@@ -94,7 +94,7 @@ const Scanlines = () => (
 );
 
 const Header = ({ time, locationName, onLocationClick }) => (
-  <header className={`bg-gradient-to-b from-[${DARK_BLUE}] to-[${NAVY_BLUE}] border-b-4 border-[${BRIGHT_CYAN}] p-4 flex justify-between items-center h-20 shrink-0 shadow-neon-lg z-10`}>
+  <header className="p-4 flex justify-between items-center h-20 shrink-0 shadow-neon-lg z-10" style={{ background: `linear-gradient(to bottom, ${DARK_BLUE}, ${NAVY_BLUE})`, borderBottom: `4px solid ${BRIGHT_CYAN}` }}>
     <div className="flex flex-col">
       <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-widest font-vt323">WEATHERBIRD</h1>
       <div className="flex items-center gap-2 text-cyan-300 font-vt323 text-lg">
@@ -102,8 +102,8 @@ const Header = ({ time, locationName, onLocationClick }) => (
       </div>
     </div>
     <div className="flex items-center gap-4">
-      <button onClick={onLocationClick} className={`p-2 sm:p-3 bg-white/10 rounded-full border border-[${BRIGHT_CYAN}] text-[${BRIGHT_CYAN}] hover:bg-white/20 transition shadow-md`}>
-        <MapPin size={20} className="text-[${BRIGHT_CYAN}]" />
+      <button onClick={onLocationClick} className="p-2 sm:p-3 bg-white/10 rounded-full hover:bg-white/20 transition shadow-md" style={{ border: `1px solid ${BRIGHT_CYAN}`, color: BRIGHT_CYAN }}>
+        <MapPin size={20} style={{ color: BRIGHT_CYAN }} />
       </button>
       <div className="text-right hidden sm:block">
         <div className="text-3xl font-bold text-white font-vt323 tracking-widest">
@@ -134,7 +134,7 @@ const Footer = ({ current, locationName, isPlaying, toggleMusic, volume, setVolu
     const tickerText = alertText ? `${alertText} ${baseText}` : baseText;
 
     return (
-        <footer className={`bg-gradient-to-t from-[${NAVY_BLUE}] to-[${DARK_BLUE}] border-t-4 border-[${BRIGHT_CYAN}] h-14 shrink-0 flex items-center relative overflow-hidden`}>
+        <footer className="h-14 shrink-0 flex items-center relative overflow-hidden" style={{ background: `linear-gradient(to top, ${NAVY_BLUE}, ${DARK_BLUE})`, borderTop: `4px solid ${BRIGHT_CYAN}` }}>
 
             {/* Left Side: Scrolling Ticker */}
             <div className="flex-grow relative h-full flex items-center overflow-hidden border-r-4 border-cyan-800 bg-black/20">
@@ -144,7 +144,7 @@ const Footer = ({ current, locationName, isPlaying, toggleMusic, volume, setVolu
             </div>
 
             {/* Right Side: Music Controls */}
-            <div className="flex items-center gap-4 px-4 bg-[${DARK_BLUE}] z-10 shrink-0 h-full">
+            <div className="flex items-center gap-4 px-4 z-10 shrink-0 h-full" style={{ backgroundColor: DARK_BLUE }}>
                 <div className="flex items-center gap-2">
                     <Volume1 size={16} className="text-cyan-400" />
                     <input
@@ -154,7 +154,8 @@ const Footer = ({ current, locationName, isPlaying, toggleMusic, volume, setVolu
                         step="0.05"
                         value={volume}
                         onChange={(e) => setVolume(parseFloat(e.target.value))}
-                        className="w-20 h-2 bg-cyan-900 rounded-lg appearance-none cursor-pointer accent-[${BRIGHT_CYAN}]"
+                        className="w-20 h-2 bg-cyan-900 rounded-lg appearance-none cursor-pointer"
+                        style={{ accentColor: BRIGHT_CYAN }}
                     />
                 </div>
                 <button
@@ -193,17 +194,18 @@ const TabNavigation = ({ currentTab, setTab }) => {
     ];
 
     return (
-        <div className={`md:w-72 shrink-0 bg-[${DARK_BLUE}] md:border-r-4 border-b-4 md:border-b-0 border-[${BRIGHT_CYAN}] shadow-neon-md p-2`}>
+        <div className="md:w-72 shrink-0 md:border-r-4 border-b-4 md:border-b-0 shadow-neon-md p-2" style={{ backgroundColor: DARK_BLUE, borderColor: BRIGHT_CYAN }}>
             <div className="flex md:flex-col overflow-x-auto md:overflow-y-auto whitespace-nowrap md:whitespace-normal h-full gap-2">
                 {tabs.map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => setTab(tab.id)}
-                        className={`inline-block md:block w-full py-4 px-4 text-3xl font-vt323 transition-all text-left rounded-lg border-2
+                        className={`inline-block md:block w-full py-4 px-4 text-3xl font-vt323 transition-all text-left rounded-lg border-2 text-white
                             ${currentTab === tab.id
-                                ? `border-[${BRIGHT_CYAN}] text-white bg-[${MID_BLUE}] font-bold shadow-inner-neon`
-                                : `border-cyan-800 text-white hover:border-cyan-500 hover:bg-white/10`
+                                ? 'font-bold shadow-inner-neon'
+                                : 'border-cyan-800 hover:border-cyan-500 hover:bg-white/10'
                             }`}
+                        style={currentTab === tab.id ? { borderColor: BRIGHT_CYAN, backgroundColor: MID_BLUE } : {}}
                     >
                         {tab.name}
                     </button>
@@ -239,10 +241,10 @@ const LocationModal = ({ location, onSave, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 font-vt323">
-      <div className={`bg-[${NAVY_BLUE}] border-4 border-[${BRIGHT_CYAN}] rounded-xl p-6 sm:p-8 w-full max-w-md shadow-neon-lg`}>
+      <div className="rounded-xl p-6 sm:p-8 w-full max-w-md shadow-neon-lg" style={{ backgroundColor: NAVY_BLUE, border: `4px solid ${BRIGHT_CYAN}` }}>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl text-white font-bold">SET LOCATION</h2>
-          <button onClick={onClose} className={`text-cyan-400 p-1 hover:text-[${BRIGHT_CYAN}] transition`}>
+          <button onClick={onClose} className="text-cyan-400 p-1 hover:text-wb-cyan transition">
             <X size={32} />
           </button>
         </div>
@@ -251,21 +253,24 @@ const LocationModal = ({ location, onSave, onClose }) => {
             value={temp.name}
             onChange={e => handleInputChange(e, 'name')}
             placeholder="City Name"
-            className={`w-full p-3 bg-[${DARK_BLUE}] border-2 border-[${BRIGHT_CYAN}] text-white text-xl rounded focus:ring-2 focus:ring-[${BRIGHT_CYAN}] outline-none`}
+            className="w-full p-3 text-white text-xl rounded outline-none"
+            style={{ backgroundColor: DARK_BLUE, border: `2px solid ${BRIGHT_CYAN}` }}
           />
           <input
             type="number" step="0.0001"
             value={temp.lat}
             onChange={e => handleInputChange(e, 'lat')}
             placeholder="Latitude"
-            className={`w-full p-3 bg-[${DARK_BLUE}] border-2 border-[${BRIGHT_CYAN}] text-white text-xl rounded focus:ring-2 focus:ring-[${BRIGHT_CYAN}] outline-none`}
+            className="w-full p-3 text-white text-xl rounded outline-none"
+            style={{ backgroundColor: DARK_BLUE, border: `2px solid ${BRIGHT_CYAN}` }}
           />
           <input
             type="number" step="0.0001"
             value={temp.lon}
             onChange={e => handleInputChange(e, 'lon')}
             placeholder="Longitude"
-            className={`w-full p-3 bg-[${DARK_BLUE}] border-2 border-[${BRIGHT_CYAN}] text-white text-xl rounded focus:ring-2 focus:ring-[${BRIGHT_CYAN}] outline-none`}
+            className="w-full p-3 text-white text-xl rounded outline-none"
+            style={{ backgroundColor: DARK_BLUE, border: `2px solid ${BRIGHT_CYAN}` }}
           />
           {temp.error && (
             <div className="bg-red-900/50 border border-red-400 p-2 rounded flex items-center gap-2">
@@ -276,7 +281,8 @@ const LocationModal = ({ location, onSave, onClose }) => {
         </div>
         <button
           onClick={handleSave}
-          className={`mt-6 w-full p-4 bg-[${BRIGHT_CYAN}] text-black text-2xl font-bold rounded shadow-neon-md hover:bg-cyan-300 transition-all active:translate-y-0.5`}
+          className="mt-6 w-full p-4 text-black text-2xl font-bold rounded shadow-neon-md hover:bg-cyan-300 transition-all active:translate-y-0.5"
+          style={{ backgroundColor: BRIGHT_CYAN }}
         >
           SAVE & REBOOT
         </button>
@@ -286,7 +292,7 @@ const LocationModal = ({ location, onSave, onClose }) => {
 };
 
 const TabPanel = ({ title, children }) => (
-    <div className={`flex-grow p-4 sm:p-6 border-4 border-[${BRIGHT_CYAN}] rounded-xl bg-gradient-to-br from-[${DARK_BLUE}] to-[${NAVY_BLUE}] shadow-neon-md min-h-[400px] overflow-auto`}>
+    <div className="flex-grow p-4 sm:p-6 rounded-xl shadow-neon-md min-h-[400px] overflow-auto" style={{ border: `4px solid ${BRIGHT_CYAN}`, background: `linear-gradient(to bottom right, ${DARK_BLUE}, ${NAVY_BLUE})` }}>
         <h2 className="text-3xl text-white font-bold mb-4 border-b border-cyan-700 pb-2">{title}</h2>
         {children}
     </div>
@@ -295,7 +301,7 @@ const TabPanel = ({ title, children }) => (
 const LoadingIndicator = () => (
     <div className="flex items-center justify-center h-full min-h-[300px] text-center">
         <div className="animate-pulse">
-            <Zap size={48} className={`text-[${BRIGHT_CYAN}] mx-auto mb-2`} />
+            <Zap size={48} className="mx-auto mb-2" style={{ color: BRIGHT_CYAN }} />
             <span className="text-2xl text-cyan-400 font-vt323">ACCESSING DATA STREAM...</span>
         </div>
     </div>
@@ -437,7 +443,7 @@ const CurrentConditionsTab = ({ current, daily, night, isWeatherLoading }) => {
                     <p className="text-8xl sm:text-[120px] text-white">
                         {Math.round(currentData.temperature_2m || 0)}°F
                     </p>
-                    <p className={`text-2xl font-vt323 text-[${BRIGHT_CYAN}] mt-[-10px]`}>
+                    <p className="text-2xl font-vt323 mt-[-10px]" style={{ color: BRIGHT_CYAN }}>
                         {getWeatherDescription(currentData.weather_code)}
                     </p>
                 </div>
@@ -499,7 +505,8 @@ const HourlyForecastTab = ({ hourly, night, isWeatherLoading }) => {
             <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-3 text-center overflow-x-auto pb-2">
                 {data.map((h, index) => (
                     <div key={index} className={`flex flex-col items-center p-3 rounded-lg transition min-w-[70px]
-                        ${index === 0 ? `bg-[${MID_BLUE}] border border-[${BRIGHT_CYAN}]` : 'bg-black/20'}`}>
+                        ${index === 0 ? '' : 'bg-black/20'}`}
+                        style={index === 0 ? { backgroundColor: MID_BLUE, border: `1px solid ${BRIGHT_CYAN}` } : {}}>
                         <p className="text-xs text-cyan-300 font-vt323 mb-1">{h.time}</p>
                         <p className="text-3xl mt-1">{getWeatherIcon(h.code, night)}</p>
                         <p className="text-xl font-bold text-white font-vt323">{h.temp}°F</p>
@@ -625,7 +632,7 @@ const AlmanacTab = ({ location, userId }) => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* Almanac Stats */}
-                <div className={`lg:col-span-2 p-4 border-2 border-[${BRIGHT_CYAN}] rounded-lg bg-[${MID_BLUE}]/30 space-y-3`}>
+                <div className="lg:col-span-2 p-4 rounded-lg space-y-3" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
                     <h3 className="text-xl text-white font-bold border-b border-cyan-700 pb-2 flex items-center gap-2"><Calendar size={20}/> HISTORICAL DATA FOR {today.toLocaleDateString([], { month: 'long' }).toUpperCase()}</h3>
 
                     <div className="grid grid-cols-2 gap-4 text-white">
@@ -640,7 +647,7 @@ const AlmanacTab = ({ location, userId }) => {
                 </div>
 
                 {/* System Controls */}
-                <div className={`lg:col-span-1 p-4 border-2 border-[${BRIGHT_CYAN}] rounded-lg bg-[${MID_BLUE}]/30 space-y-4`}>
+                <div className="lg:col-span-1 p-4 rounded-lg space-y-4" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
                     <h3 className="text-xl text-white font-bold border-b border-cyan-700 pb-2 flex items-center gap-2"><Menu size={20}/> AUTH STATUS</h3>
                     <p className="text-sm text-cyan-300 font-vt323 break-all">User ID: <span className="text-white">{userId || 'Loading...'}</span></p>
                     <p className="text-xs text-cyan-400 mt-1">Data is saved persistently to your personal storage.</p>
@@ -663,8 +670,8 @@ const AlmanacStat = ({ title, value, icon: Icon }) => (
 const AppStatus = ({ isLoading, error, isReady }) => {
   if (error) {
     return (
-      <div className={`fixed inset-0 z-50 flex items-center justify-center bg-red-900/80 p-4 font-vt323`}>
-        <div className={`bg-[${NAVY_BLUE}] border-4 border-red-500 rounded-xl p-8 max-w-lg text-center`}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-red-900/80 p-4 font-vt323">
+        <div className="border-4 border-red-500 rounded-xl p-8 max-w-lg text-center" style={{ backgroundColor: NAVY_BLUE }}>
           <AlertTriangle size={40} className="text-red-400 mx-auto mb-4" />
           <h2 className="text-3xl text-white font-bold mb-3">SYSTEM ERROR</h2>
           <p className="text-red-300 text-lg">{error}</p>
@@ -675,9 +682,9 @@ const AppStatus = ({ isLoading, error, isReady }) => {
   }
   if (!isReady || isLoading) {
     return (
-      <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 font-vt323`}>
-        <div className={`text-center animate-pulse`}>
-          <h2 className={`text-4xl text-[${BRIGHT_CYAN}] font-bold tracking-widest`}>INITIALIZING WEATHERBIRD...</h2>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 font-vt323">
+        <div className="text-center animate-pulse">
+          <h2 className="text-4xl font-bold tracking-widest" style={{ color: BRIGHT_CYAN }}>INITIALIZING WEATHERBIRD...</h2>
           <p className="text-xl text-cyan-400 mt-2">STAND BY</p>
         </div>
       </div>
@@ -713,10 +720,12 @@ const App = () => {
   useEffect(() => {
     try {
       const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
+      // If no Firebase config, run in standalone mode without persistence
       if (!Object.keys(firebaseConfig).length) {
-        setAppError("Firebase configuration is missing.");
+        console.log("Running in standalone mode (no Firebase)");
+        setUserId(crypto.randomUUID());
+        setIsAuthReady(true);
         return;
       }
 
@@ -930,7 +939,7 @@ const App = () => {
 
   // Main UI Render
   return (
-    <div className={`h-screen bg-[${NAVY_BLUE}] text-white font-vt323 antialiased flex flex-col overflow-hidden`}>
+    <div className="h-screen text-white font-vt323 antialiased flex flex-col overflow-hidden" style={{ backgroundColor: NAVY_BLUE }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
         .font-vt323 { font-family: 'VT323', monospace; }
