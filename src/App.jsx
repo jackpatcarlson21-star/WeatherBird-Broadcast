@@ -221,6 +221,41 @@ const LocationModal = ({ location, onSave, onClose }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const debounceRef = useRef(null);
+
+  // Auto-search as user types (with debounce)
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    if (searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchQuery.trim())}&count=5&language=en&format=json`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(data.results || []);
+        }
+      } catch (e) {
+        console.error("Autocomplete error:", e);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300); // Wait 300ms after user stops typing
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [searchQuery]);
 
   const handleSave = () => {
     const lat = parseFloat(temp.lat);
@@ -241,34 +276,6 @@ const LocationModal = ({ location, onSave, onClose }) => {
 
   const handleInputChange = (e, key) => {
     setTemp(t => ({ ...t, [key]: e.target.value, error: null }));
-  };
-
-  // Search for cities using Open-Meteo Geocoding API
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-    setIsSearching(true);
-    setSearchResults([]);
-    setTemp(t => ({ ...t, error: null }));
-    try {
-      const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchQuery.trim())}&count=5&language=en&format=json`;
-      console.log("Searching for:", searchQuery, "URL:", url);
-      const res = await fetch(url);
-      if (!res.ok) {
-        throw new Error(`HTTP error: ${res.status}`);
-      }
-      const data = await res.json();
-      console.log("Search results:", data);
-      if (data.results && data.results.length > 0) {
-        setSearchResults(data.results);
-      } else {
-        setTemp(t => ({ ...t, error: "No locations found. Try a different search term." }));
-      }
-    } catch (e) {
-      console.error("Geocoding error:", e);
-      setTemp(t => ({ ...t, error: `Search failed: ${e.message}. Check console for details.` }));
-    } finally {
-      setIsSearching(false);
-    }
   };
 
   // Select a search result
@@ -354,38 +361,37 @@ const LocationModal = ({ location, onSave, onClose }) => {
         </button>
 
         {/* City search */}
-        <div className="mb-4">
-          <div className="flex gap-2">
+        <div className="mb-4 relative">
+          <div className="relative">
             <input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              placeholder="Search for a city..."
-              className="flex-grow p-3 text-white text-xl rounded outline-none"
+              placeholder="Start typing a city name..."
+              className="w-full p-3 text-white text-xl rounded outline-none"
               style={{ backgroundColor: DARK_BLUE, border: `2px solid ${BRIGHT_CYAN}` }}
             />
-            <button
-              onClick={handleSearch}
-              disabled={isSearching}
-              className="px-4 py-3 text-black font-bold rounded transition-all hover:bg-cyan-300 disabled:opacity-50"
-              style={{ backgroundColor: BRIGHT_CYAN }}
-            >
-              {isSearching ? '...' : 'GO'}
-            </button>
+            {isSearching && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <div className="w-5 h-5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
           </div>
 
-          {/* Search results dropdown */}
+          {/* Autocomplete dropdown */}
           {searchResults.length > 0 && (
-            <div className="mt-2 rounded border-2 overflow-hidden" style={{ borderColor: BRIGHT_CYAN, backgroundColor: DARK_BLUE }}>
+            <div className="absolute z-10 w-full mt-1 rounded border-2 overflow-hidden shadow-lg max-h-60 overflow-y-auto" style={{ borderColor: BRIGHT_CYAN, backgroundColor: DARK_BLUE }}>
               {searchResults.map((result, idx) => (
                 <button
                   key={idx}
                   onClick={() => selectResult(result)}
-                  className="w-full p-3 text-left text-white hover:bg-cyan-900 transition border-b border-cyan-800 last:border-b-0"
+                  className="w-full p-3 text-left text-white hover:bg-cyan-900 transition border-b border-cyan-800 last:border-b-0 flex items-center gap-2"
                 >
-                  <span className="font-bold">{result.name}</span>
-                  {result.admin1 && <span className="text-cyan-400">, {result.admin1}</span>}
-                  {result.country && <span className="text-cyan-500 text-sm ml-2">({result.country})</span>}
+                  <MapPin size={16} className="text-cyan-400 shrink-0" />
+                  <div>
+                    <span className="font-bold">{result.name}</span>
+                    {result.admin1 && <span className="text-cyan-400">, {result.admin1}</span>}
+                    {result.country && <span className="text-cyan-500 text-sm ml-2">({result.country})</span>}
+                  </div>
                 </button>
               ))}
             </div>
