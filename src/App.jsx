@@ -248,17 +248,24 @@ const LocationModal = ({ location, onSave, onClose }) => {
     if (!searchQuery.trim()) return;
     setIsSearching(true);
     setSearchResults([]);
+    setTemp(t => ({ ...t, error: null }));
     try {
-      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchQuery)}&count=5&language=en&format=json`);
+      const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchQuery.trim())}&count=5&language=en&format=json`;
+      console.log("Searching for:", searchQuery, "URL:", url);
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`HTTP error: ${res.status}`);
+      }
       const data = await res.json();
+      console.log("Search results:", data);
       if (data.results && data.results.length > 0) {
         setSearchResults(data.results);
       } else {
-        setTemp(t => ({ ...t, error: "No locations found. Try a different search." }));
+        setTemp(t => ({ ...t, error: "No locations found. Try a different search term." }));
       }
     } catch (e) {
       console.error("Geocoding error:", e);
-      setTemp(t => ({ ...t, error: "Search failed. Please try again." }));
+      setTemp(t => ({ ...t, error: `Search failed: ${e.message}. Check console for details.` }));
     } finally {
       setIsSearching(false);
     }
