@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, Thermometer, Wind, Droplets, ArrowRight, Sun, CloudRain, MapPin, X, Volume2, VolumeX, Volume1, Menu, Clock, Calendar, Radio, AlertTriangle, Settings, Zap, Home, ChevronRight, Sunrise, Sunset, Maximize, Minimize, ShieldAlert, Map as MapIcon } from 'lucide-react';
+import { Play, Pause, Thermometer, Wind, Droplets, ArrowRight, Sun, CloudRain, MapPin, X, Volume2, VolumeX, Volume1, Menu, Clock, Calendar, Radio, AlertTriangle, Settings, Zap, Home, ChevronRight, Sunrise, Sunset, Maximize, Minimize, ShieldAlert, Map as MapIcon, CloudRainWind } from 'lucide-react';
 
 // --- Firebase ---
 import { initializeApp } from 'firebase/app';
@@ -36,7 +36,7 @@ const MID_BLUE = '#0055AA';
 // --- APIs & Live Imagery ---
 // Added &forecast_days=8 to ensure we have enough data for a 7-day outlook excluding today
 const getWeatherApiUrl = (lat, lon) =>
-  `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,precipitation,pressure_msl&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,wind_speed_10m_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America%2FNew_York&forecast_days=8`;
+  `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,pressure_msl&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,wind_speed_10m_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America%2FNew_York&forecast_days=8`;
 
 // NWS Alerts API
 const getNWSAlertsUrl = (lat, lon) => `https://api.weather.gov/alerts/active?point=${lat},${lon}`;
@@ -128,7 +128,7 @@ const Footer = ({ current, locationName, isPlaying, toggleMusic, volume, setVolu
     }
 
     // Ticker Text Construction
-    const baseText = `CURRENTLY IN ${locationName.toUpperCase()}: ${temp}°F ${cond} - WIND: ${wind} ::: THANK YOU FOR USING WEATHERBIRD! ::: `;
+    const baseText = `CURRENTLY IN ${locationName.toUpperCase()}: ${temp}°F ${cond} - WIND: ${wind} ::: CAW CAW! ::: THANK YOU FOR USING WEATHERBIRD! ::: `;
 
     // If alerts exist, put them FIRST
     const tickerText = alertText ? `${alertText} ${baseText}` : baseText;
@@ -217,6 +217,10 @@ const TabNavigation = ({ currentTab, setTab }) => {
 
 const LocationModal = ({ location, onSave, onClose }) => {
   const [temp, setTemp] = useState({ ...location, error: null });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
 
   const handleSave = () => {
     const lat = parseFloat(temp.lat);
@@ -239,6 +243,88 @@ const LocationModal = ({ location, onSave, onClose }) => {
     setTemp(t => ({ ...t, [key]: e.target.value, error: null }));
   };
 
+  // Search for cities using Open-Meteo Geocoding API
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    setSearchResults([]);
+    try {
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchQuery)}&count=5&language=en&format=json`);
+      const data = await res.json();
+      if (data.results && data.results.length > 0) {
+        setSearchResults(data.results);
+      } else {
+        setTemp(t => ({ ...t, error: "No locations found. Try a different search." }));
+      }
+    } catch (e) {
+      console.error("Geocoding error:", e);
+      setTemp(t => ({ ...t, error: "Search failed. Please try again." }));
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Select a search result
+  const selectResult = (result) => {
+    const displayName = result.admin1
+      ? `${result.name}, ${result.admin1}`
+      : result.name;
+    setTemp({
+      name: displayName,
+      lat: result.latitude,
+      lon: result.longitude,
+      error: null
+    });
+    setSearchResults([]);
+    setSearchQuery('');
+  };
+
+  // Auto-detect location using browser geolocation
+  const handleAutoDetect = () => {
+    if (!navigator.geolocation) {
+      setTemp(t => ({ ...t, error: "Geolocation is not supported by your browser." }));
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        // Reverse geocode to get city name
+        try {
+          const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=&count=1&language=en&format=json`);
+          // Open-Meteo doesn't support reverse geocoding, so we'll use a fallback
+          // Use nominatim for reverse geocoding
+          const nominatimRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+          const nominatimData = await nominatimRes.json();
+          const cityName = nominatimData.address?.city || nominatimData.address?.town || nominatimData.address?.village || nominatimData.address?.county || 'My Location';
+          const stateName = nominatimData.address?.state || '';
+          const displayName = stateName ? `${cityName}, ${stateName}` : cityName;
+          setTemp({
+            name: displayName,
+            lat: latitude.toFixed(4),
+            lon: longitude.toFixed(4),
+            error: null
+          });
+        } catch (e) {
+          // Fallback if reverse geocoding fails
+          setTemp({
+            name: 'My Location',
+            lat: latitude.toFixed(4),
+            lon: longitude.toFixed(4),
+            error: null
+          });
+        }
+        setIsLocating(false);
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        setTemp(t => ({ ...t, error: "Unable to get your location. Please check permissions." }));
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   return (
     <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 font-vt323">
       <div className="rounded-xl p-6 sm:p-8 w-full max-w-md shadow-neon-lg" style={{ backgroundColor: NAVY_BLUE, border: `4px solid ${BRIGHT_CYAN}` }}>
@@ -248,37 +334,95 @@ const LocationModal = ({ location, onSave, onClose }) => {
             <X size={32} />
           </button>
         </div>
-        <div className="space-y-5">
-          <input
-            value={temp.name}
-            onChange={e => handleInputChange(e, 'name')}
-            placeholder="City Name"
-            className="w-full p-3 text-white text-xl rounded outline-none"
-            style={{ backgroundColor: DARK_BLUE, border: `2px solid ${BRIGHT_CYAN}` }}
-          />
-          <input
-            type="number" step="0.0001"
-            value={temp.lat}
-            onChange={e => handleInputChange(e, 'lat')}
-            placeholder="Latitude"
-            className="w-full p-3 text-white text-xl rounded outline-none"
-            style={{ backgroundColor: DARK_BLUE, border: `2px solid ${BRIGHT_CYAN}` }}
-          />
-          <input
-            type="number" step="0.0001"
-            value={temp.lon}
-            onChange={e => handleInputChange(e, 'lon')}
-            placeholder="Longitude"
-            className="w-full p-3 text-white text-xl rounded outline-none"
-            style={{ backgroundColor: DARK_BLUE, border: `2px solid ${BRIGHT_CYAN}` }}
-          />
-          {temp.error && (
-            <div className="bg-red-900/50 border border-red-400 p-2 rounded flex items-center gap-2">
-              <AlertTriangle size={20} className="text-red-400" />
-              <p className="text-red-300 text-sm">{temp.error}</p>
+
+        {/* Auto-detect button */}
+        <button
+          onClick={handleAutoDetect}
+          disabled={isLocating}
+          className="w-full p-3 mb-4 text-lg font-bold rounded flex items-center justify-center gap-2 transition-all hover:bg-cyan-900 disabled:opacity-50"
+          style={{ backgroundColor: MID_BLUE, border: `2px solid ${BRIGHT_CYAN}`, color: BRIGHT_CYAN }}
+        >
+          <MapPin size={20} />
+          {isLocating ? 'DETECTING...' : 'USE MY CURRENT LOCATION'}
+        </button>
+
+        {/* City search */}
+        <div className="mb-4">
+          <div className="flex gap-2">
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSearch()}
+              placeholder="Search for a city..."
+              className="flex-grow p-3 text-white text-xl rounded outline-none"
+              style={{ backgroundColor: DARK_BLUE, border: `2px solid ${BRIGHT_CYAN}` }}
+            />
+            <button
+              onClick={handleSearch}
+              disabled={isSearching}
+              className="px-4 py-3 text-black font-bold rounded transition-all hover:bg-cyan-300 disabled:opacity-50"
+              style={{ backgroundColor: BRIGHT_CYAN }}
+            >
+              {isSearching ? '...' : 'GO'}
+            </button>
+          </div>
+
+          {/* Search results dropdown */}
+          {searchResults.length > 0 && (
+            <div className="mt-2 rounded border-2 overflow-hidden" style={{ borderColor: BRIGHT_CYAN, backgroundColor: DARK_BLUE }}>
+              {searchResults.map((result, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => selectResult(result)}
+                  className="w-full p-3 text-left text-white hover:bg-cyan-900 transition border-b border-cyan-800 last:border-b-0"
+                >
+                  <span className="font-bold">{result.name}</span>
+                  {result.admin1 && <span className="text-cyan-400">, {result.admin1}</span>}
+                  {result.country && <span className="text-cyan-500 text-sm ml-2">({result.country})</span>}
+                </button>
+              ))}
             </div>
           )}
         </div>
+
+        <div className="border-t border-cyan-700 pt-4 mt-2">
+          <p className="text-sm text-cyan-400 mb-3">Or enter coordinates manually:</p>
+          <div className="space-y-3">
+            <input
+              value={temp.name}
+              onChange={e => handleInputChange(e, 'name')}
+              placeholder="City Name"
+              className="w-full p-3 text-white text-xl rounded outline-none"
+              style={{ backgroundColor: DARK_BLUE, border: `2px solid ${BRIGHT_CYAN}` }}
+            />
+            <div className="flex gap-3">
+              <input
+                type="number" step="0.0001"
+                value={temp.lat}
+                onChange={e => handleInputChange(e, 'lat')}
+                placeholder="Latitude"
+                className="w-1/2 p-3 text-white text-xl rounded outline-none"
+                style={{ backgroundColor: DARK_BLUE, border: `2px solid ${BRIGHT_CYAN}` }}
+              />
+              <input
+                type="number" step="0.0001"
+                value={temp.lon}
+                onChange={e => handleInputChange(e, 'lon')}
+                placeholder="Longitude"
+                className="w-1/2 p-3 text-white text-xl rounded outline-none"
+                style={{ backgroundColor: DARK_BLUE, border: `2px solid ${BRIGHT_CYAN}` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {temp.error && (
+          <div className="bg-red-900/50 border border-red-400 p-2 rounded flex items-center gap-2 mt-4">
+            <AlertTriangle size={20} className="text-red-400" />
+            <p className="text-red-300 text-sm">{temp.error}</p>
+          </div>
+        )}
+
         <button
           onClick={handleSave}
           className="mt-6 w-full p-4 text-black text-2xl font-bold rounded shadow-neon-md hover:bg-cyan-300 transition-all active:translate-y-0.5"
@@ -452,11 +596,16 @@ const CurrentConditionsTab = ({ current, daily, night, isWeatherLoading }) => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-white font-vt323 text-lg">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-white font-vt323 text-lg">
                 <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 flex flex-col items-center">
                     <Wind size={20} className="text-cyan-400" />
                     <span className="text-sm text-cyan-300">WIND</span>
                     <span className="font-bold">{Math.round(currentData.wind_speed_10m || 0)} mph {degreeToCardinal(currentData.wind_direction_10m || 0)}</span>
+                </div>
+                <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 flex flex-col items-center">
+                    <Zap size={20} className="text-cyan-400" />
+                    <span className="text-sm text-cyan-300">WIND GUSTS</span>
+                    <span className="font-bold">{Math.round(currentData.wind_gusts_10m || 0)} mph</span>
                 </div>
                 <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 flex flex-col items-center">
                     <Droplets size={20} className="text-cyan-400" />
@@ -625,6 +774,8 @@ const AlmanacTab = ({ location, userId }) => {
         ytdPrecip: 35.42,
         avgHighMonth: 65,
         avgLowMonth: 45,
+        recordPrecip: 4.52,
+        recordPrecipYear: 1997,
     };
 
     return (
@@ -646,8 +797,19 @@ const AlmanacTab = ({ location, userId }) => {
                     <p className="text-xs text-cyan-400 pt-2">Historical data is simulated for demonstration purposes.</p>
                 </div>
 
+                {/* Record Precipitation Box */}
+                <div className="lg:col-span-1 p-4 rounded-lg space-y-3" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
+                    <h3 className="text-xl text-white font-bold border-b border-cyan-700 pb-2 flex items-center gap-2"><CloudRainWind size={20}/> RECORD PRECIPITATION</h3>
+                    <div className="text-center py-4">
+                        <p className="text-5xl font-bold text-white">{mockAlmanac.recordPrecip}"</p>
+                        <p className="text-lg text-cyan-300 mt-2">Record for this date</p>
+                        <p className="text-sm text-cyan-400">Set in {mockAlmanac.recordPrecipYear}</p>
+                    </div>
+                    <p className="text-xs text-cyan-400 border-t border-cyan-700 pt-2">Maximum precipitation recorded on this calendar day in historical records.</p>
+                </div>
+
                 {/* System Controls */}
-                <div className="lg:col-span-1 p-4 rounded-lg space-y-4" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
+                <div className="lg:col-span-3 p-4 rounded-lg space-y-4" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
                     <h3 className="text-xl text-white font-bold border-b border-cyan-700 pb-2 flex items-center gap-2"><Menu size={20}/> AUTH STATUS</h3>
                     <p className="text-sm text-cyan-300 font-vt323 break-all">User ID: <span className="text-white">{userId || 'Loading...'}</span></p>
                     <p className="text-xs text-cyan-400 mt-1">Data is saved persistently to your personal storage.</p>
