@@ -10,8 +10,8 @@ import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 // Fallback location until user's location is loaded from Firestore
 const INITIAL_LOCATION = { name: "Lawrenceburg, KY", lat: 37.8393, lon: -84.2700 };
 
-// Music URL - Switched to a more atmospheric electronic track.
-const MUSIC_URL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3";
+// Music URL - Smooth jazz for that classic weather channel vibe
+const MUSIC_URL = "https://stream.zeno.fm/0r0xa792kwzuv";
 
 const REFRESH_RATE_MS = 60000; // 60 seconds
 
