@@ -36,7 +36,7 @@ const MID_BLUE = '#0055AA';
 // --- APIs & Live Imagery ---
 // Added &forecast_days=8 to ensure we have enough data for a 7-day outlook excluding today
 const getWeatherApiUrl = (lat, lon) =>
-  `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,pressure_msl&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,wind_speed_10m_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America%2FNew_York&forecast_days=8`;
+  `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,pressure_msl&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,wind_speed_10m_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America%2FNew_York&forecast_days=8`;
 
 // NWS Alerts API
 const getNWSAlertsUrl = (lat, lon) => `https://api.weather.gov/alerts/active?point=${lat},${lon}`;
@@ -184,9 +184,9 @@ const Footer = ({ current, locationName, isPlaying, toggleMusic, volume, setVolu
 const TabNavigation = ({ currentTab, setTab }) => {
     const tabs = [
         { id: SCREENS.CONDITIONS, name: 'CURRENT' },
-        { id: SCREENS.ALERTS, name: 'ALERTS' },
         { id: SCREENS.HOURLY, name: '12HR' },
         { id: SCREENS.DAILY, name: '7-DAY' },
+        { id: SCREENS.ALERTS, name: 'ALERTS' },
         { id: SCREENS.RADAR, name: 'RADAR' },
         { id: SCREENS.WWA, name: 'WWA MAP' },
         { id: SCREENS.SPC, name: 'SPC' },
@@ -582,6 +582,78 @@ const WWADisplayTab = () => (
     </TabPanel>
 );
 
+// Generate a brief weather description based on conditions
+const generateWeatherSummary = (current, daily, night) => {
+    if (!current || !daily) return "Weather data loading...";
+
+    const temp = Math.round(current.temperature_2m || 0);
+    const feelsLike = Math.round(current.apparent_temperature || temp);
+    const humidity = current.relative_humidity_2m || 0;
+    const windSpeed = Math.round(current.wind_speed_10m || 0);
+    const weatherCode = current.weather_code || 0;
+    const high = Math.round(daily.temperature_2m_max?.[0] || 0);
+    const low = Math.round(daily.temperature_2m_min?.[0] || 0);
+    const pop = Math.round(daily.precipitation_probability_max?.[0] || 0);
+
+    let summary = "";
+
+    // Temperature feel
+    if (temp <= 32) {
+        summary += "Cold conditions with temperatures at or below freezing. ";
+    } else if (temp <= 50) {
+        summary += "Cool conditions expected. ";
+    } else if (temp <= 70) {
+        summary += "Mild and comfortable temperatures. ";
+    } else if (temp <= 85) {
+        summary += "Warm conditions today. ";
+    } else {
+        summary += "Hot conditions - stay hydrated. ";
+    }
+
+    // Wind chill / heat index note
+    if (Math.abs(temp - feelsLike) >= 5) {
+        if (feelsLike < temp) {
+            summary += `Wind chill makes it feel like ${feelsLike}°F. `;
+        } else {
+            summary += `Heat index makes it feel like ${feelsLike}°F. `;
+        }
+    }
+
+    // Sky conditions
+    if (weatherCode === 0) {
+        summary += night ? "Clear skies overnight. " : "Expect sunny skies. ";
+    } else if (weatherCode <= 3) {
+        summary += "Partly cloudy skies. ";
+    } else if (weatherCode <= 48) {
+        summary += "Foggy or hazy conditions possible. ";
+    } else if (weatherCode <= 67) {
+        summary += "Rain expected - grab an umbrella. ";
+    } else if (weatherCode <= 82) {
+        summary += "Showers and storms possible. ";
+    } else if (weatherCode >= 95) {
+        summary += "Thunderstorms in the forecast - stay weather aware. ";
+    }
+
+    // Precipitation chance
+    if (pop >= 70) {
+        summary += `High chance of precipitation (${pop}%). `;
+    } else if (pop >= 40) {
+        summary += `Moderate chance of precipitation (${pop}%). `;
+    }
+
+    // Wind
+    if (windSpeed >= 25) {
+        summary += "Strong winds expected. ";
+    } else if (windSpeed >= 15) {
+        summary += "Breezy conditions. ";
+    }
+
+    // High/Low
+    summary += `Today's high near ${high}°F with a low of ${low}°F.`;
+
+    return summary;
+};
+
 const CurrentConditionsTab = ({ current, daily, night, isWeatherLoading }) => {
     if (isWeatherLoading) return <LoadingIndicator />;
 
@@ -593,8 +665,18 @@ const CurrentConditionsTab = ({ current, daily, night, isWeatherLoading }) => {
         sunset: daily.sunset[0],
     } : {};
 
+    const weatherSummary = generateWeatherSummary(current, daily, night);
+
     return (
         <TabPanel title="CURRENT CONDITIONS">
+            {/* Weather Summary Box */}
+            <div className="mb-6 p-4 rounded-lg border-2 border-cyan-600 bg-black/30">
+                <h3 className="text-lg text-cyan-300 font-bold mb-2 flex items-center gap-2">
+                    <Radio size={18} /> FORECAST SUMMARY
+                </h3>
+                <p className="text-white text-lg leading-relaxed">{weatherSummary}</p>
+            </div>
+
             <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start mb-8 border-b border-cyan-800 pb-4">
                 <div className="text-center sm:text-left mb-4 sm:mb-0">
                     <p className="text-8xl sm:text-[120px] text-white">
@@ -610,6 +692,11 @@ const CurrentConditionsTab = ({ current, daily, night, isWeatherLoading }) => {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-white font-vt323 text-lg">
+                <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 flex flex-col items-center">
+                    <Thermometer size={20} className="text-cyan-400" />
+                    <span className="text-sm text-cyan-300">FEELS LIKE</span>
+                    <span className="font-bold">{Math.round(currentData.apparent_temperature || currentData.temperature_2m || 0)}°F</span>
+                </div>
                 <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 flex flex-col items-center">
                     <Wind size={20} className="text-cyan-400" />
                     <span className="text-sm text-cyan-300">WIND</span>
@@ -636,7 +723,7 @@ const CurrentConditionsTab = ({ current, daily, night, isWeatherLoading }) => {
                     <span className="font-bold">{formatTime(dailyData.sunset)}</span>
                 </div>
                 <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 flex flex-col items-center">
-                    <Thermometer size={20} className="text-cyan-400" />
+                    <Maximize size={20} className="text-cyan-400" />
                     <span className="text-sm text-cyan-300">HIGH / LOW</span>
                     <span className="font-bold">{Math.round(dailyData.max || 0)}°F / {Math.round(dailyData.min || 0)}°F</span>
                 </div>
