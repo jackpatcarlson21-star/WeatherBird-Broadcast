@@ -779,16 +779,125 @@ const SPCOutlookTab = () => (
 );
 
 const AlmanacTab = ({ location, userId }) => {
-    // Mock Almanac Data (Date-specific data is not fetched by the API)
     const today = new Date();
-    const mockAlmanac = {
-        recordHigh: 98,
-        recordLow: 10,
-        ytdPrecip: 35.42,
-        avgHighMonth: 65,
-        avgLowMonth: 45,
-        recordPrecip: 4.52,
-        recordPrecipYear: 1997,
+    const [almanacData, setAlmanacData] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchAlmanacData = async () => {
+            setIsLoading(true);
+            try {
+                // Get today's month and day for historical comparison
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                const currentYear = today.getFullYear();
+
+                // Fetch historical data for this date across multiple years (last 30 years)
+                const startYear = currentYear - 30;
+                const historicalPromises = [];
+
+                // Get data for this specific date across past years
+                for (let year = startYear; year < currentYear; year++) {
+                    const dateStr = `${year}-${month}-${day}`;
+                    historicalPromises.push(
+                        fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${dateStr}&end_date=${dateStr}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto`)
+                            .then(res => res.ok ? res.json() : null)
+                            .catch(() => null)
+                    );
+                }
+
+                // Fetch YTD precipitation (Jan 1 to today)
+                const ytdStartDate = `${currentYear}-01-01`;
+                const ytdEndDate = `${currentYear}-${month}-${day}`;
+                const ytdPromise = fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${ytdStartDate}&end_date=${ytdEndDate}&daily=precipitation_sum&precipitation_unit=inch&timezone=auto`)
+                    .then(res => res.ok ? res.json() : null)
+                    .catch(() => null);
+
+                // Fetch monthly averages (this month across years)
+                const monthStart = `${currentYear - 10}-${month}-01`;
+                const monthEnd = `${currentYear - 1}-${month}-28`;
+                const monthlyPromise = fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${monthStart}&end_date=${monthEnd}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto`)
+                    .then(res => res.ok ? res.json() : null)
+                    .catch(() => null);
+
+                const [ytdData, monthlyData, ...historicalResults] = await Promise.all([ytdPromise, monthlyPromise, ...historicalPromises]);
+
+                // Process historical data for this date
+                let recordHigh = -999;
+                let recordLow = 999;
+                let recordPrecip = 0;
+                let recordPrecipYear = currentYear;
+
+                historicalResults.forEach((data, idx) => {
+                    if (data?.daily) {
+                        const high = data.daily.temperature_2m_max?.[0];
+                        const low = data.daily.temperature_2m_min?.[0];
+                        const precip = data.daily.precipitation_sum?.[0] || 0;
+                        const year = startYear + idx;
+
+                        if (high != null && high > recordHigh) recordHigh = high;
+                        if (low != null && low < recordLow) recordLow = low;
+                        if (precip > recordPrecip) {
+                            recordPrecip = precip;
+                            recordPrecipYear = year;
+                        }
+                    }
+                });
+
+                // Calculate YTD precipitation
+                let ytdPrecip = 0;
+                if (ytdData?.daily?.precipitation_sum) {
+                    ytdPrecip = ytdData.daily.precipitation_sum.reduce((sum, p) => sum + (p || 0), 0);
+                }
+
+                // Calculate monthly averages
+                let avgHighMonth = 0;
+                let avgLowMonth = 0;
+                if (monthlyData?.daily) {
+                    const highs = monthlyData.daily.temperature_2m_max?.filter(t => t != null) || [];
+                    const lows = monthlyData.daily.temperature_2m_min?.filter(t => t != null) || [];
+                    if (highs.length > 0) avgHighMonth = highs.reduce((a, b) => a + b, 0) / highs.length;
+                    if (lows.length > 0) avgLowMonth = lows.reduce((a, b) => a + b, 0) / lows.length;
+                }
+
+                setAlmanacData({
+                    recordHigh: recordHigh > -999 ? Math.round(recordHigh) : '--',
+                    recordLow: recordLow < 999 ? Math.round(recordLow) : '--',
+                    ytdPrecip: ytdPrecip.toFixed(2),
+                    avgHighMonth: avgHighMonth > 0 ? Math.round(avgHighMonth) : '--',
+                    avgLowMonth: avgLowMonth > 0 ? Math.round(avgLowMonth) : '--',
+                    recordPrecip: recordPrecip.toFixed(2),
+                    recordPrecipYear: recordPrecip > 0 ? recordPrecipYear : '--',
+                });
+            } catch (e) {
+                console.error("Almanac fetch error:", e);
+                setAlmanacData(null);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (location.lat && location.lon) {
+            fetchAlmanacData();
+        }
+    }, [location.lat, location.lon]);
+
+    if (isLoading) {
+        return (
+            <TabPanel title="ALMANAC & SYSTEM CONTROL">
+                <LoadingIndicator />
+            </TabPanel>
+        );
+    }
+
+    const displayData = almanacData || {
+        recordHigh: '--',
+        recordLow: '--',
+        ytdPrecip: '--',
+        avgHighMonth: '--',
+        avgLowMonth: '--',
+        recordPrecip: '--',
+        recordPrecipYear: '--',
     };
 
     return (
@@ -800,25 +909,25 @@ const AlmanacTab = ({ location, userId }) => {
                     <h3 className="text-xl text-white font-bold border-b border-cyan-700 pb-2 flex items-center gap-2"><Calendar size={20}/> HISTORICAL DATA FOR {today.toLocaleDateString([], { month: 'long' }).toUpperCase()}</h3>
 
                     <div className="grid grid-cols-2 gap-4 text-white">
-                        <AlmanacStat title="Record High Today" value={`${mockAlmanac.recordHigh}°F`} icon={Maximize} />
-                        <AlmanacStat title="Record Low Today" value={`${mockAlmanac.recordLow}°F`} icon={Minimize} />
-                        <AlmanacStat title="Avg High (Monthly)" value={`${mockAlmanac.avgHighMonth}°F`} icon={Thermometer} />
-                        <AlmanacStat title="Avg Low (Monthly)" value={`${mockAlmanac.avgLowMonth}°F`} icon={Thermometer} />
-                        <AlmanacStat title="YTD Precipitation" value={`${mockAlmanac.ytdPrecip}"`} icon={Droplets} />
+                        <AlmanacStat title="Record High Today" value={`${displayData.recordHigh}°F`} icon={Maximize} />
+                        <AlmanacStat title="Record Low Today" value={`${displayData.recordLow}°F`} icon={Minimize} />
+                        <AlmanacStat title="Avg High (Monthly)" value={`${displayData.avgHighMonth}°F`} icon={Thermometer} />
+                        <AlmanacStat title="Avg Low (Monthly)" value={`${displayData.avgLowMonth}°F`} icon={Thermometer} />
+                        <AlmanacStat title="YTD Precipitation" value={`${displayData.ytdPrecip}"`} icon={Droplets} />
                         <AlmanacStat title="System Location" value={location.name} icon={MapPin} />
                     </div>
-                    <p className="text-xs text-cyan-400 pt-2">Historical data is simulated for demonstration purposes.</p>
+                    <p className="text-xs text-cyan-400 pt-2">Historical data from Open-Meteo Archive (last 30 years).</p>
                 </div>
 
                 {/* Record Precipitation Box */}
                 <div className="lg:col-span-1 p-4 rounded-lg space-y-3" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
                     <h3 className="text-xl text-white font-bold border-b border-cyan-700 pb-2 flex items-center gap-2"><CloudRainWind size={20}/> RECORD PRECIPITATION</h3>
                     <div className="text-center py-4">
-                        <p className="text-5xl font-bold text-white">{mockAlmanac.recordPrecip}"</p>
+                        <p className="text-5xl font-bold text-white">{displayData.recordPrecip}"</p>
                         <p className="text-lg text-cyan-300 mt-2">Record for this date</p>
-                        <p className="text-sm text-cyan-400">Set in {mockAlmanac.recordPrecipYear}</p>
+                        <p className="text-sm text-cyan-400">Set in {displayData.recordPrecipYear}</p>
                     </div>
-                    <p className="text-xs text-cyan-400 border-t border-cyan-700 pt-2">Maximum precipitation recorded on this calendar day in historical records.</p>
+                    <p className="text-xs text-cyan-400 border-t border-cyan-700 pt-2">Maximum precipitation recorded on this calendar day (last 30 years).</p>
                 </div>
 
                 {/* System Controls */}
