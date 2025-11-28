@@ -1066,154 +1066,167 @@ const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
     const maxProbHour = data.reduce((max, d) => d.probability > max.probability ? d : max, { probability: 0, time: '--' });
     const maxAmountHour = data.reduce((max, d) => d.amount > max.amount ? d : max, { amount: 0, time: '--' });
 
+    // Reusable bar component for both graphs
+    const PrecipBar = ({ value, maxValue, label, time, type }) => {
+        const heightPercent = type === 'chance'
+            ? (value / 100) * 100
+            : (maxValue > 0 ? (value / maxValue) * 100 : 0);
+
+        let barColor;
+        if (type === 'chance') {
+            barColor = 'bg-cyan-800';
+            if (value >= 70) barColor = 'bg-blue-500';
+            else if (value >= 50) barColor = 'bg-cyan-500';
+            else if (value >= 30) barColor = 'bg-cyan-600';
+        } else {
+            barColor = 'bg-green-800';
+            if (value >= 0.5) barColor = 'bg-blue-600';
+            else if (value >= 0.25) barColor = 'bg-blue-500';
+            else if (value >= 0.1) barColor = 'bg-green-500';
+            else if (value > 0) barColor = 'bg-green-600';
+        }
+
+        const glowStyle = type === 'chance'
+            ? (value >= 50 ? '0 0 10px rgba(0, 255, 255, 0.5)' : 'none')
+            : (value >= 0.25 ? '0 0 10px rgba(0, 200, 100, 0.5)' : 'none');
+
+        return (
+            <div className="flex flex-col items-center justify-end h-full min-w-[40px] sm:min-w-0 sm:flex-1">
+                <span className="text-[10px] sm:text-xs text-white mb-1 font-bold whitespace-nowrap">
+                    {label}
+                </span>
+                <div
+                    className={`w-full max-w-[30px] sm:max-w-none ${barColor} rounded-t transition-all duration-300 min-h-[4px]`}
+                    style={{
+                        height: `${Math.max(heightPercent, type === 'amount' && value > 0 ? 5 : 2)}%`,
+                        boxShadow: glowStyle
+                    }}
+                />
+                <span className="text-[10px] sm:text-xs text-cyan-300 mt-1 sm:mt-2 font-vt323">
+                    {time}
+                </span>
+            </div>
+        );
+    };
+
     return (
         <TabPanel title="12-HOUR PRECIPITATION FORECAST">
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
+                {/* Summary Stats - Moved to top for mobile */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                    <div className="p-2 sm:p-3 bg-black/20 rounded-lg border border-cyan-700 text-center">
+                        <p className="text-[10px] sm:text-xs text-cyan-400 mb-1">AVG CHANCE</p>
+                        <p className="text-xl sm:text-2xl font-bold text-white">{avgProb}%</p>
+                    </div>
+                    <div className="p-2 sm:p-3 bg-black/20 rounded-lg border border-cyan-700 text-center">
+                        <p className="text-[10px] sm:text-xs text-cyan-400 mb-1">PEAK CHANCE</p>
+                        <p className="text-xl sm:text-2xl font-bold text-white">{maxProbHour.probability}%</p>
+                        <p className="text-[10px] sm:text-xs text-cyan-300">{maxProbHour.time}</p>
+                    </div>
+                    <div className="p-2 sm:p-3 bg-black/20 rounded-lg border border-cyan-700 text-center">
+                        <p className="text-[10px] sm:text-xs text-cyan-400 mb-1">12HR TOTAL</p>
+                        <p className="text-xl sm:text-2xl font-bold text-white">{totalPrecip.toFixed(2)}"</p>
+                    </div>
+                    <div className="p-2 sm:p-3 bg-black/20 rounded-lg border border-cyan-700 text-center">
+                        <p className="text-[10px] sm:text-xs text-cyan-400 mb-1">PEAK AMOUNT</p>
+                        <p className="text-xl sm:text-2xl font-bold text-white">{maxAmountHour.amount.toFixed(2)}"</p>
+                        <p className="text-[10px] sm:text-xs text-cyan-300">{maxAmountHour.time}</p>
+                    </div>
+                </div>
+
                 {/* Probability Graph */}
                 <div>
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2 text-cyan-300">
-                            <Droplets size={20} />
-                            <span className="text-lg">CHANCE OF PRECIPITATION</span>
-                        </div>
+                    <div className="flex items-center gap-2 text-cyan-300 mb-2">
+                        <Droplets size={18} className="shrink-0" />
+                        <span className="text-sm sm:text-lg">CHANCE OF PRECIPITATION</span>
                     </div>
-                    <div className="bg-black/30 rounded-lg border-2 border-cyan-700 p-4">
-                        <div className="flex items-end justify-between gap-2 h-40">
-                            {data.map((hour, index) => {
-                                const heightPercent = (hour.probability / 100) * 100;
-                                let barColor = 'bg-cyan-800';
-                                if (hour.probability >= 70) barColor = 'bg-blue-500';
-                                else if (hour.probability >= 50) barColor = 'bg-cyan-500';
-                                else if (hour.probability >= 30) barColor = 'bg-cyan-600';
-
-                                return (
-                                    <div key={index} className="flex-1 flex flex-col items-center justify-end h-full">
-                                        <span className="text-xs text-white mb-1 font-bold">
-                                            {hour.probability}%
-                                        </span>
-                                        <div
-                                            className={`w-full ${barColor} rounded-t transition-all duration-300 min-h-[4px]`}
-                                            style={{
-                                                height: `${Math.max(heightPercent, 2)}%`,
-                                                boxShadow: hour.probability >= 50 ? '0 0 10px rgba(0, 255, 255, 0.5)' : 'none'
-                                            }}
-                                        />
-                                        <span className="text-xs text-cyan-300 mt-2 font-vt323">
-                                            {hour.time}
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                    <div className="bg-black/30 rounded-lg border-2 border-cyan-700 p-2 sm:p-4">
+                        <div className="overflow-x-auto pb-2 -mx-2 px-2 sm:overflow-visible sm:mx-0 sm:px-0">
+                            <div className="flex items-end gap-1 sm:gap-2 h-32 sm:h-40 min-w-[480px] sm:min-w-0">
+                                {data.map((hour, index) => (
+                                    <PrecipBar
+                                        key={index}
+                                        value={hour.probability}
+                                        maxValue={100}
+                                        label={`${hour.probability}%`}
+                                        time={hour.time}
+                                        type="chance"
+                                    />
+                                ))}
+                            </div>
                         </div>
+                        <p className="text-[10px] text-cyan-500 mt-2 sm:hidden text-center">← Swipe to see all hours →</p>
                     </div>
                 </div>
 
                 {/* Amount Graph */}
                 <div>
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2 text-cyan-300">
-                            <CloudRain size={20} />
-                            <span className="text-lg">EXPECTED PRECIPITATION (INCHES)</span>
-                        </div>
+                    <div className="flex items-center gap-2 text-cyan-300 mb-2">
+                        <CloudRain size={18} className="shrink-0" />
+                        <span className="text-sm sm:text-lg">EXPECTED AMOUNT (INCHES)</span>
                     </div>
-                    <div className="bg-black/30 rounded-lg border-2 border-cyan-700 p-4">
-                        <div className="flex items-end justify-between gap-2 h-40">
-                            {data.map((hour, index) => {
-                                const heightPercent = maxAmount > 0 ? (hour.amount / maxAmount) * 100 : 0;
-                                // Color based on amount
-                                let barColor = 'bg-green-800';
-                                if (hour.amount >= 0.5) barColor = 'bg-blue-600';
-                                else if (hour.amount >= 0.25) barColor = 'bg-blue-500';
-                                else if (hour.amount >= 0.1) barColor = 'bg-green-500';
-                                else if (hour.amount > 0) barColor = 'bg-green-600';
-
-                                return (
-                                    <div key={index} className="flex-1 flex flex-col items-center justify-end h-full">
-                                        <span className="text-xs text-white mb-1 font-bold">
-                                            {hour.amount > 0 ? hour.amount.toFixed(2) : '0'}
-                                        </span>
-                                        <div
-                                            className={`w-full ${barColor} rounded-t transition-all duration-300 min-h-[4px]`}
-                                            style={{
-                                                height: `${Math.max(heightPercent, hour.amount > 0 ? 5 : 2)}%`,
-                                                boxShadow: hour.amount >= 0.25 ? '0 0 10px rgba(0, 200, 100, 0.5)' : 'none'
-                                            }}
-                                        />
-                                        <span className="text-xs text-cyan-300 mt-2 font-vt323">
-                                            {hour.time}
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                    <div className="bg-black/30 rounded-lg border-2 border-cyan-700 p-2 sm:p-4">
+                        <div className="overflow-x-auto pb-2 -mx-2 px-2 sm:overflow-visible sm:mx-0 sm:px-0">
+                            <div className="flex items-end gap-1 sm:gap-2 h-32 sm:h-40 min-w-[480px] sm:min-w-0">
+                                {data.map((hour, index) => (
+                                    <PrecipBar
+                                        key={index}
+                                        value={hour.amount}
+                                        maxValue={maxAmount}
+                                        label={hour.amount > 0 ? hour.amount.toFixed(2) : '0'}
+                                        time={hour.time}
+                                        type="amount"
+                                    />
+                                ))}
+                            </div>
                         </div>
+                        <p className="text-[10px] text-cyan-500 mt-2 sm:hidden text-center">← Swipe to see all hours →</p>
                     </div>
                 </div>
 
-                {/* Combined Legend */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-black/20 rounded-lg border border-cyan-700 p-3">
-                        <p className="text-xs text-cyan-400 mb-2 font-bold">CHANCE LEGEND</p>
-                        <div className="flex flex-wrap gap-2 text-xs">
+                {/* Combined Legend - More compact on mobile */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+                    <div className="bg-black/20 rounded-lg border border-cyan-700 p-2 sm:p-3">
+                        <p className="text-[10px] sm:text-xs text-cyan-400 mb-1 sm:mb-2 font-bold">CHANCE LEGEND</p>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] sm:text-xs">
                             <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 bg-cyan-800 rounded"></div>
-                                <span className="text-cyan-300">Low</span>
+                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-cyan-800 rounded"></div>
+                                <span className="text-cyan-300">0-29%</span>
                             </div>
                             <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 bg-cyan-600 rounded"></div>
-                                <span className="text-cyan-300">Mod</span>
+                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-cyan-600 rounded"></div>
+                                <span className="text-cyan-300">30-49%</span>
                             </div>
                             <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 bg-cyan-500 rounded"></div>
-                                <span className="text-cyan-300">Likely</span>
+                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-cyan-500 rounded"></div>
+                                <span className="text-cyan-300">50-69%</span>
                             </div>
                             <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                                <span className="text-cyan-300">High</span>
+                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-blue-500 rounded"></div>
+                                <span className="text-cyan-300">70%+</span>
                             </div>
                         </div>
                     </div>
-                    <div className="bg-black/20 rounded-lg border border-cyan-700 p-3">
-                        <p className="text-xs text-cyan-400 mb-2 font-bold">AMOUNT LEGEND</p>
-                        <div className="flex flex-wrap gap-2 text-xs">
+                    <div className="bg-black/20 rounded-lg border border-cyan-700 p-2 sm:p-3">
+                        <p className="text-[10px] sm:text-xs text-cyan-400 mb-1 sm:mb-2 font-bold">AMOUNT LEGEND</p>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] sm:text-xs">
                             <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 bg-green-800 rounded"></div>
+                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-800 rounded"></div>
                                 <span className="text-cyan-300">Trace</span>
                             </div>
                             <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 bg-green-500 rounded"></div>
-                                <span className="text-cyan-300">Light</span>
+                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded"></div>
+                                <span className="text-cyan-300">0.1"+</span>
                             </div>
                             <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                                <span className="text-cyan-300">Mod</span>
+                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-blue-500 rounded"></div>
+                                <span className="text-cyan-300">0.25"+</span>
                             </div>
                             <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 bg-blue-600 rounded"></div>
-                                <span className="text-cyan-300">Heavy</span>
+                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-blue-600 rounded"></div>
+                                <span className="text-cyan-300">0.5"+</span>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                {/* Summary Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 text-center">
-                        <p className="text-xs text-cyan-400 mb-1">AVG CHANCE</p>
-                        <p className="text-2xl font-bold text-white">{avgProb}%</p>
-                    </div>
-                    <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 text-center">
-                        <p className="text-xs text-cyan-400 mb-1">PEAK CHANCE</p>
-                        <p className="text-2xl font-bold text-white">{maxProbHour.probability}%</p>
-                        <p className="text-xs text-cyan-300">{maxProbHour.time}</p>
-                    </div>
-                    <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 text-center">
-                        <p className="text-xs text-cyan-400 mb-1">12HR TOTAL</p>
-                        <p className="text-2xl font-bold text-white">{totalPrecip.toFixed(2)}"</p>
-                    </div>
-                    <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 text-center">
-                        <p className="text-xs text-cyan-400 mb-1">PEAK AMOUNT</p>
-                        <p className="text-2xl font-bold text-white">{maxAmountHour.amount.toFixed(2)}"</p>
-                        <p className="text-xs text-cyan-300">{maxAmountHour.time}</p>
                     </div>
                 </div>
             </div>
