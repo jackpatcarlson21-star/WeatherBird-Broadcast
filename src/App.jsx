@@ -818,37 +818,19 @@ const DailyOutlookTab = ({ daily, isWeatherLoading }) => {
 const RadarTab = ({ location }) => (
     <TabPanel title="DOPPLER RADAR">
         <div className="text-center space-y-4">
-            <h3 className="text-2xl text-cyan-300">NWS RIDGE2 RADAR</h3>
+            <h3 className="text-2xl text-cyan-300">INTERACTIVE RADAR</h3>
             <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden" style={{ height: '500px' }}>
                 <iframe
-                    src={`https://radar.weather.gov/ridge/lite/N0R/${location.lat}/${location.lon}/?settings=v1_2_2_1_1_1_1_0_0`}
+                    src={`https://embed.windy.com/embed2.html?lat=${location.lat}&lon=${location.lon}&detailLat=${location.lat}&detailLon=${location.lon}&width=650&height=500&zoom=7&level=surface&overlay=radar&product=radar&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=mph&metricTemp=%C2%B0F&radarRange=-1`}
                     width="100%"
                     height="100%"
                     frameBorder="0"
                     style={{ border: 0 }}
                     allowFullScreen
-                    title="NWS Weather Radar"
+                    title="Windy Weather Radar"
                 />
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-cyan-300 mt-2">
-                <div className="flex items-center justify-center gap-1">
-                    <div className="w-4 h-3 rounded" style={{ backgroundColor: '#00ff00' }}></div>
-                    <span>Light</span>
-                </div>
-                <div className="flex items-center justify-center gap-1">
-                    <div className="w-4 h-3 rounded" style={{ backgroundColor: '#ffff00' }}></div>
-                    <span>Moderate</span>
-                </div>
-                <div className="flex items-center justify-center gap-1">
-                    <div className="w-4 h-3 rounded" style={{ backgroundColor: '#ff0000' }}></div>
-                    <span>Heavy</span>
-                </div>
-                <div className="flex items-center justify-center gap-1">
-                    <div className="w-4 h-3 rounded" style={{ backgroundColor: '#ff00ff' }}></div>
-                    <span>Extreme</span>
-                </div>
-            </div>
-            <p className="text-xs text-cyan-400">Source: National Weather Service RIDGE2 Radar</p>
+            <p className="text-xs text-cyan-400">Source: Windy.com - Interactive radar with animation controls</p>
         </div>
     </TabPanel>
 );
