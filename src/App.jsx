@@ -960,16 +960,22 @@ const HourlyForecastTab = ({ hourly, night, isWeatherLoading }) => {
 const DailyOutlookTab = ({ daily, isWeatherLoading }) => {
     if (isWeatherLoading) return <LoadingIndicator />;
 
-    // With 8 forecast days, slice(1, 8) gives indices 1 through 7 (7 days total)
-    const data = daily?.time ? daily.time.slice(1, 8).map((time, i) => ({
-        day: new Date(time).toLocaleDateString([], { weekday: 'short' }),
-        date: formatDate(time),
-        max: Math.round(daily.temperature_2m_max[i + 1]),
-        min: Math.round(daily.temperature_2m_min[i + 1]),
-        pop: Math.round(daily.precipitation_probability_max[i + 1]),
-        wind: Math.round(daily.wind_speed_10m_max[i + 1]),
-        code: daily.weather_code[i + 1],
-    })) : [];
+    // Build 7-day forecast starting from tomorrow (index 1)
+    // We loop through indices 1-7 of the original arrays
+    const data = daily?.time ? Array.from({ length: 7 }, (_, i) => {
+        const idx = i + 1; // Start from index 1 (tomorrow)
+        const time = daily.time[idx];
+        if (!time) return null;
+        return {
+            day: new Date(time).toLocaleDateString([], { weekday: 'short' }),
+            date: formatDate(time),
+            max: Math.round(daily.temperature_2m_max[idx] ?? 0),
+            min: Math.round(daily.temperature_2m_min[idx] ?? 0),
+            pop: Math.round(daily.precipitation_probability_max[idx] ?? 0),
+            wind: Math.round(daily.wind_speed_10m_max[idx] ?? 0),
+            code: daily.weather_code[idx] ?? 0,
+        };
+    }).filter(Boolean) : [];
 
     return (
         <TabPanel title="NEXT 7-DAY OUTLOOK">
