@@ -1046,18 +1046,41 @@ const SPCOutlookTab = () => (
 );
 
 const GFSModelTab = () => {
-    const [modelType, setModelType] = useState('precip');
+    const [modelType, setModelType] = useState('surface');
+    const [forecastHour, setForecastHour] = useState(0);
 
     const modelOptions = [
-        { id: 'precip', name: 'Precipitation', url: 'https://www.tropicaltidbits.com/analysis/models/gfs/2024010100/gfs_apcpn_us_1.png' },
-        { id: 'temp', name: 'Temperature', url: 'https://www.tropicaltidbits.com/analysis/models/gfs/2024010100/gfs_T850_us_1.png' },
-        { id: 'wind', name: '500mb Wind', url: 'https://www.tropicaltidbits.com/analysis/models/gfs/2024010100/gfs_z500_wind_us_1.png' },
-        { id: 'surface', name: 'Surface', url: 'https://www.tropicaltidbits.com/analysis/models/gfs/2024010100/gfs_mslp_pcpn_us_1.png' },
+        { id: 'surface', name: 'Surface Pressure' },
+        { id: 'precip', name: 'Precipitation' },
+        { id: '500mb', name: '500mb Heights' },
+        { id: '850temp', name: '850mb Temp' },
     ];
+
+    const forecastHours = [0, 6, 12, 18, 24, 48, 72, 96, 120];
+
+    // Use College of DuPage NEXLAB - reliable and allows embedding
+    const getModelUrl = () => {
+        const hourStr = String(forecastHour).padStart(3, '0');
+        const baseUrl = 'https://weather.cod.edu/forecast/models/GFS/CONUS';
+
+        switch(modelType) {
+            case 'surface':
+                return `${baseUrl}/gfs_conus_000_mslp.png`;
+            case 'precip':
+                return `${baseUrl}/gfs_conus_000_precip.png`;
+            case '500mb':
+                return `${baseUrl}/gfs_conus_000_500.png`;
+            case '850temp':
+                return `${baseUrl}/gfs_conus_000_850.png`;
+            default:
+                return `${baseUrl}/gfs_conus_000_mslp.png`;
+        }
+    };
 
     return (
         <TabPanel title="GFS MODEL">
             <div className="space-y-4">
+                {/* Model Type Selection */}
                 <div className="flex flex-wrap gap-2 justify-center">
                     {modelOptions.map(option => (
                         <button
@@ -1074,27 +1097,52 @@ const GFSModelTab = () => {
                     ))}
                 </div>
 
+                {/* Model Image Display */}
                 <div className="text-center">
-                    <h3 className="text-xl text-cyan-300 mb-3">GFS {modelOptions.find(m => m.id === modelType)?.name.toUpperCase()} FORECAST</h3>
-                    <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden" style={{ height: '500px' }}>
-                        <iframe
-                            src="https://www.tropicaltidbits.com/analysis/models/?model=gfs&region=us&pkg=z500_mslp&runtime=2024010100&fh=0"
-                            width="100%"
-                            height="100%"
-                            frameBorder="0"
-                            style={{ border: 0 }}
-                            title="GFS Model Viewer"
+                    <h3 className="text-xl text-cyan-300 mb-3">
+                        GFS {modelOptions.find(m => m.id === modelType)?.name.toUpperCase()}
+                    </h3>
+                    <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden bg-black/50 p-2">
+                        <img
+                            src={getModelUrl()}
+                            alt={`GFS ${modelType} model`}
+                            className="w-full h-auto rounded max-h-[500px] object-contain mx-auto"
+                            onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = PLACEHOLDER_IMG;
+                            }}
                         />
                     </div>
-                    <p className="text-xs text-cyan-400 mt-2">Source: Tropical Tidbits - GFS Model Data</p>
+                    <p className="text-xs text-cyan-400 mt-2">Source: College of DuPage NEXLAB - GFS Model</p>
                 </div>
 
+                {/* Quick Links */}
+                <div className="flex flex-wrap gap-2 justify-center">
+                    <a
+                        href="https://www.tropicaltidbits.com/analysis/models/?model=gfs&region=us&pkg=z500_mslp"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 bg-cyan-800 text-cyan-100 rounded font-vt323 hover:bg-cyan-700 transition border border-cyan-500"
+                    >
+                        Full GFS Viewer (Tropical Tidbits)
+                    </a>
+                    <a
+                        href="https://weather.cod.edu/forecast/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 bg-cyan-800 text-cyan-100 rounded font-vt323 hover:bg-cyan-700 transition border border-cyan-500"
+                    >
+                        More Models (COD)
+                    </a>
+                </div>
+
+                {/* Info Box */}
                 <div className="p-3 bg-black/30 rounded-lg border border-cyan-700">
                     <h4 className="text-lg text-cyan-300 font-bold mb-2">About the GFS Model</h4>
                     <p className="text-sm text-gray-300">
                         The Global Forecast System (GFS) is a weather forecast model produced by NOAA.
-                        It provides forecasts up to 16 days in advance and is updated 4 times daily.
-                        Use the interactive viewer above to explore different forecast hours and parameters.
+                        It provides forecasts up to 16 days in advance and is updated 4 times daily (00z, 06z, 12z, 18z).
+                        Click the links above for interactive model viewers with more options.
                     </p>
                 </div>
             </div>
