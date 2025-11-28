@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, Thermometer, Wind, Droplets, ArrowRight, Sun, CloudRain, MapPin, X, Volume2, VolumeX, Volume1, Menu, Clock, Calendar, Radio, AlertTriangle, Settings, Zap, Home, ChevronRight, Sunrise, Sunset, Maximize, Minimize, ShieldAlert, Map as MapIcon, CloudRainWind } from 'lucide-react';
+import { Play, Pause, Thermometer, Wind, Droplets, ArrowRight, Sun, CloudRain, MapPin, X, Volume2, VolumeX, Volume1, Menu, Clock, Calendar, Radio, AlertTriangle, Settings, Zap, Home, ChevronRight, Sunrise, Sunset, Maximize, Minimize, ShieldAlert, Map as MapIcon, CloudRainWind, Moon } from 'lucide-react';
 
 // --- Firebase ---
 import { initializeApp } from 'firebase/app';
@@ -83,6 +83,56 @@ const getWeatherDescription = (code) => {
 
 const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : "--:--";
 const formatDate = (iso) => iso ? new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' }) : "--/--";
+
+// Moon phase calculation
+const getMoonPhase = (date = new Date()) => {
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+
+    // Calculate days since known new moon (Jan 6, 2000)
+    const lp = 2551443; // Lunar period in seconds
+    const newMoon = new Date(2000, 0, 6, 18, 14, 0);
+    const phase = ((date.getTime() - newMoon.getTime()) / 1000) % lp;
+    const phaseDay = Math.floor(phase / (24 * 3600));
+
+    // Moon cycle is ~29.53 days
+    const phasePct = phaseDay / 29.53;
+
+    let phaseName, icon;
+    if (phasePct < 0.0625) {
+        phaseName = "New Moon";
+        icon = "🌑";
+    } else if (phasePct < 0.1875) {
+        phaseName = "Waxing Crescent";
+        icon = "🌒";
+    } else if (phasePct < 0.3125) {
+        phaseName = "First Quarter";
+        icon = "🌓";
+    } else if (phasePct < 0.4375) {
+        phaseName = "Waxing Gibbous";
+        icon = "🌔";
+    } else if (phasePct < 0.5625) {
+        phaseName = "Full Moon";
+        icon = "🌕";
+    } else if (phasePct < 0.6875) {
+        phaseName = "Waning Gibbous";
+        icon = "🌖";
+    } else if (phasePct < 0.8125) {
+        phaseName = "Last Quarter";
+        icon = "🌗";
+    } else if (phasePct < 0.9375) {
+        phaseName = "Waning Crescent";
+        icon = "🌘";
+    } else {
+        phaseName = "New Moon";
+        icon = "🌑";
+    }
+
+    const illumination = Math.round(Math.abs(Math.cos(phasePct * 2 * Math.PI)) * 100);
+
+    return { phaseName, icon, illumination, phaseDay };
+};
 
 // --- Components ---
 
@@ -1012,8 +1062,24 @@ const AlmanacTab = ({ location, userId }) => {
                     <p className="text-xs text-cyan-400 border-t border-cyan-700 pt-2">Maximum precipitation recorded on this calendar day (last 30 years).</p>
                 </div>
 
+                {/* Moon Phase Box */}
+                {(() => {
+                    const moonData = getMoonPhase(today);
+                    return (
+                        <div className="lg:col-span-1 p-4 rounded-lg space-y-3" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
+                            <h3 className="text-xl text-white font-bold border-b border-cyan-700 pb-2 flex items-center gap-2"><Moon size={20}/> MOON PHASE</h3>
+                            <div className="text-center py-2">
+                                <p className="text-7xl mb-2">{moonData.icon}</p>
+                                <p className="text-2xl font-bold text-white">{moonData.phaseName}</p>
+                                <p className="text-lg text-cyan-300 mt-1">{moonData.illumination}% Illuminated</p>
+                                <p className="text-sm text-cyan-400">Day {moonData.phaseDay} of cycle</p>
+                            </div>
+                        </div>
+                    );
+                })()}
+
                 {/* System Controls */}
-                <div className="lg:col-span-3 p-4 rounded-lg space-y-4" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
+                <div className="lg:col-span-2 p-4 rounded-lg space-y-4" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
                     <h3 className="text-xl text-white font-bold border-b border-cyan-700 pb-2 flex items-center gap-2"><Menu size={20}/> AUTH STATUS</h3>
                     <p className="text-sm text-cyan-300 font-vt323 break-all">User ID: <span className="text-white">{userId || 'Loading...'}</span></p>
                     <p className="text-xs text-cyan-400 mt-1">Data is saved persistently to your personal storage.</p>
