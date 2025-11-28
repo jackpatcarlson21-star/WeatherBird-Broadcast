@@ -20,11 +20,11 @@ const SCREENS = {
     CONDITIONS: 'CONDITIONS',
     HOURLY: 'HOURLY',
     DAILY: 'DAILY',
+    PRECIP: 'PRECIP',
     RADAR: 'RADAR',
     ALERTS: 'ALERTS',
     WWA: 'WWA',
     SPC: 'SPC',
-    GFS: 'GFS',
     ALMANAC: 'ALMANAC',
 };
 
@@ -261,11 +261,11 @@ const TabNavigation = ({ currentTab, setTab }) => {
         { id: SCREENS.CONDITIONS, name: 'CURRENT' },
         { id: SCREENS.HOURLY, name: '12HR' },
         { id: SCREENS.DAILY, name: '7-DAY' },
+        { id: SCREENS.PRECIP, name: 'PRECIP' },
         { id: SCREENS.ALERTS, name: 'ALERTS' },
         { id: SCREENS.RADAR, name: 'RADAR' },
         { id: SCREENS.WWA, name: 'WWA MAP' },
         { id: SCREENS.SPC, name: 'SPC' },
-        { id: SCREENS.GFS, name: 'GFS MODEL' },
         { id: SCREENS.ALMANAC, name: 'ALMANAC' },
     ];
 
@@ -1045,94 +1045,118 @@ const SPCOutlookTab = () => (
     </TabPanel>
 );
 
-const GFSModelTab = () => {
-    const [modelType, setModelType] = useState('surface');
+const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
+    if (isWeatherLoading) return <LoadingIndicator />;
 
-    const modelOptions = [
-        { id: 'surface', name: 'Surface Analysis', url: 'https://www.wpc.ncep.noaa.gov/sfc/namussfcwbg.gif' },
-        { id: 'precip', name: '24hr Precip', url: 'https://www.wpc.ncep.noaa.gov/qpf/fill_94qwbg.gif' },
-        { id: 'day2', name: 'Day 2 Outlook', url: 'https://www.wpc.ncep.noaa.gov/qpf/fill_98qwbg.gif' },
-        { id: 'day3', name: 'Day 3 Outlook', url: 'https://www.wpc.ncep.noaa.gov/qpf/fill_99qwbg.gif' },
-    ];
+    // Get next 12 hours of precipitation data
+    const data = hourly?.time ? hourly.time.slice(0, 12).map((time, i) => ({
+        time: new Date(time).toLocaleTimeString([], { hour: 'numeric' }),
+        probability: Math.round(hourly.precipitation_probability?.[i] || 0),
+    })) : [];
 
-    const currentModel = modelOptions.find(m => m.id === modelType);
+    // Find the max probability for scaling
+    const maxProb = Math.max(...data.map(d => d.probability), 10);
 
     return (
-        <TabPanel title="GFS MODEL">
-            <div className="space-y-4">
-                {/* Model Type Selection */}
-                <div className="flex flex-wrap gap-2 justify-center">
-                    {modelOptions.map(option => (
-                        <button
-                            key={option.id}
-                            onClick={() => setModelType(option.id)}
-                            className={`px-4 py-2 rounded font-vt323 text-lg transition ${
-                                modelType === option.id
-                                    ? 'bg-cyan-600 text-white border-2 border-white'
-                                    : 'bg-black/30 text-cyan-300 border-2 border-cyan-700 hover:border-cyan-500'
-                            }`}
-                        >
-                            {option.name}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Model Image Display */}
-                <div className="text-center">
-                    <h3 className="text-xl text-cyan-300 mb-3">
-                        {currentModel?.name.toUpperCase()}
-                    </h3>
-                    <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden bg-white p-2">
-                        <img
-                            src={currentModel?.url}
-                            alt={`GFS ${modelType} model`}
-                            className="w-full h-auto rounded max-h-[500px] object-contain mx-auto"
-                            onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = PLACEHOLDER_IMG;
-                            }}
-                        />
+        <TabPanel title="12-HOUR PRECIPITATION FORECAST">
+            <div className="space-y-6">
+                {/* Header Info */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-cyan-300">
+                        <CloudRain size={24} />
+                        <span className="text-xl">PRECIPITATION PROBABILITY</span>
                     </div>
-                    <p className="text-xs text-cyan-400 mt-2">Source: NOAA Weather Prediction Center</p>
+                    <div className="text-sm text-cyan-400">
+                        Next 12 Hours
+                    </div>
                 </div>
 
-                {/* Quick Links */}
-                <div className="flex flex-wrap gap-2 justify-center">
-                    <a
-                        href="https://www.tropicaltidbits.com/analysis/models/?model=gfs&region=us&pkg=z500_mslp"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 bg-cyan-800 text-cyan-100 rounded font-vt323 hover:bg-cyan-700 transition border border-cyan-500"
-                    >
-                        Interactive GFS (Tropical Tidbits)
-                    </a>
-                    <a
-                        href="https://www.wpc.ncep.noaa.gov/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 bg-cyan-800 text-cyan-100 rounded font-vt323 hover:bg-cyan-700 transition border border-cyan-500"
-                    >
-                        Weather Prediction Center
-                    </a>
-                    <a
-                        href="https://mag.ncep.noaa.gov/model-guidance-model-area.php"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 bg-cyan-800 text-cyan-100 rounded font-vt323 hover:bg-cyan-700 transition border border-cyan-500"
-                    >
-                        NCEP Model Guidance
-                    </a>
+                {/* Bar Graph */}
+                <div className="bg-black/30 rounded-lg border-2 border-cyan-700 p-4">
+                    <div className="flex items-end justify-between gap-2 h-64">
+                        {data.map((hour, index) => {
+                            const heightPercent = (hour.probability / 100) * 100;
+                            // Color based on probability
+                            let barColor = 'bg-cyan-600';
+                            if (hour.probability >= 70) barColor = 'bg-blue-500';
+                            else if (hour.probability >= 50) barColor = 'bg-cyan-500';
+                            else if (hour.probability >= 30) barColor = 'bg-cyan-600';
+                            else barColor = 'bg-cyan-800';
+
+                            return (
+                                <div key={index} className="flex-1 flex flex-col items-center justify-end h-full">
+                                    {/* Percentage label above bar */}
+                                    <span className="text-xs text-white mb-1 font-bold">
+                                        {hour.probability}%
+                                    </span>
+                                    {/* Bar */}
+                                    <div
+                                        className={`w-full ${barColor} rounded-t transition-all duration-300 min-h-[4px]`}
+                                        style={{
+                                            height: `${Math.max(heightPercent, 2)}%`,
+                                            boxShadow: hour.probability >= 50 ? '0 0 10px rgba(0, 255, 255, 0.5)' : 'none'
+                                        }}
+                                    />
+                                    {/* Time label */}
+                                    <span className="text-xs text-cyan-300 mt-2 font-vt323">
+                                        {hour.time}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Y-axis labels */}
+                    <div className="flex justify-between mt-4 pt-2 border-t border-cyan-800">
+                        <span className="text-xs text-cyan-400">0%</span>
+                        <span className="text-xs text-cyan-400">25%</span>
+                        <span className="text-xs text-cyan-400">50%</span>
+                        <span className="text-xs text-cyan-400">75%</span>
+                        <span className="text-xs text-cyan-400">100%</span>
+                    </div>
                 </div>
 
-                {/* Info Box */}
-                <div className="p-3 bg-black/30 rounded-lg border border-cyan-700">
-                    <h4 className="text-lg text-cyan-300 font-bold mb-2">About the GFS Model</h4>
-                    <p className="text-sm text-gray-300">
-                        The Global Forecast System (GFS) is a weather forecast model produced by NOAA.
-                        It provides forecasts up to 16 days in advance and is updated 4 times daily (00z, 06z, 12z, 18z).
-                        Click the links above for full interactive model viewers with more parameters and forecast hours.
-                    </p>
+                {/* Legend */}
+                <div className="flex flex-wrap gap-4 justify-center text-sm">
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-cyan-800 rounded"></div>
+                        <span className="text-cyan-300">0-29% (Low)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-cyan-600 rounded"></div>
+                        <span className="text-cyan-300">30-49% (Moderate)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-cyan-500 rounded"></div>
+                        <span className="text-cyan-300">50-69% (Likely)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                        <span className="text-cyan-300">70%+ (Very Likely)</span>
+                    </div>
                 </div>
+
+                {/* Summary */}
+                {(() => {
+                    const avgProb = data.length > 0
+                        ? Math.round(data.reduce((sum, d) => sum + d.probability, 0) / data.length)
+                        : 0;
+                    const maxHour = data.reduce((max, d) => d.probability > max.probability ? d : max, { probability: 0, time: '--' });
+
+                    return (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-4 bg-black/20 rounded-lg border border-cyan-700 text-center">
+                                <p className="text-sm text-cyan-400 mb-1">AVERAGE CHANCE</p>
+                                <p className="text-3xl font-bold text-white">{avgProb}%</p>
+                            </div>
+                            <div className="p-4 bg-black/20 rounded-lg border border-cyan-700 text-center">
+                                <p className="text-sm text-cyan-400 mb-1">PEAK CHANCE</p>
+                                <p className="text-3xl font-bold text-white">{maxHour.probability}%</p>
+                                <p className="text-xs text-cyan-300">at {maxHour.time}</p>
+                            </div>
+                        </div>
+                    );
+                })()}
             </div>
         </TabPanel>
     );
@@ -1590,8 +1614,8 @@ const App = () => {
         return <WWADisplayTab />;
       case SCREENS.SPC:
         return <SPCOutlookTab />;
-      case SCREENS.GFS:
-        return <GFSModelTab />;
+      case SCREENS.PRECIP:
+        return <PrecipGraphTab hourly={hourly} isWeatherLoading={isWeatherLoading} />;
       case SCREENS.ALMANAC:
         return <AlmanacTab location={location} userId={userId} />;
       default:
