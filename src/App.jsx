@@ -24,6 +24,7 @@ const SCREENS = {
     ALERTS: 'ALERTS',
     WWA: 'WWA',
     SPC: 'SPC',
+    GFS: 'GFS',
     ALMANAC: 'ALMANAC',
 };
 
@@ -264,6 +265,7 @@ const TabNavigation = ({ currentTab, setTab }) => {
         { id: SCREENS.RADAR, name: 'RADAR' },
         { id: SCREENS.WWA, name: 'WWA MAP' },
         { id: SCREENS.SPC, name: 'SPC' },
+        { id: SCREENS.GFS, name: 'GFS MODEL' },
         { id: SCREENS.ALMANAC, name: 'ALMANAC' },
     ];
 
@@ -1043,6 +1045,63 @@ const SPCOutlookTab = () => (
     </TabPanel>
 );
 
+const GFSModelTab = () => {
+    const [modelType, setModelType] = useState('precip');
+
+    const modelOptions = [
+        { id: 'precip', name: 'Precipitation', url: 'https://www.tropicaltidbits.com/analysis/models/gfs/2024010100/gfs_apcpn_us_1.png' },
+        { id: 'temp', name: 'Temperature', url: 'https://www.tropicaltidbits.com/analysis/models/gfs/2024010100/gfs_T850_us_1.png' },
+        { id: 'wind', name: '500mb Wind', url: 'https://www.tropicaltidbits.com/analysis/models/gfs/2024010100/gfs_z500_wind_us_1.png' },
+        { id: 'surface', name: 'Surface', url: 'https://www.tropicaltidbits.com/analysis/models/gfs/2024010100/gfs_mslp_pcpn_us_1.png' },
+    ];
+
+    return (
+        <TabPanel title="GFS MODEL">
+            <div className="space-y-4">
+                <div className="flex flex-wrap gap-2 justify-center">
+                    {modelOptions.map(option => (
+                        <button
+                            key={option.id}
+                            onClick={() => setModelType(option.id)}
+                            className={`px-4 py-2 rounded font-vt323 text-lg transition ${
+                                modelType === option.id
+                                    ? 'bg-cyan-600 text-white border-2 border-white'
+                                    : 'bg-black/30 text-cyan-300 border-2 border-cyan-700 hover:border-cyan-500'
+                            }`}
+                        >
+                            {option.name}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="text-center">
+                    <h3 className="text-xl text-cyan-300 mb-3">GFS {modelOptions.find(m => m.id === modelType)?.name.toUpperCase()} FORECAST</h3>
+                    <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden" style={{ height: '500px' }}>
+                        <iframe
+                            src="https://www.tropicaltidbits.com/analysis/models/?model=gfs&region=us&pkg=z500_mslp&runtime=2024010100&fh=0"
+                            width="100%"
+                            height="100%"
+                            frameBorder="0"
+                            style={{ border: 0 }}
+                            title="GFS Model Viewer"
+                        />
+                    </div>
+                    <p className="text-xs text-cyan-400 mt-2">Source: Tropical Tidbits - GFS Model Data</p>
+                </div>
+
+                <div className="p-3 bg-black/30 rounded-lg border border-cyan-700">
+                    <h4 className="text-lg text-cyan-300 font-bold mb-2">About the GFS Model</h4>
+                    <p className="text-sm text-gray-300">
+                        The Global Forecast System (GFS) is a weather forecast model produced by NOAA.
+                        It provides forecasts up to 16 days in advance and is updated 4 times daily.
+                        Use the interactive viewer above to explore different forecast hours and parameters.
+                    </p>
+                </div>
+            </div>
+        </TabPanel>
+    );
+};
+
 const AlmanacTab = ({ location, userId }) => {
     const today = new Date();
     const [almanacData, setAlmanacData] = useState(null);
@@ -1495,6 +1554,8 @@ const App = () => {
         return <WWADisplayTab />;
       case SCREENS.SPC:
         return <SPCOutlookTab />;
+      case SCREENS.GFS:
+        return <GFSModelTab />;
       case SCREENS.ALMANAC:
         return <AlmanacTab location={location} userId={userId} />;
       default:
