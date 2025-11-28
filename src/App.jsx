@@ -615,44 +615,183 @@ const WWADisplayTab = () => (
                 </div>
             </div>
 
-            {/* Common Hazards Key */}
-            <div className="mt-6 p-4 bg-black/20 border-2 border-cyan-700 rounded-lg">
-                <h4 className="text-xl text-white font-bold mb-3 border-b border-cyan-800 pb-1">COMMON HAZARDS KEY</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-left">
-                    <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-[#FF0000] border border-white"></div>
-                        <span className="text-sm text-cyan-100 font-vt323">Tornado Warning</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-[#FFA500] border border-white"></div>
-                        <span className="text-sm text-cyan-100 font-vt323">Severe T-Storm</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-[#00FF00] border border-white"></div>
-                        <span className="text-sm text-cyan-100 font-vt323">Flood Warning</span>
-                    </div>
-                     <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-[#8B0000] border border-white"></div>
-                        <span className="text-sm text-cyan-100 font-vt323">Flash Flood</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-[#FF69B4] border border-white"></div>
-                        <span className="text-sm text-cyan-100 font-vt323">Winter Storm</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-[#DA70D6] border border-white"></div>
-                        <span className="text-sm text-cyan-100 font-vt323">Winter Weather Adv</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-[#FF1493] border border-white"></div>
-                        <span className="text-sm text-cyan-100 font-vt323">Red Flag Warning</span>
-                    </div>
-                     <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-[#D2B48C] border border-white"></div>
-                        <span className="text-sm text-cyan-100 font-vt323">Wind Advisory</span>
+            {/* Comprehensive Hazards Key */}
+            <div className="mt-6 p-3 sm:p-4 bg-black/20 border-2 border-cyan-700 rounded-lg">
+                <h4 className="text-lg sm:text-xl text-white font-bold mb-3 border-b border-cyan-800 pb-1">HAZARDS KEY</h4>
+
+                {/* Warnings - Most Severe */}
+                <div className="mb-4">
+                    <h5 className="text-sm text-red-400 font-bold mb-2">WARNINGS (Immediate Action)</h5>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-left">
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#FF0000] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Tornado</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#FFA500] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Severe T-Storm</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#8B0000] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Flash Flood</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#00FF00] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Flood</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#FF69B4] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Winter Storm</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#FF4500] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Ice Storm</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#CD5C5C] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Blizzard</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#FF1493] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Red Flag</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#7CFC00] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Coastal Flood</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#228B22] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">River Flood</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#8B4513] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">High Wind</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#4169E1] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Lake Effect Snow</span>
+                        </div>
                     </div>
                 </div>
-                <p className="text-xs text-gray-400 mt-3 italic">Note: NWS uses many colors. Refer to weather.gov for full legend.</p>
+
+                {/* Watches */}
+                <div className="mb-4">
+                    <h5 className="text-sm text-yellow-400 font-bold mb-2">WATCHES (Be Prepared)</h5>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-left">
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#FFFF00] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Tornado</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#DB7093] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Severe T-Storm</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#2E8B57] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Flash Flood</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#2E8B57] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Flood</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#4682B4] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Winter Storm</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#B8860B] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">High Wind</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#FFE4B5] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Fire Weather</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#48D1CC] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Freeze</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Advisories */}
+                <div className="mb-4">
+                    <h5 className="text-sm text-cyan-400 font-bold mb-2">ADVISORIES (Be Aware)</h5>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-left">
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#D2B48C] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Wind</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#7B68EE] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Winter Weather</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#6495ED] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Lake Wind</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#00CED1] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Frost</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#008080] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Coastal Flood</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#AFEEEE] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Wind Chill</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#F0E68C] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Dense Fog</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#FF7F50] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Heat</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#808080] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Air Quality</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#BDB76B] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Dust</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#EE82EE] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Freezing Rain</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#C71585] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Extreme Cold</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Special */}
+                <div>
+                    <h5 className="text-sm text-purple-400 font-bold mb-2">SPECIAL STATEMENTS</h5>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-left">
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#FFE4C4] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Special Weather</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#C0C0C0] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Marine Weather</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#FF8C00] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Excessive Heat</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#40E0D0] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Rip Current</span>
+                        </div>
+                    </div>
+                </div>
+
+                <p className="text-xs text-gray-400 mt-3 italic text-center">Colors match official NWS hazard map. Visit weather.gov for complete details.</p>
             </div>
         </div>
     </TabPanel>
