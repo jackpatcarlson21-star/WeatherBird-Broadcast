@@ -65,18 +65,28 @@ const degreeToCardinal = (deg) => {
 const getWeatherIcon = (code, night) => {
   if (code === 0) return night ? "🌙" : "☀️";
   if (code <= 3) return night ? "☁️" : "⛅";
-  if (code <= 48) return "🌫️";
-  if (code <= 67) return "🌧️";
-  if (code <= 82) return "⛈️";
-  if (code >= 95) return "⚡";
+  if (code <= 48) return "🌫️"; // Fog
+  if (code <= 57) return "🌧️"; // Drizzle
+  if (code <= 67) return "🌧️"; // Rain
+  if (code <= 77) return "❄️"; // Snow (71-77)
+  if (code <= 82) return "🌧️"; // Rain showers
+  if (code <= 86) return "🌨️"; // Snow showers (85-86)
+  if (code >= 95) return "⛈️"; // Thunderstorm
   return "❓";
 };
 
 const getWeatherDescription = (code) => {
   const map = {
     0: "CLEAR SKY", 1: "MAINLY CLEAR", 2: "PARTLY CLOUDY", 3: "OVERCAST",
-    45: "FOG", 61: "LIGHT RAIN", 63: "RAIN", 65: "HEAVY RAIN", 71: "LIGHT SNOW", 73: "SNOW", 77: "SNOW GRAINS",
-    80: "RAIN SHOWERS", 82: "VIOLENT SHOWERS", 95: "THUNDERSTORM"
+    45: "FOG", 48: "FREEZING FOG",
+    51: "LIGHT DRIZZLE", 53: "DRIZZLE", 55: "HEAVY DRIZZLE",
+    56: "FREEZING DRIZZLE", 57: "HEAVY FREEZING DRIZZLE",
+    61: "LIGHT RAIN", 63: "RAIN", 65: "HEAVY RAIN",
+    66: "FREEZING RAIN", 67: "HEAVY FREEZING RAIN",
+    71: "LIGHT SNOW", 73: "SNOW", 75: "HEAVY SNOW", 77: "SNOW GRAINS",
+    80: "RAIN SHOWERS", 81: "MODERATE SHOWERS", 82: "VIOLENT SHOWERS",
+    85: "LIGHT SNOW SHOWERS", 86: "HEAVY SNOW SHOWERS",
+    95: "THUNDERSTORM", 96: "THUNDERSTORM W/ HAIL", 99: "SEVERE THUNDERSTORM"
   };
   return map[code] || "UNKNOWN";
 };
