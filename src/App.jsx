@@ -1047,35 +1047,15 @@ const SPCOutlookTab = () => (
 
 const GFSModelTab = () => {
     const [modelType, setModelType] = useState('surface');
-    const [forecastHour, setForecastHour] = useState(0);
 
     const modelOptions = [
-        { id: 'surface', name: 'Surface Pressure' },
-        { id: 'precip', name: 'Precipitation' },
-        { id: '500mb', name: '500mb Heights' },
-        { id: '850temp', name: '850mb Temp' },
+        { id: 'surface', name: 'Surface Analysis', url: 'https://www.wpc.ncep.noaa.gov/sfc/namussfcwbg.gif' },
+        { id: 'precip', name: '24hr Precip', url: 'https://www.wpc.ncep.noaa.gov/qpf/fill_94qwbg.gif' },
+        { id: 'day2', name: 'Day 2 Outlook', url: 'https://www.wpc.ncep.noaa.gov/qpf/fill_98qwbg.gif' },
+        { id: 'day3', name: 'Day 3 Outlook', url: 'https://www.wpc.ncep.noaa.gov/qpf/fill_99qwbg.gif' },
     ];
 
-    const forecastHours = [0, 6, 12, 18, 24, 48, 72, 96, 120];
-
-    // Use College of DuPage NEXLAB - reliable and allows embedding
-    const getModelUrl = () => {
-        const hourStr = String(forecastHour).padStart(3, '0');
-        const baseUrl = 'https://weather.cod.edu/forecast/models/GFS/CONUS';
-
-        switch(modelType) {
-            case 'surface':
-                return `${baseUrl}/gfs_conus_000_mslp.png`;
-            case 'precip':
-                return `${baseUrl}/gfs_conus_000_precip.png`;
-            case '500mb':
-                return `${baseUrl}/gfs_conus_000_500.png`;
-            case '850temp':
-                return `${baseUrl}/gfs_conus_000_850.png`;
-            default:
-                return `${baseUrl}/gfs_conus_000_mslp.png`;
-        }
-    };
+    const currentModel = modelOptions.find(m => m.id === modelType);
 
     return (
         <TabPanel title="GFS MODEL">
@@ -1100,11 +1080,11 @@ const GFSModelTab = () => {
                 {/* Model Image Display */}
                 <div className="text-center">
                     <h3 className="text-xl text-cyan-300 mb-3">
-                        GFS {modelOptions.find(m => m.id === modelType)?.name.toUpperCase()}
+                        {currentModel?.name.toUpperCase()}
                     </h3>
-                    <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden bg-black/50 p-2">
+                    <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden bg-white p-2">
                         <img
-                            src={getModelUrl()}
+                            src={currentModel?.url}
                             alt={`GFS ${modelType} model`}
                             className="w-full h-auto rounded max-h-[500px] object-contain mx-auto"
                             onError={(e) => {
@@ -1113,7 +1093,7 @@ const GFSModelTab = () => {
                             }}
                         />
                     </div>
-                    <p className="text-xs text-cyan-400 mt-2">Source: College of DuPage NEXLAB - GFS Model</p>
+                    <p className="text-xs text-cyan-400 mt-2">Source: NOAA Weather Prediction Center</p>
                 </div>
 
                 {/* Quick Links */}
@@ -1124,15 +1104,23 @@ const GFSModelTab = () => {
                         rel="noopener noreferrer"
                         className="px-4 py-2 bg-cyan-800 text-cyan-100 rounded font-vt323 hover:bg-cyan-700 transition border border-cyan-500"
                     >
-                        Full GFS Viewer (Tropical Tidbits)
+                        Interactive GFS (Tropical Tidbits)
                     </a>
                     <a
-                        href="https://weather.cod.edu/forecast/"
+                        href="https://www.wpc.ncep.noaa.gov/"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-4 py-2 bg-cyan-800 text-cyan-100 rounded font-vt323 hover:bg-cyan-700 transition border border-cyan-500"
                     >
-                        More Models (COD)
+                        Weather Prediction Center
+                    </a>
+                    <a
+                        href="https://mag.ncep.noaa.gov/model-guidance-model-area.php"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 bg-cyan-800 text-cyan-100 rounded font-vt323 hover:bg-cyan-700 transition border border-cyan-500"
+                    >
+                        NCEP Model Guidance
                     </a>
                 </div>
 
@@ -1142,7 +1130,7 @@ const GFSModelTab = () => {
                     <p className="text-sm text-gray-300">
                         The Global Forecast System (GFS) is a weather forecast model produced by NOAA.
                         It provides forecasts up to 16 days in advance and is updated 4 times daily (00z, 06z, 12z, 18z).
-                        Click the links above for interactive model viewers with more options.
+                        Click the links above for full interactive model viewers with more parameters and forecast hours.
                     </p>
                 </div>
             </div>
