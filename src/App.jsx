@@ -815,27 +815,40 @@ const DailyOutlookTab = ({ daily, isWeatherLoading }) => {
     );
 };
 
-const RadarTab = () => (
+const RadarTab = ({ location }) => (
     <TabPanel title="DOPPLER RADAR">
         <div className="text-center space-y-4">
-            <h3 className="text-2xl text-cyan-300">CURRENT REGIONAL SCAN (NWS)</h3>
-            <img
-                src={RADAR_URL}
-                alt="Live Radar"
-                className="w-full h-auto rounded-lg border-4 border-cyan-500 mx-auto max-w-2xl bg-black"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = PLACEHOLDER_IMG;
-                  e.target.nextSibling.style.display = 'block';
-                }}
-            />
-            <div className="hidden mt-6 p-4 bg-red-900/40 border-l-4 border-red-500 text-left">
-                <p className="text-lg text-red-400 font-bold mb-2 flex items-center gap-2"><AlertTriangle size={20}/> CONNECTION FAILED</p>
-                <p className="text-sm text-red-300">
-                    Unable to connect to National Weather Service radar feed. This is likely due to network security restrictions in your current browser environment blocking external image sources.
-                </p>
+            <h3 className="text-2xl text-cyan-300">INTERACTIVE RADAR</h3>
+            <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden" style={{ height: '500px' }}>
+                <iframe
+                    src={`https://www.rainviewer.com/map.html?loc=${location.lat},${location.lon},6&oFa=1&oC=1&oU=1&oCS=1&oF=1&oAP=1&c=1&o=83&lm=0&layer=radar&sm=1&sn=1`}
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    style={{ border: 0 }}
+                    allowFullScreen
+                    title="Weather Radar"
+                />
             </div>
-            <p className="text-xs text-cyan-400">Source: National Weather Service (NWS) RIDGE Radar Loop</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-cyan-300 mt-2">
+                <div className="flex items-center justify-center gap-1">
+                    <div className="w-4 h-3 rounded" style={{ backgroundColor: '#00ff00' }}></div>
+                    <span>Light Rain</span>
+                </div>
+                <div className="flex items-center justify-center gap-1">
+                    <div className="w-4 h-3 rounded" style={{ backgroundColor: '#ffff00' }}></div>
+                    <span>Moderate</span>
+                </div>
+                <div className="flex items-center justify-center gap-1">
+                    <div className="w-4 h-3 rounded" style={{ backgroundColor: '#ff0000' }}></div>
+                    <span>Heavy Rain</span>
+                </div>
+                <div className="flex items-center justify-center gap-1">
+                    <div className="w-4 h-3 rounded" style={{ backgroundColor: '#ff00ff' }}></div>
+                    <span>Intense</span>
+                </div>
+            </div>
+            <p className="text-xs text-cyan-400">Source: RainViewer - Interactive radar with animation controls</p>
         </div>
     </TabPanel>
 );
@@ -1296,7 +1309,7 @@ const App = () => {
       case SCREENS.DAILY:
         return <DailyOutlookTab daily={daily} isWeatherLoading={isWeatherLoading} />;
       case SCREENS.RADAR:
-        return <RadarTab />;
+        return <RadarTab location={location} />;
       case SCREENS.WWA:
         return <WWADisplayTab />;
       case SCREENS.SPC:
