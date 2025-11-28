@@ -37,7 +37,7 @@ const MID_BLUE = '#0055AA';
 // --- APIs & Live Imagery ---
 // Added &forecast_days=8 to ensure we have enough data for a 7-day outlook excluding today
 const getWeatherApiUrl = (lat, lon) =>
-  `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,pressure_msl&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,wind_speed_10m_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=8`;
+  `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,pressure_msl&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,wind_speed_10m_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=8`;
 
 // NWS Alerts API
 const getNWSAlertsUrl = (lat, lon) => `https://api.weather.gov/alerts/active?point=${lat},${lon}`;
@@ -1052,111 +1052,170 @@ const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
     const data = hourly?.time ? hourly.time.slice(0, 12).map((time, i) => ({
         time: new Date(time).toLocaleTimeString([], { hour: 'numeric' }),
         probability: Math.round(hourly.precipitation_probability?.[i] || 0),
+        amount: hourly.precipitation?.[i] || 0,
     })) : [];
 
-    // Find the max probability for scaling
-    const maxProb = Math.max(...data.map(d => d.probability), 10);
+    // Find the max amount for scaling the second graph
+    const maxAmount = Math.max(...data.map(d => d.amount), 0.1);
+
+    // Calculate totals
+    const totalPrecip = data.reduce((sum, d) => sum + d.amount, 0);
+    const avgProb = data.length > 0
+        ? Math.round(data.reduce((sum, d) => sum + d.probability, 0) / data.length)
+        : 0;
+    const maxProbHour = data.reduce((max, d) => d.probability > max.probability ? d : max, { probability: 0, time: '--' });
+    const maxAmountHour = data.reduce((max, d) => d.amount > max.amount ? d : max, { amount: 0, time: '--' });
 
     return (
         <TabPanel title="12-HOUR PRECIPITATION FORECAST">
             <div className="space-y-6">
-                {/* Header Info */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-cyan-300">
-                        <CloudRain size={24} />
-                        <span className="text-xl">PRECIPITATION PROBABILITY</span>
+                {/* Probability Graph */}
+                <div>
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 text-cyan-300">
+                            <Droplets size={20} />
+                            <span className="text-lg">CHANCE OF PRECIPITATION</span>
+                        </div>
                     </div>
-                    <div className="text-sm text-cyan-400">
-                        Next 12 Hours
+                    <div className="bg-black/30 rounded-lg border-2 border-cyan-700 p-4">
+                        <div className="flex items-end justify-between gap-2 h-40">
+                            {data.map((hour, index) => {
+                                const heightPercent = (hour.probability / 100) * 100;
+                                let barColor = 'bg-cyan-800';
+                                if (hour.probability >= 70) barColor = 'bg-blue-500';
+                                else if (hour.probability >= 50) barColor = 'bg-cyan-500';
+                                else if (hour.probability >= 30) barColor = 'bg-cyan-600';
+
+                                return (
+                                    <div key={index} className="flex-1 flex flex-col items-center justify-end h-full">
+                                        <span className="text-xs text-white mb-1 font-bold">
+                                            {hour.probability}%
+                                        </span>
+                                        <div
+                                            className={`w-full ${barColor} rounded-t transition-all duration-300 min-h-[4px]`}
+                                            style={{
+                                                height: `${Math.max(heightPercent, 2)}%`,
+                                                boxShadow: hour.probability >= 50 ? '0 0 10px rgba(0, 255, 255, 0.5)' : 'none'
+                                            }}
+                                        />
+                                        <span className="text-xs text-cyan-300 mt-2 font-vt323">
+                                            {hour.time}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 
-                {/* Bar Graph */}
-                <div className="bg-black/30 rounded-lg border-2 border-cyan-700 p-4">
-                    <div className="flex items-end justify-between gap-2 h-64">
-                        {data.map((hour, index) => {
-                            const heightPercent = (hour.probability / 100) * 100;
-                            // Color based on probability
-                            let barColor = 'bg-cyan-600';
-                            if (hour.probability >= 70) barColor = 'bg-blue-500';
-                            else if (hour.probability >= 50) barColor = 'bg-cyan-500';
-                            else if (hour.probability >= 30) barColor = 'bg-cyan-600';
-                            else barColor = 'bg-cyan-800';
-
-                            return (
-                                <div key={index} className="flex-1 flex flex-col items-center justify-end h-full">
-                                    {/* Percentage label above bar */}
-                                    <span className="text-xs text-white mb-1 font-bold">
-                                        {hour.probability}%
-                                    </span>
-                                    {/* Bar */}
-                                    <div
-                                        className={`w-full ${barColor} rounded-t transition-all duration-300 min-h-[4px]`}
-                                        style={{
-                                            height: `${Math.max(heightPercent, 2)}%`,
-                                            boxShadow: hour.probability >= 50 ? '0 0 10px rgba(0, 255, 255, 0.5)' : 'none'
-                                        }}
-                                    />
-                                    {/* Time label */}
-                                    <span className="text-xs text-cyan-300 mt-2 font-vt323">
-                                        {hour.time}
-                                    </span>
-                                </div>
-                            );
-                        })}
+                {/* Amount Graph */}
+                <div>
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 text-cyan-300">
+                            <CloudRain size={20} />
+                            <span className="text-lg">EXPECTED PRECIPITATION (INCHES)</span>
+                        </div>
                     </div>
+                    <div className="bg-black/30 rounded-lg border-2 border-cyan-700 p-4">
+                        <div className="flex items-end justify-between gap-2 h-40">
+                            {data.map((hour, index) => {
+                                const heightPercent = maxAmount > 0 ? (hour.amount / maxAmount) * 100 : 0;
+                                // Color based on amount
+                                let barColor = 'bg-green-800';
+                                if (hour.amount >= 0.5) barColor = 'bg-blue-600';
+                                else if (hour.amount >= 0.25) barColor = 'bg-blue-500';
+                                else if (hour.amount >= 0.1) barColor = 'bg-green-500';
+                                else if (hour.amount > 0) barColor = 'bg-green-600';
 
-                    {/* Y-axis labels */}
-                    <div className="flex justify-between mt-4 pt-2 border-t border-cyan-800">
-                        <span className="text-xs text-cyan-400">0%</span>
-                        <span className="text-xs text-cyan-400">25%</span>
-                        <span className="text-xs text-cyan-400">50%</span>
-                        <span className="text-xs text-cyan-400">75%</span>
-                        <span className="text-xs text-cyan-400">100%</span>
+                                return (
+                                    <div key={index} className="flex-1 flex flex-col items-center justify-end h-full">
+                                        <span className="text-xs text-white mb-1 font-bold">
+                                            {hour.amount > 0 ? hour.amount.toFixed(2) : '0'}
+                                        </span>
+                                        <div
+                                            className={`w-full ${barColor} rounded-t transition-all duration-300 min-h-[4px]`}
+                                            style={{
+                                                height: `${Math.max(heightPercent, hour.amount > 0 ? 5 : 2)}%`,
+                                                boxShadow: hour.amount >= 0.25 ? '0 0 10px rgba(0, 200, 100, 0.5)' : 'none'
+                                            }}
+                                        />
+                                        <span className="text-xs text-cyan-300 mt-2 font-vt323">
+                                            {hour.time}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 
-                {/* Legend */}
-                <div className="flex flex-wrap gap-4 justify-center text-sm">
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-cyan-800 rounded"></div>
-                        <span className="text-cyan-300">0-29% (Low)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-cyan-600 rounded"></div>
-                        <span className="text-cyan-300">30-49% (Moderate)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-cyan-500 rounded"></div>
-                        <span className="text-cyan-300">50-69% (Likely)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-blue-500 rounded"></div>
-                        <span className="text-cyan-300">70%+ (Very Likely)</span>
-                    </div>
-                </div>
-
-                {/* Summary */}
-                {(() => {
-                    const avgProb = data.length > 0
-                        ? Math.round(data.reduce((sum, d) => sum + d.probability, 0) / data.length)
-                        : 0;
-                    const maxHour = data.reduce((max, d) => d.probability > max.probability ? d : max, { probability: 0, time: '--' });
-
-                    return (
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 bg-black/20 rounded-lg border border-cyan-700 text-center">
-                                <p className="text-sm text-cyan-400 mb-1">AVERAGE CHANCE</p>
-                                <p className="text-3xl font-bold text-white">{avgProb}%</p>
+                {/* Combined Legend */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-black/20 rounded-lg border border-cyan-700 p-3">
+                        <p className="text-xs text-cyan-400 mb-2 font-bold">CHANCE LEGEND</p>
+                        <div className="flex flex-wrap gap-2 text-xs">
+                            <div className="flex items-center gap-1">
+                                <div className="w-3 h-3 bg-cyan-800 rounded"></div>
+                                <span className="text-cyan-300">Low</span>
                             </div>
-                            <div className="p-4 bg-black/20 rounded-lg border border-cyan-700 text-center">
-                                <p className="text-sm text-cyan-400 mb-1">PEAK CHANCE</p>
-                                <p className="text-3xl font-bold text-white">{maxHour.probability}%</p>
-                                <p className="text-xs text-cyan-300">at {maxHour.time}</p>
+                            <div className="flex items-center gap-1">
+                                <div className="w-3 h-3 bg-cyan-600 rounded"></div>
+                                <span className="text-cyan-300">Mod</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <div className="w-3 h-3 bg-cyan-500 rounded"></div>
+                                <span className="text-cyan-300">Likely</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                                <span className="text-cyan-300">High</span>
                             </div>
                         </div>
-                    );
-                })()}
+                    </div>
+                    <div className="bg-black/20 rounded-lg border border-cyan-700 p-3">
+                        <p className="text-xs text-cyan-400 mb-2 font-bold">AMOUNT LEGEND</p>
+                        <div className="flex flex-wrap gap-2 text-xs">
+                            <div className="flex items-center gap-1">
+                                <div className="w-3 h-3 bg-green-800 rounded"></div>
+                                <span className="text-cyan-300">Trace</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <div className="w-3 h-3 bg-green-500 rounded"></div>
+                                <span className="text-cyan-300">Light</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                                <span className="text-cyan-300">Mod</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <div className="w-3 h-3 bg-blue-600 rounded"></div>
+                                <span className="text-cyan-300">Heavy</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Summary Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 text-center">
+                        <p className="text-xs text-cyan-400 mb-1">AVG CHANCE</p>
+                        <p className="text-2xl font-bold text-white">{avgProb}%</p>
+                    </div>
+                    <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 text-center">
+                        <p className="text-xs text-cyan-400 mb-1">PEAK CHANCE</p>
+                        <p className="text-2xl font-bold text-white">{maxProbHour.probability}%</p>
+                        <p className="text-xs text-cyan-300">{maxProbHour.time}</p>
+                    </div>
+                    <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 text-center">
+                        <p className="text-xs text-cyan-400 mb-1">12HR TOTAL</p>
+                        <p className="text-2xl font-bold text-white">{totalPrecip.toFixed(2)}"</p>
+                    </div>
+                    <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 text-center">
+                        <p className="text-xs text-cyan-400 mb-1">PEAK AMOUNT</p>
+                        <p className="text-2xl font-bold text-white">{maxAmountHour.amount.toFixed(2)}"</p>
+                        <p className="text-xs text-cyan-300">{maxAmountHour.time}</p>
+                    </div>
+                </div>
             </div>
         </TabPanel>
     );
