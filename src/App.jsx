@@ -153,7 +153,16 @@ const Scanlines = () => (
   </div>
 );
 
-const Header = ({ time, locationName, onLocationClick }) => (
+const Header = ({ time, locationName, onLocationClick, timezone }) => {
+  const timeOptions = { hour: 'numeric', minute: '2-digit', second: '2-digit' };
+  const dateOptions = { weekday: 'short', month: 'short', day: 'numeric' };
+
+  if (timezone) {
+    timeOptions.timeZone = timezone;
+    dateOptions.timeZone = timezone;
+  }
+
+  return (
   <header className="p-4 flex justify-between items-center h-20 shrink-0 shadow-neon-lg z-10" style={{ background: `linear-gradient(to bottom, ${DARK_BLUE}, ${NAVY_BLUE})`, borderBottom: `4px solid ${BRIGHT_CYAN}` }}>
     <div className="flex flex-col">
       <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-widest font-vt323">WEATHERBIRD</h1>
@@ -167,13 +176,14 @@ const Header = ({ time, locationName, onLocationClick }) => (
       </button>
       <div className="text-right hidden sm:block">
         <div className="text-3xl font-bold text-white font-vt323 tracking-widest">
-            {time.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
+            {time.toLocaleTimeString([], timeOptions)}
         </div>
-        <div className="text-sm text-white font-vt323">{time.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}</div>
+        <div className="text-sm text-white font-vt323">{time.toLocaleDateString([], dateOptions)}</div>
       </div>
     </div>
   </header>
-);
+  );
+};
 
 const Footer = ({ current, locationName, isPlaying, toggleMusic, volume, setVolume, alerts }) => {
     const temp = current ? Math.round(current.temperature_2m) : '--';
@@ -1394,7 +1404,7 @@ const App = () => {
       <AppStatus isLoading={isWeatherLoading} error={appError} isReady={isAuthReady} />
 
       {/* Main Header */}
-      <Header time={time} locationName={location.name} onLocationClick={() => setIsModalOpen(true)} />
+      <Header time={time} locationName={location.name} onLocationClick={() => setIsModalOpen(true)} timezone={weatherData?.timezone} />
 
       {/* Main Content Area: Flex container for Sidebar and Content Panel */}
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col md:flex-row gap-6 overflow-hidden">
