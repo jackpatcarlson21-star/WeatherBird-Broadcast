@@ -818,22 +818,22 @@ const DailyOutlookTab = ({ daily, isWeatherLoading }) => {
 const RadarTab = ({ location }) => (
     <TabPanel title="DOPPLER RADAR">
         <div className="text-center space-y-4">
-            <h3 className="text-2xl text-cyan-300">INTERACTIVE RADAR</h3>
+            <h3 className="text-2xl text-cyan-300">NWS RIDGE2 RADAR</h3>
             <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden" style={{ height: '500px' }}>
                 <iframe
-                    src={`https://www.rainviewer.com/map.html?loc=${location.lat},${location.lon},6&oFa=1&oC=1&oU=1&oCS=1&oF=1&oAP=1&c=1&o=83&lm=0&layer=radar&sm=1&sn=1`}
+                    src={`https://radar.weather.gov/ridge/lite/N0R/${location.lat}/${location.lon}/?settings=v1_2_2_1_1_1_1_0_0`}
                     width="100%"
                     height="100%"
                     frameBorder="0"
                     style={{ border: 0 }}
                     allowFullScreen
-                    title="Weather Radar"
+                    title="NWS Weather Radar"
                 />
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-cyan-300 mt-2">
                 <div className="flex items-center justify-center gap-1">
                     <div className="w-4 h-3 rounded" style={{ backgroundColor: '#00ff00' }}></div>
-                    <span>Light Rain</span>
+                    <span>Light</span>
                 </div>
                 <div className="flex items-center justify-center gap-1">
                     <div className="w-4 h-3 rounded" style={{ backgroundColor: '#ffff00' }}></div>
@@ -841,14 +841,14 @@ const RadarTab = ({ location }) => (
                 </div>
                 <div className="flex items-center justify-center gap-1">
                     <div className="w-4 h-3 rounded" style={{ backgroundColor: '#ff0000' }}></div>
-                    <span>Heavy Rain</span>
+                    <span>Heavy</span>
                 </div>
                 <div className="flex items-center justify-center gap-1">
                     <div className="w-4 h-3 rounded" style={{ backgroundColor: '#ff00ff' }}></div>
-                    <span>Intense</span>
+                    <span>Extreme</span>
                 </div>
             </div>
-            <p className="text-xs text-cyan-400">Source: RainViewer - Interactive radar with animation controls</p>
+            <p className="text-xs text-cyan-400">Source: National Weather Service RIDGE2 Radar</p>
         </div>
     </TabPanel>
 );
