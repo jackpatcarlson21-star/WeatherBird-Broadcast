@@ -153,7 +153,7 @@ const Scanlines = () => (
   </div>
 );
 
-const Header = ({ time, locationName, onLocationClick, timezone }) => {
+const Header = ({ time, locationName, onLocationClick, timezone, isPlaying, toggleMusic, volume, setVolume }) => {
   const timeOptions = { hour: 'numeric', minute: '2-digit', second: '2-digit' };
   const dateOptions = { weekday: 'short', month: 'short', day: 'numeric' };
 
@@ -170,10 +170,38 @@ const Header = ({ time, locationName, onLocationClick, timezone }) => {
         <MapPin size={16} /> <span className="truncate max-w-56">{locationName}</span>
       </div>
     </div>
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-3 sm:gap-5">
+      {/* Music Controls */}
+      <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-black/30" style={{ border: `1px solid ${BRIGHT_CYAN}` }}>
+        <button
+          onClick={toggleMusic}
+          className="text-cyan-400 hover:text-white transition"
+          title={isPlaying ? 'Pause Music' : 'Play Music'}
+        >
+          {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+        </button>
+        <div className="hidden sm:flex items-center gap-2">
+          <VolumeX size={14} className="text-cyan-600" />
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={volume}
+            onChange={(e) => setVolume(parseFloat(e.target.value))}
+            className="w-16 h-1.5 bg-cyan-900 rounded-lg appearance-none cursor-pointer"
+            style={{ accentColor: BRIGHT_CYAN }}
+          />
+          <Volume2 size={14} className="text-cyan-400" />
+        </div>
+      </div>
+
+      {/* Location Button */}
       <button onClick={onLocationClick} className="p-2 sm:p-3 bg-white/10 rounded-full hover:bg-white/20 transition shadow-md" style={{ border: `1px solid ${BRIGHT_CYAN}`, color: BRIGHT_CYAN }}>
         <MapPin size={20} style={{ color: BRIGHT_CYAN }} />
       </button>
+
+      {/* Clock */}
       <div className="text-right hidden sm:block">
         <div className="text-3xl font-bold text-white font-vt323 tracking-widest">
             {time.toLocaleTimeString([], timeOptions)}
@@ -185,7 +213,7 @@ const Header = ({ time, locationName, onLocationClick, timezone }) => {
   );
 };
 
-const Footer = ({ current, locationName, isPlaying, toggleMusic, volume, setVolume, alerts }) => {
+const Footer = ({ current, locationName, alerts }) => {
     const temp = current ? Math.round(current.temperature_2m) : '--';
     const cond = current ? getWeatherDescription(current.weather_code) : 'LOADING';
     const wind = current ? `${Math.round(current.wind_speed_10m)} MPH` : '--';
@@ -204,37 +232,13 @@ const Footer = ({ current, locationName, isPlaying, toggleMusic, volume, setVolu
     const tickerText = alertText ? `${alertText} ${baseText}` : baseText;
 
     return (
-        <footer className="h-14 shrink-0 flex items-center relative overflow-hidden" style={{ background: `linear-gradient(to top, ${NAVY_BLUE}, ${DARK_BLUE})`, borderTop: `4px solid ${BRIGHT_CYAN}` }}>
+        <footer className="h-12 shrink-0 flex items-center relative overflow-hidden" style={{ background: `linear-gradient(to top, ${NAVY_BLUE}, ${DARK_BLUE})`, borderTop: `4px solid ${BRIGHT_CYAN}` }}>
 
-            {/* Left Side: Scrolling Ticker */}
-            <div className="flex-grow relative h-full flex items-center overflow-hidden border-r-4 border-cyan-800 bg-black/20">
+            {/* Scrolling Ticker - Full Width */}
+            <div className="w-full relative h-full flex items-center overflow-hidden bg-black/20">
                 <div className={`whitespace-nowrap animate-marquee font-vt323 text-xl px-4 tracking-widest absolute ${alerts && alerts.length > 0 ? 'text-red-300 font-bold' : 'text-cyan-300'}`}>
                     {tickerText.repeat(5)}
                 </div>
-            </div>
-
-            {/* Right Side: Music Controls */}
-            <div className="flex items-center gap-4 px-4 z-10 shrink-0 h-full" style={{ backgroundColor: DARK_BLUE }}>
-                <div className="flex items-center gap-2">
-                    <Volume1 size={16} className="text-cyan-400" />
-                    <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.05"
-                        value={volume}
-                        onChange={(e) => setVolume(parseFloat(e.target.value))}
-                        className="w-20 h-2 bg-cyan-900 rounded-lg appearance-none cursor-pointer"
-                        style={{ accentColor: BRIGHT_CYAN }}
-                    />
-                </div>
-                <button
-                    onClick={toggleMusic}
-                    className={`flex items-center gap-2 px-3 py-1 rounded border-2 transition font-vt323 font-bold ${isPlaying ? 'bg-cyan-600 border-white text-white' : 'bg-black/30 border-cyan-600 text-cyan-400 hover:bg-cyan-900'}`}
-                >
-                    {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-                    <span className="text-sm">{isPlaying ? 'STOP' : 'PLAY'}</span>
-                </button>
             </div>
 
             <style>{`
@@ -1404,7 +1408,7 @@ const App = () => {
       <AppStatus isLoading={isWeatherLoading} error={appError} isReady={isAuthReady} />
 
       {/* Main Header */}
-      <Header time={time} locationName={location.name} onLocationClick={() => setIsModalOpen(true)} timezone={weatherData?.timezone} />
+      <Header time={time} locationName={location.name} onLocationClick={() => setIsModalOpen(true)} timezone={weatherData?.timezone} isPlaying={isPlaying} toggleMusic={toggleMusic} volume={volume} setVolume={setVolume} />
 
       {/* Main Content Area: Flex container for Sidebar and Content Panel */}
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col md:flex-row gap-6 overflow-hidden">
@@ -1412,14 +1416,10 @@ const App = () => {
           {renderTabContent()}
       </main>
 
-      {/* Footer / Music / Ticker */}
+      {/* Footer Ticker */}
       <Footer
         current={current}
         locationName={location.name}
-        isPlaying={isPlaying}
-        toggleMusic={toggleMusic}
-        volume={volume}
-        setVolume={setVolume}
         alerts={alerts}
       />
 
