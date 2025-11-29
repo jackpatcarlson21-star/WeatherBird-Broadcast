@@ -1333,19 +1333,19 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
 const RadarTab = ({ location }) => (
     <TabPanel title="DOPPLER RADAR">
         <div className="text-center space-y-4">
-            <h3 className="text-2xl text-cyan-300">INTERACTIVE RADAR</h3>
-            <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden" style={{ height: '500px' }}>
+            <h3 className="text-xl sm:text-2xl text-cyan-300">INTERACTIVE RADAR</h3>
+            <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden" style={{ height: '450px' }}>
                 <iframe
-                    src={`https://embed.windy.com/embed2.html?lat=${location.lat}&lon=${location.lon}&detailLat=${location.lat}&detailLon=${location.lon}&width=650&height=500&zoom=7&level=surface&overlay=radar&product=radar&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=mph&metricTemp=%C2%B0F&radarRange=-1`}
+                    src={`https://www.rainviewer.com/map.html?loc=${location.lat},${location.lon},7&oFa=1&oC=1&oU=1&oCS=1&oF=1&oAP=1&c=1&o=83&lm=0&th=0&sm=1&sn=1`}
                     width="100%"
                     height="100%"
                     frameBorder="0"
                     style={{ border: 0 }}
                     allowFullScreen
-                    title="Windy Weather Radar"
+                    title="RainViewer Weather Radar"
                 />
             </div>
-            <p className="text-xs text-cyan-400">Source: Windy.com - Interactive radar with animation controls</p>
+            <p className="text-xs text-cyan-400">Source: RainViewer - Touch-friendly radar with animation</p>
         </div>
     </TabPanel>
 );
