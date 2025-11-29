@@ -375,44 +375,69 @@ const LocationModal = ({ location, onSave, onClose }) => {
       setTemp(t => ({ ...t, error: "Geolocation is not supported by your browser." }));
       return;
     }
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        // Reverse geocode to get city name
-        try {
-          const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=&count=1&language=en&format=json`);
-          // Open-Meteo doesn't support reverse geocoding, so we'll use a fallback
-          // Use nominatim for reverse geocoding
-          const nominatimRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
-          const nominatimData = await nominatimRes.json();
-          const cityName = nominatimData.address?.city || nominatimData.address?.town || nominatimData.address?.village || nominatimData.address?.county || 'My Location';
-          const stateName = nominatimData.address?.state || '';
-          const displayName = stateName ? `${cityName}, ${stateName}` : cityName;
-          setTemp({
-            name: displayName,
-            lat: latitude.toFixed(4),
-            lon: longitude.toFixed(4),
-            error: null
-          });
-        } catch (e) {
-          // Fallback if reverse geocoding fails
-          setTemp({
-            name: 'My Location',
-            lat: latitude.toFixed(4),
-            lon: longitude.toFixed(4),
-            error: null
-          });
+
+    // Check if geolocation is allowed by permissions policy
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+        if (result.state === 'denied') {
+          setTemp(t => ({ ...t, error: "Location access denied. Please use the search instead." }));
+          return;
         }
-        setIsLocating(false);
-      },
-      (error) => {
-        console.error("Geolocation error:", error);
-        setTemp(t => ({ ...t, error: "Unable to get your location. Please check permissions." }));
-        setIsLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+      }).catch(() => {
+        // Permissions API not fully supported, continue anyway
+      });
+    }
+
+    setIsLocating(true);
+    try {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          // Reverse geocode to get city name
+          try {
+            // Use nominatim for reverse geocoding
+            const nominatimRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+            const nominatimData = await nominatimRes.json();
+            const cityName = nominatimData.address?.city || nominatimData.address?.town || nominatimData.address?.village || nominatimData.address?.county || 'My Location';
+            const stateName = nominatimData.address?.state || '';
+            const displayName = stateName ? `${cityName}, ${stateName}` : cityName;
+            setTemp({
+              name: displayName,
+              lat: latitude.toFixed(4),
+              lon: longitude.toFixed(4),
+              error: null
+            });
+          } catch (e) {
+            // Fallback if reverse geocoding fails
+            setTemp({
+              name: 'My Location',
+              lat: latitude.toFixed(4),
+              lon: longitude.toFixed(4),
+              error: null
+            });
+          }
+          setIsLocating(false);
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          let errorMsg = "Unable to get your location. Please use the search instead.";
+          if (error.code === 1) {
+            errorMsg = "Location access denied. Please search for your city instead.";
+          } else if (error.code === 2) {
+            errorMsg = "Location unavailable. Please search for your city instead.";
+          } else if (error.code === 3) {
+            errorMsg = "Location request timed out. Please search for your city instead.";
+          }
+          setTemp(t => ({ ...t, error: errorMsg }));
+          setIsLocating(false);
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+      );
+    } catch (e) {
+      console.error("Geolocation blocked:", e);
+      setTemp(t => ({ ...t, error: "GPS is blocked on this site. Please search for your city instead." }));
+      setIsLocating(false);
+    }
   };
 
   return (
