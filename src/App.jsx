@@ -1287,12 +1287,6 @@ const SPCOutlookTab = () => {
 const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
     if (isWeatherLoading) return <LoadingIndicator />;
 
-    // Debug: log snowfall data
-    console.log('Hourly precip data:', {
-        precipitation: hourly?.precipitation?.slice(0, 12),
-        snowfall: hourly?.snowfall?.slice(0, 12),
-    });
-
     // Get next 12 hours of precipitation data (rain + snow)
     // Snowfall is in cm, convert to inches (1 cm = 0.3937 inches)
     // Also convert snow water equivalent roughly (10:1 ratio typical)
