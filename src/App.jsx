@@ -1333,19 +1333,19 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
 const RadarTab = ({ location }) => (
     <TabPanel title="DOPPLER RADAR">
         <div className="text-center space-y-4">
-            <h3 className="text-xl sm:text-2xl text-cyan-300">DOPPLER RADAR</h3>
-            <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden" style={{ height: '450px' }}>
+            <h3 className="text-xl sm:text-2xl text-cyan-300">INTERACTIVE RADAR</h3>
+            <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden" style={{ height: '500px' }}>
                 <iframe
-                    src={`https://radar.weather.gov/region/conus/standard`}
+                    src={`https://embed.windy.com/embed2.html?lat=${location.lat}&lon=${location.lon}&detailLat=${location.lat}&detailLon=${location.lon}&width=650&height=500&zoom=7&level=surface&overlay=radar&product=radar&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=mph&metricTemp=%C2%B0F&radarRange=-1`}
                     width="100%"
                     height="100%"
                     frameBorder="0"
                     style={{ border: 0 }}
                     allowFullScreen
-                    title="NWS Weather Radar"
+                    title="Windy Weather Radar"
                 />
             </div>
-            <p className="text-xs text-cyan-400">Source: National Weather Service - Official NOAA Radar (Ad-Free)</p>
+            <p className="text-xs text-cyan-400">Source: Windy.com - Interactive radar with animation controls</p>
         </div>
     </TabPanel>
 );
