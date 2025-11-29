@@ -1099,6 +1099,13 @@ const HourlyForecastTab = ({ hourly, night, isWeatherLoading }) => {
 const DailyOutlookTab = ({ daily, isWeatherLoading }) => {
     if (isWeatherLoading) return <LoadingIndicator />;
 
+    // Debug: log the raw daily data to console
+    console.log('Daily forecast data:', {
+        time: daily?.time,
+        max: daily?.temperature_2m_max,
+        min: daily?.temperature_2m_min
+    });
+
     // Build 7-day forecast starting from TODAY (index 0)
     // API returns dates as "YYYY-MM-DD" strings - parse them correctly to avoid timezone issues
     const data = daily?.time ? daily.time.slice(0, 7).map((timeStr, idx) => {
