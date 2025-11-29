@@ -42,6 +42,9 @@ const getWeatherApiUrl = (lat, lon) =>
 // NWS Alerts API
 const getNWSAlertsUrl = (lat, lon) => `https://api.weather.gov/alerts/active?point=${lat},${lon}`;
 
+// NWS Points API (to get forecast URL for a location)
+const getNWSPointsUrl = (lat, lon) => `https://api.weather.gov/points/${lat},${lon}`;
+
 // Live Imagery URLs
 const RADAR_URL = "https://radar.weather.gov/ridge/standard/CONUS_loop.gif";
 const SPC_OUTLOOK_URL = "https://www.spc.noaa.gov/products/outlook/day1otlk.gif";
@@ -1121,31 +1124,151 @@ const HourlyForecastTab = ({ hourly, night, isWeatherLoading }) => {
     );
 };
 
-const DailyOutlookTab = ({ daily, isWeatherLoading }) => {
-    if (isWeatherLoading) return <LoadingIndicator />;
+const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
+    const [nwsForecast, setNwsForecast] = useState(null);
+    const [nwsLoading, setNwsLoading] = useState(true);
+    const [nwsError, setNwsError] = useState(false);
 
-    // Build 7-day forecast starting from TODAY (index 0)
-    // API returns dates as "YYYY-MM-DD" strings - parse them correctly to avoid timezone issues
-    const data = daily?.time ? daily.time.slice(0, 7).map((timeStr, idx) => {
-        // Parse the date string directly to avoid timezone shift
-        // timeStr is like "2024-11-28"
-        const [year, month, day] = timeStr.split('-').map(Number);
-        const date = new Date(year, month - 1, day); // month is 0-indexed
+    // Fetch NWS forecast for more accurate US weather data
+    useEffect(() => {
+        const fetchNWSForecast = async () => {
+            if (!location?.lat || !location?.lon) return;
 
-        return {
-            day: idx === 0 ? 'Today' : date.toLocaleDateString([], { weekday: 'short' }),
-            date: date.toLocaleDateString([], { month: 'short', day: 'numeric' }),
-            max: Math.round(daily.temperature_2m_max[idx] ?? 0),
-            min: Math.round(daily.temperature_2m_min[idx] ?? 0),
-            pop: Math.round(daily.precipitation_probability_max[idx] ?? 0),
-            wind: Math.round(daily.wind_speed_10m_max[idx] ?? 0),
-            code: daily.weather_code[idx] ?? 0,
-            isToday: idx === 0,
+            setNwsLoading(true);
+            setNwsError(false);
+
+            try {
+                // First get the forecast URL from the points endpoint
+                const pointsRes = await fetch(getNWSPointsUrl(location.lat, location.lon), {
+                    headers: { 'User-Agent': 'WeatherBird App' }
+                });
+                if (!pointsRes.ok) throw new Error('Points fetch failed');
+                const pointsData = await pointsRes.json();
+                const forecastUrl = pointsData.properties?.forecast;
+
+                if (!forecastUrl) throw new Error('No forecast URL');
+
+                // Now fetch the actual forecast
+                const forecastRes = await fetch(forecastUrl, {
+                    headers: { 'User-Agent': 'WeatherBird App' }
+                });
+                if (!forecastRes.ok) throw new Error('Forecast fetch failed');
+                const forecastData = await forecastRes.json();
+
+                setNwsForecast(forecastData.properties?.periods || []);
+            } catch (err) {
+                console.error('NWS forecast error:', err);
+                setNwsError(true);
+            } finally {
+                setNwsLoading(false);
+            }
         };
-    }) : [];
+
+        fetchNWSForecast();
+    }, [location?.lat, location?.lon]);
+
+    if (isWeatherLoading && nwsLoading) return <LoadingIndicator />;
+
+    // Process NWS data - periods come as day/night pairs
+    // We need to combine them into daily high/low
+    let data = [];
+
+    if (nwsForecast && nwsForecast.length > 0 && !nwsError) {
+        // NWS returns periods like "Tonight", "Saturday", "Saturday Night", etc.
+        // Group them into days
+        const days = [];
+        let currentDay = null;
+
+        for (const period of nwsForecast) {
+            const periodDate = new Date(period.startTime);
+            const dateKey = periodDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+            if (period.isDaytime) {
+                // Start a new day
+                currentDay = {
+                    name: period.name,
+                    date: dateKey,
+                    max: period.temperature,
+                    min: null,
+                    pop: period.probabilityOfPrecipitation?.value || 0,
+                    wind: period.windSpeed,
+                    shortForecast: period.shortForecast,
+                    icon: period.icon,
+                };
+                days.push(currentDay);
+            } else if (currentDay && currentDay.min === null) {
+                // This is the night following the day
+                currentDay.min = period.temperature;
+                // Use higher precip chance
+                const nightPop = period.probabilityOfPrecipitation?.value || 0;
+                if (nightPop > currentDay.pop) currentDay.pop = nightPop;
+            } else if (!currentDay) {
+                // Starts with tonight - create a partial day
+                currentDay = {
+                    name: 'Tonight',
+                    date: dateKey,
+                    max: null,
+                    min: period.temperature,
+                    pop: period.probabilityOfPrecipitation?.value || 0,
+                    wind: period.windSpeed,
+                    shortForecast: period.shortForecast,
+                    icon: period.icon,
+                };
+                days.push(currentDay);
+            }
+        }
+
+        // Convert to our display format (limit to 7 days)
+        data = days.slice(0, 7).map((d, idx) => ({
+            day: idx === 0 ? (d.name === 'Tonight' ? 'Tonight' : 'Today') : d.name,
+            date: d.date,
+            max: d.max,
+            min: d.min,
+            pop: d.pop || 0,
+            wind: d.wind || '--',
+            shortForecast: d.shortForecast,
+            isToday: idx === 0,
+            isNightOnly: d.max === null,
+        }));
+    } else {
+        // Fallback to Open-Meteo data
+        data = daily?.time ? daily.time.slice(0, 7).map((timeStr, idx) => {
+            const [year, month, day] = timeStr.split('-').map(Number);
+            const date = new Date(year, month - 1, day);
+
+            return {
+                day: idx === 0 ? 'Today' : date.toLocaleDateString([], { weekday: 'short' }),
+                date: date.toLocaleDateString([], { month: 'short', day: 'numeric' }),
+                max: Math.round(daily.temperature_2m_max[idx] ?? 0),
+                min: Math.round(daily.temperature_2m_min[idx] ?? 0),
+                pop: Math.round(daily.precipitation_probability_max[idx] ?? 0),
+                wind: `${Math.round(daily.wind_speed_10m_max[idx] ?? 0)} mph`,
+                code: daily.weather_code[idx] ?? 0,
+                isToday: idx === 0,
+                isNightOnly: false,
+            };
+        }) : [];
+    }
+
+    // Helper to get icon from NWS forecast text
+    const getForecastIcon = (shortForecast, nwsIcon) => {
+        const forecast = (shortForecast || '').toLowerCase();
+        if (forecast.includes('snow')) return '❄️';
+        if (forecast.includes('rain') || forecast.includes('shower')) return '🌧️';
+        if (forecast.includes('thunder') || forecast.includes('storm')) return '⛈️';
+        if (forecast.includes('cloud') || forecast.includes('overcast')) return '☁️';
+        if (forecast.includes('partly') || forecast.includes('mostly sunny')) return '⛅';
+        if (forecast.includes('fog')) return '🌫️';
+        if (forecast.includes('sunny') || forecast.includes('clear')) return '☀️';
+        if (nwsIcon?.includes('night')) return '🌙';
+        return '☀️';
+    };
 
     return (
         <TabPanel title="7-DAY FORECAST">
+            {nwsError && (
+                <p className="text-xs text-yellow-400 mb-2 text-center">Using backup forecast data</p>
+            )}
             <div className="space-y-3">
                 {data.map((d, index) => (
                     <div key={index} className={`flex items-center p-3 rounded-lg border-2 ${
@@ -1159,10 +1282,18 @@ const DailyOutlookTab = ({ daily, isWeatherLoading }) => {
                             <p className={`text-lg font-bold font-vt323 ${d.isToday ? 'text-cyan-200' : 'text-cyan-300'}`}>{d.day}</p>
                             <p className="text-xs text-cyan-400">{d.date}</p>
                         </div>
-                        <div className="w-1/6 text-4xl text-center">{getWeatherIcon(d.code, false)}</div>
+                        <div className="w-1/6 text-4xl text-center">
+                            {d.shortForecast ? getForecastIcon(d.shortForecast, d.icon) : getWeatherIcon(d.code, false)}
+                        </div>
                         <div className="w-2/6 text-center">
-                            <span className="text-2xl font-vt323 text-white">{d.max}°</span>
-                            <span className="text-xl text-cyan-400"> / {d.min}°</span>
+                            {d.isNightOnly ? (
+                                <span className="text-xl text-cyan-400">Low: {d.min}°</span>
+                            ) : (
+                                <>
+                                    <span className="text-2xl font-vt323 text-white">{d.max}°</span>
+                                    <span className="text-xl text-cyan-400"> / {d.min !== null ? `${d.min}°` : '--'}</span>
+                                </>
+                            )}
                         </div>
                         <div className="w-1/6 text-sm text-center flex flex-col items-center">
                             <Droplets size={16} className="text-cyan-400" />
@@ -1170,7 +1301,7 @@ const DailyOutlookTab = ({ daily, isWeatherLoading }) => {
                         </div>
                         <div className="w-1/6 text-sm text-center flex flex-col items-center">
                             <Wind size={16} className="text-cyan-400" />
-                            <span className="text-white">{d.wind} mph</span>
+                            <span className="text-white">{d.wind}</span>
                         </div>
                     </div>
                 ))}
@@ -1974,7 +2105,7 @@ const App = () => {
       case SCREENS.HOURLY:
         return <HourlyForecastTab hourly={hourly} night={night} isWeatherLoading={isWeatherLoading} />;
       case SCREENS.DAILY:
-        return <DailyOutlookTab daily={daily} isWeatherLoading={isWeatherLoading} />;
+        return <DailyOutlookTab location={location} daily={daily} isWeatherLoading={isWeatherLoading} />;
       case SCREENS.RADAR:
         return <RadarTab location={location} />;
       case SCREENS.WWA:
