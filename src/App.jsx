@@ -1287,19 +1287,40 @@ const SPCOutlookTab = () => {
 const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
     if (isWeatherLoading) return <LoadingIndicator />;
 
-    // Get next 12 hours of precipitation data (rain + snow)
+    // Find the current hour index in the hourly data
+    // The API returns hourly data starting from midnight, so we need to find which index matches "now"
+    const now = new Date();
+    let startIndex = 0;
+
+    if (hourly?.time) {
+        // Find the first hour that is >= current time
+        for (let i = 0; i < hourly.time.length; i++) {
+            const hourTime = new Date(hourly.time[i]);
+            if (hourTime >= now) {
+                startIndex = i;
+                break;
+            }
+            // If we've passed all times, use the last available
+            if (i === hourly.time.length - 1) {
+                startIndex = i;
+            }
+        }
+    }
+
+    // Get next 12 hours of precipitation data starting from current hour (rain + snow)
     // Note: Open-Meteo's "precipitation" already includes rain + snow water equivalent
     // "snowfall" is the actual snow accumulation in cm (converted to inches by API since we use precipitation_unit=inch)
-    const data = hourly?.time ? hourly.time.slice(0, 12).map((time, i) => {
-        const totalPrecip = hourly.precipitation?.[i] || 0; // Total precip (rain + snow water equiv)
-        const snowfall = hourly.snowfall?.[i] || 0; // Snow accumulation in inches
+    const data = hourly?.time ? hourly.time.slice(startIndex, startIndex + 12).map((time, i) => {
+        const idx = startIndex + i;
+        const totalPrecip = hourly.precipitation?.[idx] || 0; // Total precip (rain + snow water equiv)
+        const snowfall = hourly.snowfall?.[idx] || 0; // Snow accumulation in inches
         const hasSnow = snowfall > 0;
         // If there's snowfall, show snow. Otherwise if there's precip, it's rain
         const hasRain = totalPrecip > 0 && !hasSnow;
 
         return {
             time: new Date(time).toLocaleTimeString([], { hour: 'numeric' }),
-            probability: Math.round(hourly.precipitation_probability?.[i] || 0),
+            probability: Math.round(hourly.precipitation_probability?.[idx] || 0),
             rain: hasRain ? totalPrecip : 0,
             snow: snowfall,
             // For amount, show snowfall if snowing, otherwise show precip (rain)
