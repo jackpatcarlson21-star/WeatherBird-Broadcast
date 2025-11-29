@@ -869,10 +869,18 @@ const generateWeatherSummary = (current, daily, night) => {
         summary += "Partly cloudy skies. ";
     } else if (weatherCode <= 48) {
         summary += "Foggy or hazy conditions possible. ";
+    } else if (weatherCode <= 57) {
+        summary += "Drizzle expected. ";
     } else if (weatherCode <= 67) {
         summary += "Rain expected - grab an umbrella. ";
+    } else if (weatherCode <= 77) {
+        // Snow codes: 71=light snow, 73=snow, 75=heavy snow, 77=snow grains
+        summary += "Snow expected - bundle up! ";
     } else if (weatherCode <= 82) {
-        summary += "Showers and storms possible. ";
+        summary += "Rain showers possible. ";
+    } else if (weatherCode <= 86) {
+        // Snow showers: 85=light snow showers, 86=heavy snow showers
+        summary += "Snow showers in the forecast. ";
     } else if (weatherCode >= 95) {
         summary += "Thunderstorms in the forecast - stay weather aware. ";
     }
