@@ -1099,30 +1099,39 @@ const HourlyForecastTab = ({ hourly, night, isWeatherLoading }) => {
 const DailyOutlookTab = ({ daily, isWeatherLoading }) => {
     if (isWeatherLoading) return <LoadingIndicator />;
 
-    // Build 7-day forecast starting from tomorrow (index 1)
-    // We loop through indices 1-7 of the original arrays
-    const data = daily?.time ? Array.from({ length: 7 }, (_, i) => {
-        const idx = i + 1; // Start from index 1 (tomorrow)
-        const time = daily.time[idx];
-        if (!time) return null;
+    // Build 7-day forecast starting from TODAY (index 0)
+    // API returns dates as "YYYY-MM-DD" strings - parse them correctly to avoid timezone issues
+    const data = daily?.time ? daily.time.slice(0, 7).map((timeStr, idx) => {
+        // Parse the date string directly to avoid timezone shift
+        // timeStr is like "2024-11-28"
+        const [year, month, day] = timeStr.split('-').map(Number);
+        const date = new Date(year, month - 1, day); // month is 0-indexed
+
         return {
-            day: new Date(time).toLocaleDateString([], { weekday: 'short' }),
-            date: formatDate(time),
+            day: idx === 0 ? 'Today' : date.toLocaleDateString([], { weekday: 'short' }),
+            date: date.toLocaleDateString([], { month: 'short', day: 'numeric' }),
             max: Math.round(daily.temperature_2m_max[idx] ?? 0),
             min: Math.round(daily.temperature_2m_min[idx] ?? 0),
             pop: Math.round(daily.precipitation_probability_max[idx] ?? 0),
             wind: Math.round(daily.wind_speed_10m_max[idx] ?? 0),
             code: daily.weather_code[idx] ?? 0,
+            isToday: idx === 0,
         };
-    }).filter(Boolean) : [];
+    }) : [];
 
     return (
-        <TabPanel title="NEXT 7-DAY OUTLOOK">
+        <TabPanel title="7-DAY FORECAST">
             <div className="space-y-3">
                 {data.map((d, index) => (
-                    <div key={index} className={`flex items-center p-3 rounded-lg border-2 ${index % 2 === 0 ? 'bg-black/20 border-cyan-900' : 'bg-black/40 border-cyan-800'}`}>
+                    <div key={index} className={`flex items-center p-3 rounded-lg border-2 ${
+                        d.isToday
+                            ? 'bg-cyan-900/30 border-cyan-500'
+                            : index % 2 === 0
+                                ? 'bg-black/20 border-cyan-900'
+                                : 'bg-black/40 border-cyan-800'
+                    }`}>
                         <div className="w-1/6 text-left">
-                            <p className="text-lg font-bold text-cyan-300 font-vt323">{d.day}</p>
+                            <p className={`text-lg font-bold font-vt323 ${d.isToday ? 'text-cyan-200' : 'text-cyan-300'}`}>{d.day}</p>
                             <p className="text-xs text-cyan-400">{d.date}</p>
                         </div>
                         <div className="w-1/6 text-4xl text-center">{getWeatherIcon(d.code, false)}</div>
