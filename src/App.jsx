@@ -1333,19 +1333,19 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
 const RadarTab = ({ location }) => (
     <TabPanel title="DOPPLER RADAR">
         <div className="text-center space-y-4">
-            <h3 className="text-xl sm:text-2xl text-cyan-300">INTERACTIVE RADAR</h3>
+            <h3 className="text-xl sm:text-2xl text-cyan-300">DOPPLER RADAR</h3>
             <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden" style={{ height: '450px' }}>
                 <iframe
-                    src={`https://www.rainviewer.com/map.html?loc=${location.lat},${location.lon},7&oFa=1&oC=1&oU=1&oCS=1&oF=1&oAP=1&c=1&o=83&lm=0&th=0&sm=1&sn=1`}
+                    src={`https://radar.weather.gov/region/conus/standard`}
                     width="100%"
                     height="100%"
                     frameBorder="0"
                     style={{ border: 0 }}
                     allowFullScreen
-                    title="RainViewer Weather Radar"
+                    title="NWS Weather Radar"
                 />
             </div>
-            <p className="text-xs text-cyan-400">Source: RainViewer - Touch-friendly radar with animation</p>
+            <p className="text-xs text-cyan-400">Source: National Weather Service - Official NOAA Radar (Ad-Free)</p>
         </div>
     </TabPanel>
 );
