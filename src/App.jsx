@@ -37,7 +37,7 @@ const MID_BLUE = '#0055AA';
 // --- APIs & Live Imagery ---
 // Added &forecast_days=8 to ensure we have enough data for a 7-day outlook excluding today
 const getWeatherApiUrl = (lat, lon) =>
-  `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,pressure_msl&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,wind_speed_10m_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=8`;
+  `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,pressure_msl&hourly=temperature_2m,precipitation_probability,precipitation,snowfall,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,wind_speed_10m_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=8`;
 
 // NWS Alerts API
 const getNWSAlertsUrl = (lat, lon) => `https://api.weather.gov/alerts/active?point=${lat},${lon}`;
@@ -1262,26 +1262,42 @@ const SPCOutlookTab = () => {
 const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
     if (isWeatherLoading) return <LoadingIndicator />;
 
-    // Get next 12 hours of precipitation data
-    const data = hourly?.time ? hourly.time.slice(0, 12).map((time, i) => ({
-        time: new Date(time).toLocaleTimeString([], { hour: 'numeric' }),
-        probability: Math.round(hourly.precipitation_probability?.[i] || 0),
-        amount: hourly.precipitation?.[i] || 0,
-    })) : [];
+    // Get next 12 hours of precipitation data (rain + snow)
+    // Snowfall is in cm, convert to inches (1 cm = 0.3937 inches)
+    // Also convert snow water equivalent roughly (10:1 ratio typical)
+    const data = hourly?.time ? hourly.time.slice(0, 12).map((time, i) => {
+        const rain = hourly.precipitation?.[i] || 0;
+        const snowCm = hourly.snowfall?.[i] || 0;
+        const snowInches = snowCm * 0.3937; // Convert cm to inches
+        const hasSnow = snowCm > 0;
+        const hasRain = rain > 0 && !hasSnow;
+
+        return {
+            time: new Date(time).toLocaleTimeString([], { hour: 'numeric' }),
+            probability: Math.round(hourly.precipitation_probability?.[i] || 0),
+            rain: rain,
+            snow: snowInches,
+            amount: rain + snowInches, // Total liquid equivalent
+            hasSnow,
+            hasRain,
+        };
+    }) : [];
 
     // Find the max amount for scaling the second graph
     const maxAmount = Math.max(...data.map(d => d.amount), 0.1);
 
     // Calculate totals
-    const totalPrecip = data.reduce((sum, d) => sum + d.amount, 0);
+    const totalRain = data.reduce((sum, d) => sum + d.rain, 0);
+    const totalSnow = data.reduce((sum, d) => sum + d.snow, 0);
+    const totalPrecip = totalRain + totalSnow;
     const avgProb = data.length > 0
         ? Math.round(data.reduce((sum, d) => sum + d.probability, 0) / data.length)
         : 0;
     const maxProbHour = data.reduce((max, d) => d.probability > max.probability ? d : max, { probability: 0, time: '--' });
-    const maxAmountHour = data.reduce((max, d) => d.amount > max.amount ? d : max, { amount: 0, time: '--' });
+    const maxAmountHour = data.reduce((max, d) => d.amount > max.amount ? d : max, { amount: 0, time: '--', hasSnow: false });
 
     // Reusable bar component for both graphs
-    const PrecipBar = ({ value, maxValue, label, time, type }) => {
+    const PrecipBar = ({ value, maxValue, label, time, type, hasSnow, hasRain }) => {
         const heightPercent = type === 'chance'
             ? (value / 100) * 100
             : (maxValue > 0 ? (value / maxValue) * 100 : 0);
@@ -1292,7 +1308,15 @@ const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
             if (value >= 70) barColor = 'bg-blue-500';
             else if (value >= 50) barColor = 'bg-cyan-500';
             else if (value >= 30) barColor = 'bg-cyan-600';
+        } else if (hasSnow) {
+            // Snow colors - white/purple theme
+            barColor = 'bg-purple-400';
+            if (value >= 0.5) barColor = 'bg-purple-300';
+            else if (value >= 0.25) barColor = 'bg-purple-400';
+            else if (value >= 0.1) barColor = 'bg-purple-500';
+            else if (value > 0) barColor = 'bg-purple-600';
         } else {
+            // Rain colors - green/blue theme
             barColor = 'bg-green-800';
             if (value >= 0.5) barColor = 'bg-blue-600';
             else if (value >= 0.25) barColor = 'bg-blue-500';
@@ -1302,7 +1326,9 @@ const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
 
         const glowStyle = type === 'chance'
             ? (value >= 50 ? '0 0 10px rgba(0, 255, 255, 0.5)' : 'none')
-            : (value >= 0.25 ? '0 0 10px rgba(0, 200, 100, 0.5)' : 'none');
+            : hasSnow && value >= 0.1
+                ? '0 0 10px rgba(200, 150, 255, 0.5)'
+                : (value >= 0.25 ? '0 0 10px rgba(0, 200, 100, 0.5)' : 'none');
 
         return (
             <div className="flex flex-col items-center justify-end h-full min-w-[40px] sm:min-w-0 sm:flex-1">
@@ -1316,6 +1342,10 @@ const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
                         boxShadow: glowStyle
                     }}
                 />
+                {/* Show snow/rain icon below bar */}
+                {type === 'amount' && (hasSnow || hasRain) && (
+                    <span className="text-[10px] mt-0.5">{hasSnow ? '❄️' : '🌧️'}</span>
+                )}
                 <span className="text-[10px] sm:text-xs text-cyan-300 mt-1 sm:mt-2 font-vt323">
                     {time}
                 </span>
@@ -1340,11 +1370,12 @@ const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
                     <div className="p-2 sm:p-3 bg-black/20 rounded-lg border border-cyan-700 text-center">
                         <p className="text-[10px] sm:text-xs text-cyan-400 mb-1">12HR TOTAL</p>
                         <p className="text-xl sm:text-2xl font-bold text-white">{totalPrecip.toFixed(2)}"</p>
+                        {totalSnow > 0 && <p className="text-[10px] text-purple-300">❄️ {totalSnow.toFixed(2)}" snow</p>}
                     </div>
                     <div className="p-2 sm:p-3 bg-black/20 rounded-lg border border-cyan-700 text-center">
                         <p className="text-[10px] sm:text-xs text-cyan-400 mb-1">PEAK AMOUNT</p>
                         <p className="text-xl sm:text-2xl font-bold text-white">{maxAmountHour.amount.toFixed(2)}"</p>
-                        <p className="text-[10px] sm:text-xs text-cyan-300">{maxAmountHour.time}</p>
+                        <p className="text-[10px] sm:text-xs text-cyan-300">{maxAmountHour.time} {maxAmountHour.hasSnow ? '❄️' : ''}</p>
                     </div>
                 </div>
 
@@ -1390,6 +1421,8 @@ const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
                                         label={hour.amount > 0 ? hour.amount.toFixed(2) : '0'}
                                         time={hour.time}
                                         type="amount"
+                                        hasSnow={hour.hasSnow}
+                                        hasRain={hour.hasRain}
                                     />
                                 ))}
                             </div>
@@ -1425,20 +1458,20 @@ const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
                         <p className="text-[10px] sm:text-xs text-cyan-400 mb-1 sm:mb-2 font-bold">AMOUNT LEGEND</p>
                         <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] sm:text-xs">
                             <div className="flex items-center gap-1">
-                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-800 rounded"></div>
-                                <span className="text-cyan-300">Trace</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded"></div>
-                                <span className="text-cyan-300">0.1"+</span>
+                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-600 rounded"></div>
+                                <span className="text-cyan-300">🌧️ Rain</span>
                             </div>
                             <div className="flex items-center gap-1">
                                 <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-blue-500 rounded"></div>
-                                <span className="text-cyan-300">0.25"+</span>
+                                <span className="text-cyan-300">🌧️ Heavy</span>
                             </div>
                             <div className="flex items-center gap-1">
-                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-blue-600 rounded"></div>
-                                <span className="text-cyan-300">0.5"+</span>
+                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-purple-500 rounded"></div>
+                                <span className="text-cyan-300">❄️ Snow</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-purple-300 rounded"></div>
+                                <span className="text-cyan-300">❄️ Heavy</span>
                             </div>
                         </div>
                     </div>
