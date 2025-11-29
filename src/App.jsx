@@ -826,7 +826,7 @@ const WWADisplayTab = () => (
 );
 
 // Generate a brief weather description based on conditions
-const generateWeatherSummary = (current, daily, night) => {
+const generateWeatherSummary = (current, daily, night, alerts) => {
     if (!current || !daily) return "Weather data loading...";
 
     const temp = Math.round(current.temperature_2m || 0);
@@ -839,6 +839,19 @@ const generateWeatherSummary = (current, daily, night) => {
     const pop = Math.round(daily.precipitation_probability_max?.[0] || 0);
 
     let summary = "";
+
+    // Active weather alerts - show at the beginning for visibility
+    if (alerts && alerts.length > 0) {
+        const alertCount = alerts.length;
+        const alertTypes = alerts.map(a => a.properties?.event).filter(Boolean);
+        const uniqueAlerts = [...new Set(alertTypes)];
+
+        if (alertCount === 1) {
+            summary += `⚠️ ALERT: ${uniqueAlerts[0]} in effect. `;
+        } else {
+            summary += `⚠️ ${alertCount} ACTIVE ALERTS: ${uniqueAlerts.slice(0, 3).join(', ')}${uniqueAlerts.length > 3 ? '...' : ''}. `;
+        }
+    }
 
     // Temperature feel
     if (temp <= 32) {
@@ -1006,7 +1019,7 @@ const WeatherBird = ({ temp, weatherCode, windSpeed, night }) => {
     );
 };
 
-const CurrentConditionsTab = ({ current, daily, night, isWeatherLoading }) => {
+const CurrentConditionsTab = ({ current, daily, night, isWeatherLoading, alerts }) => {
     if (isWeatherLoading) return <LoadingIndicator />;
 
     const currentData = current || {};
@@ -1017,7 +1030,7 @@ const CurrentConditionsTab = ({ current, daily, night, isWeatherLoading }) => {
         sunset: daily.sunset[0],
     } : {};
 
-    const weatherSummary = generateWeatherSummary(current, daily, night);
+    const weatherSummary = generateWeatherSummary(current, daily, night, alerts);
 
     return (
         <TabPanel title="CURRENT CONDITIONS">
@@ -2127,7 +2140,7 @@ const App = () => {
   const renderTabContent = () => {
     switch (currentScreen) {
       case SCREENS.CONDITIONS:
-        return <CurrentConditionsTab current={current} daily={daily} night={night} isWeatherLoading={isWeatherLoading} />;
+        return <CurrentConditionsTab current={current} daily={daily} night={night} isWeatherLoading={isWeatherLoading} alerts={alerts} />;
       case SCREENS.ALERTS:
         return <AlertsTab alerts={alerts} />; // Pass alerts here
       case SCREENS.HOURLY:
