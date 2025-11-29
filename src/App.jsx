@@ -1092,14 +1092,34 @@ const CurrentConditionsTab = ({ current, daily, night, isWeatherLoading }) => {
 const HourlyForecastTab = ({ hourly, night, isWeatherLoading }) => {
     if (isWeatherLoading) return <LoadingIndicator />;
 
-    const data = hourly?.time ? hourly.time.slice(0, 12).map((time, i) => ({
-        time: formatTime(time),
-        temp: Math.round(hourly.temperature_2m[i]),
-        pop: Math.round(hourly.precipitation_probability[i]),
-        code: hourly.weather_code[i],
-        wind: Math.round(hourly.wind_speed_10m[i]),
-        isNight: isNight(new Date(time), hourly.time[i], hourly.time[i])
-    })) : [];
+    // Find the current hour index in the hourly data
+    const now = new Date();
+    let startIndex = 0;
+
+    if (hourly?.time) {
+        for (let i = 0; i < hourly.time.length; i++) {
+            const hourTime = new Date(hourly.time[i]);
+            if (hourTime >= now) {
+                startIndex = i;
+                break;
+            }
+            if (i === hourly.time.length - 1) {
+                startIndex = i;
+            }
+        }
+    }
+
+    // Get next 12 hours starting from current hour
+    const data = hourly?.time ? hourly.time.slice(startIndex, startIndex + 12).map((time, i) => {
+        const idx = startIndex + i;
+        return {
+            time: formatTime(time),
+            temp: Math.round(hourly.temperature_2m[idx]),
+            pop: Math.round(hourly.precipitation_probability[idx]),
+            code: hourly.weather_code[idx],
+            wind: Math.round(hourly.wind_speed_10m[idx]),
+        };
+    }) : [];
 
     return (
         <TabPanel title="NEXT 12 HOUR FORECAST">
