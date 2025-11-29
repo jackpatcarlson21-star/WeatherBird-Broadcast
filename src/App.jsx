@@ -1288,21 +1288,22 @@ const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
     if (isWeatherLoading) return <LoadingIndicator />;
 
     // Get next 12 hours of precipitation data (rain + snow)
-    // Snowfall is in cm, convert to inches (1 cm = 0.3937 inches)
-    // Also convert snow water equivalent roughly (10:1 ratio typical)
+    // Note: Open-Meteo's "precipitation" already includes rain + snow water equivalent
+    // "snowfall" is the actual snow accumulation in cm (converted to inches by API since we use precipitation_unit=inch)
     const data = hourly?.time ? hourly.time.slice(0, 12).map((time, i) => {
-        const rain = hourly.precipitation?.[i] || 0;
-        const snowCm = hourly.snowfall?.[i] || 0;
-        const snowInches = snowCm * 0.3937; // Convert cm to inches
-        const hasSnow = snowCm > 0;
-        const hasRain = rain > 0 && !hasSnow;
+        const totalPrecip = hourly.precipitation?.[i] || 0; // Total precip (rain + snow water equiv)
+        const snowfall = hourly.snowfall?.[i] || 0; // Snow accumulation in inches
+        const hasSnow = snowfall > 0;
+        // If there's snowfall, show snow. Otherwise if there's precip, it's rain
+        const hasRain = totalPrecip > 0 && !hasSnow;
 
         return {
             time: new Date(time).toLocaleTimeString([], { hour: 'numeric' }),
             probability: Math.round(hourly.precipitation_probability?.[i] || 0),
-            rain: rain,
-            snow: snowInches,
-            amount: rain + snowInches, // Total liquid equivalent
+            rain: hasRain ? totalPrecip : 0,
+            snow: snowfall,
+            // For amount, show snowfall if snowing, otherwise show precip (rain)
+            amount: hasSnow ? snowfall : totalPrecip,
             hasSnow,
             hasRain,
         };
@@ -1314,7 +1315,8 @@ const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
     // Calculate totals
     const totalRain = data.reduce((sum, d) => sum + d.rain, 0);
     const totalSnow = data.reduce((sum, d) => sum + d.snow, 0);
-    const totalPrecip = totalRain + totalSnow;
+    // Total precip: for display, sum rain + snow accumulation
+    const totalPrecip = data.reduce((sum, d) => sum + d.amount, 0);
     const avgProb = data.length > 0
         ? Math.round(data.reduce((sum, d) => sum + d.probability, 0) / data.length)
         : 0;
