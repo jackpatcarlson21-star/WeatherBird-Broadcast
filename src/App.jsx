@@ -2067,10 +2067,63 @@ const App = () => {
   useEffect(() => {
       const fetchAlerts = async () => {
           try {
-              const res = await fetch(getNWSAlertsUrl(location.lat, location.lon));
-              if (!res.ok) throw new Error('Failed to fetch alerts');
-              const data = await res.json();
-              setAlerts(data.features || []);
+              // First, get the zone/county info from NWS points API
+              const pointsRes = await fetch(getNWSPointsUrl(location.lat, location.lon), {
+                  headers: { 'User-Agent': 'WeatherBird App' }
+              });
+
+              if (pointsRes.ok) {
+                  const pointsData = await pointsRes.json();
+                  const county = pointsData.properties?.county;
+                  const forecastZone = pointsData.properties?.forecastZone;
+
+                  // Fetch alerts for both the county and forecast zone for better coverage
+                  const alertPromises = [];
+
+                  if (county) {
+                      // County URL looks like: https://api.weather.gov/zones/county/KYC001
+                      const countyCode = county.split('/').pop();
+                      alertPromises.push(
+                          fetch(`https://api.weather.gov/alerts/active?zone=${countyCode}`, {
+                              headers: { 'User-Agent': 'WeatherBird App' }
+                          }).then(r => r.ok ? r.json() : { features: [] })
+                      );
+                  }
+
+                  if (forecastZone) {
+                      // Forecast zone URL looks like: https://api.weather.gov/zones/forecast/KYZ051
+                      const zoneCode = forecastZone.split('/').pop();
+                      alertPromises.push(
+                          fetch(`https://api.weather.gov/alerts/active?zone=${zoneCode}`, {
+                              headers: { 'User-Agent': 'WeatherBird App' }
+                          }).then(r => r.ok ? r.json() : { features: [] })
+                      );
+                  }
+
+                  // Also fetch point-based alerts as fallback
+                  alertPromises.push(
+                      fetch(getNWSAlertsUrl(location.lat, location.lon), {
+                          headers: { 'User-Agent': 'WeatherBird App' }
+                      }).then(r => r.ok ? r.json() : { features: [] })
+                  );
+
+                  const results = await Promise.all(alertPromises);
+
+                  // Combine and deduplicate alerts by ID
+                  const allAlerts = results.flatMap(r => r.features || []);
+                  const uniqueAlerts = Array.from(
+                      new Map(allAlerts.map(a => [a.properties?.id, a])).values()
+                  );
+
+                  setAlerts(uniqueAlerts);
+              } else {
+                  // Fallback to point-based if points API fails
+                  const res = await fetch(getNWSAlertsUrl(location.lat, location.lon));
+                  if (res.ok) {
+                      const data = await res.json();
+                      setAlerts(data.features || []);
+                  }
+              }
           } catch (err) {
               console.error("Alert fetch error:", err);
               // Don't block app on alert failure
