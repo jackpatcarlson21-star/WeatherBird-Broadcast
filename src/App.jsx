@@ -8,7 +8,7 @@ import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 // --- Config ---
 // Fallback location until user's location is loaded from Firestore
-const INITIAL_LOCATION = { name: "Lawrenceburg, KY", lat: 37.8393, lon: -84.2700 };
+const INITIAL_LOCATION = { name: "Lawrenceburg, KY", lat: 38.0337, lon: -84.9966 };
 
 // Music URL - Smooth jazz for that classic weather channel vibe
 const MUSIC_URL = "https://stream.zeno.fm/0r0xa792kwzuv";
