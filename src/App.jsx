@@ -251,7 +251,7 @@ const Footer = ({ current, locationName, alerts }) => {
                     100% { transform: translateX(-50%); }
                 }
                 .animate-marquee {
-                    animation: marquee 45s linear infinite;
+                    animation: marquee 60s linear infinite;
                     will-change: transform;
                 }
             `}</style>
