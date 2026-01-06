@@ -157,6 +157,229 @@ const Scanlines = () => (
   </div>
 );
 
+// Weather Background Component - Animated backgrounds based on conditions
+const WeatherBackground = ({ weatherCode, isNight }) => {
+  // Determine weather type from code
+  const getWeatherType = (code) => {
+    if (code === 0) return 'clear';
+    if (code <= 3) return 'cloudy';
+    if (code <= 48) return 'fog';
+    if (code <= 57) return 'drizzle';
+    if (code <= 67) return 'rain';
+    if (code <= 77) return 'snow';
+    if (code <= 82) return 'rain';
+    if (code <= 86) return 'snow';
+    if (code >= 95) return 'thunderstorm';
+    return 'clear';
+  };
+
+  const weatherType = getWeatherType(weatherCode || 0);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      {/* Base gradient - changes with day/night */}
+      <div
+        className="absolute inset-0 transition-all duration-1000"
+        style={{
+          background: isNight
+            ? 'linear-gradient(to bottom, #0a0a1a 0%, #001122 50%, #001a33 100%)'
+            : 'linear-gradient(to bottom, #001a33 0%, #003366 50%, #001122 100%)'
+        }}
+      />
+
+      {/* Clear sky - sun rays or stars */}
+      {weatherType === 'clear' && !isNight && (
+        <div className="absolute inset-0">
+          <div className="sun-rays" />
+          <style>{`
+            .sun-rays {
+              position: absolute;
+              top: -50%;
+              left: -50%;
+              width: 200%;
+              height: 200%;
+              background: conic-gradient(from 0deg at 50% 50%,
+                transparent 0deg, rgba(255, 200, 50, 0.03) 10deg,
+                transparent 20deg, transparent 30deg,
+                rgba(255, 200, 50, 0.03) 40deg, transparent 50deg);
+              animation: rotateSun 120s linear infinite;
+            }
+            @keyframes rotateSun { to { transform: rotate(360deg); } }
+          `}</style>
+        </div>
+      )}
+
+      {/* Night stars */}
+      {weatherType === 'clear' && isNight && (
+        <div className="absolute inset-0">
+          <div className="stars" />
+          <style>{`
+            .stars {
+              position: absolute;
+              inset: 0;
+              background-image:
+                radial-gradient(1px 1px at 20% 30%, white 100%, transparent),
+                radial-gradient(1px 1px at 40% 70%, white 100%, transparent),
+                radial-gradient(1px 1px at 50% 20%, white 100%, transparent),
+                radial-gradient(1.5px 1.5px at 60% 50%, white 100%, transparent),
+                radial-gradient(1px 1px at 70% 80%, white 100%, transparent),
+                radial-gradient(1px 1px at 80% 10%, white 100%, transparent),
+                radial-gradient(1.5px 1.5px at 10% 60%, white 100%, transparent),
+                radial-gradient(1px 1px at 90% 40%, white 100%, transparent),
+                radial-gradient(1px 1px at 25% 85%, white 100%, transparent),
+                radial-gradient(1.5px 1.5px at 75% 25%, white 100%, transparent),
+                radial-gradient(1px 1px at 15% 15%, white 100%, transparent),
+                radial-gradient(1px 1px at 85% 65%, white 100%, transparent),
+                radial-gradient(1px 1px at 35% 45%, white 100%, transparent),
+                radial-gradient(1.5px 1.5px at 55% 90%, white 100%, transparent),
+                radial-gradient(1px 1px at 95% 5%, white 100%, transparent);
+              animation: twinkle 4s ease-in-out infinite alternate;
+            }
+            @keyframes twinkle {
+              0% { opacity: 0.5; }
+              100% { opacity: 1; }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* Clouds */}
+      {(weatherType === 'cloudy' || weatherType === 'drizzle') && (
+        <div className="absolute inset-0">
+          <div className="clouds" />
+          <style>{`
+            .clouds {
+              position: absolute;
+              inset: 0;
+              background-image:
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20'%3E%3Cellipse cx='50' cy='10' rx='40' ry='8' fill='rgba(150,170,200,0.15)'/%3E%3C/svg%3E");
+              background-size: 300px 60px;
+              animation: drift 60s linear infinite;
+            }
+            @keyframes drift {
+              from { background-position: 0 0; }
+              to { background-position: 300px 0; }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* Rain */}
+      {(weatherType === 'rain' || weatherType === 'drizzle') && (
+        <div className="absolute inset-0">
+          <div className="rain" />
+          <style>{`
+            .rain {
+              position: absolute;
+              inset: 0;
+              background-image:
+                linear-gradient(transparent 0%, transparent 90%, rgba(120, 180, 255, 0.3) 90%, rgba(120, 180, 255, 0.3) 100%);
+              background-size: ${weatherType === 'drizzle' ? '3px 20px' : '2px 15px'};
+              animation: rainfall ${weatherType === 'drizzle' ? '1s' : '0.5s'} linear infinite;
+              opacity: ${weatherType === 'drizzle' ? '0.3' : '0.5'};
+            }
+            @keyframes rainfall {
+              from { background-position: 0 -20px; }
+              to { background-position: 0 20px; }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* Snow */}
+      {weatherType === 'snow' && (
+        <div className="absolute inset-0">
+          <div className="snow snow-1" />
+          <div className="snow snow-2" />
+          <div className="snow snow-3" />
+          <style>{`
+            .snow {
+              position: absolute;
+              inset: 0;
+              background-image:
+                radial-gradient(3px 3px at 100px 50px, white 100%, transparent),
+                radial-gradient(2px 2px at 200px 150px, white 100%, transparent),
+                radial-gradient(2.5px 2.5px at 300px 250px, white 100%, transparent),
+                radial-gradient(2px 2px at 400px 100px, white 100%, transparent),
+                radial-gradient(3px 3px at 500px 300px, white 100%, transparent),
+                radial-gradient(2px 2px at 50px 200px, white 100%, transparent),
+                radial-gradient(2.5px 2.5px at 150px 350px, white 100%, transparent),
+                radial-gradient(2px 2px at 250px 50px, white 100%, transparent),
+                radial-gradient(3px 3px at 350px 400px, white 100%, transparent),
+                radial-gradient(2px 2px at 450px 200px, white 100%, transparent);
+              background-size: 500px 500px;
+              opacity: 0.7;
+            }
+            .snow-1 { animation: snowfall 8s linear infinite; }
+            .snow-2 { animation: snowfall 12s linear infinite; opacity: 0.5; }
+            .snow-3 { animation: snowfall 6s linear infinite; opacity: 0.3; }
+            @keyframes snowfall {
+              from { background-position: 0 -500px; }
+              to { background-position: 100px 500px; }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* Fog */}
+      {weatherType === 'fog' && (
+        <div className="absolute inset-0">
+          <div className="fog fog-1" />
+          <div className="fog fog-2" />
+          <style>{`
+            .fog {
+              position: absolute;
+              inset: 0;
+              background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(180, 190, 200, 0.15) 25%,
+                rgba(180, 190, 200, 0.2) 50%,
+                rgba(180, 190, 200, 0.15) 75%,
+                transparent 100%);
+              background-size: 200% 100%;
+            }
+            .fog-1 { animation: fogDrift 20s ease-in-out infinite; }
+            .fog-2 { animation: fogDrift 30s ease-in-out infinite reverse; opacity: 0.7; }
+            @keyframes fogDrift {
+              0%, 100% { background-position: 0% 0%; }
+              50% { background-position: 100% 0%; }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* Thunderstorm */}
+      {weatherType === 'thunderstorm' && (
+        <div className="absolute inset-0">
+          <div className="rain storm-rain" />
+          <div className="lightning" />
+          <style>{`
+            .storm-rain {
+              position: absolute;
+              inset: 0;
+              background-image:
+                linear-gradient(transparent 0%, transparent 85%, rgba(120, 180, 255, 0.4) 85%, rgba(120, 180, 255, 0.4) 100%);
+              background-size: 2px 12px;
+              animation: rainfall 0.4s linear infinite;
+              opacity: 0.6;
+            }
+            .lightning {
+              position: absolute;
+              inset: 0;
+              background: transparent;
+              animation: flash 8s ease-in-out infinite;
+            }
+            @keyframes flash {
+              0%, 89%, 91%, 93%, 95%, 100% { background: transparent; }
+              90%, 92%, 94% { background: rgba(255, 255, 255, 0.1); }
+            }
+          `}</style>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Header = ({ time, locationName, onLocationClick, timezone, isPlaying, toggleMusic, volume, setVolume }) => {
   const timeOptions = { hour: 'numeric', minute: '2-digit', second: '2-digit' };
   const dateOptions = { weekday: 'short', month: 'short', day: 'numeric' };
@@ -2265,7 +2488,7 @@ const App = () => {
 
   // Main UI Render
   return (
-    <div className="h-screen text-white font-vt323 antialiased flex flex-col overflow-hidden" style={{ backgroundColor: NAVY_BLUE }}>
+    <div className="h-screen text-white font-vt323 antialiased flex flex-col overflow-hidden relative" style={{ backgroundColor: NAVY_BLUE }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
         .font-vt323 { font-family: 'VT323', monospace; }
@@ -2273,6 +2496,9 @@ const App = () => {
         .shadow-neon-lg { box-shadow: 0 0 15px 3px rgba(0, 255, 255, 0.7), 0 0 30px 8px rgba(0, 255, 255, 0.4); }
         .shadow-inner-neon { box-shadow: inset 0 0 8px rgba(0, 255, 255, 0.5); }
       `}</style>
+
+      {/* Animated Weather Background */}
+      <WeatherBackground weatherCode={current?.weather_code} isNight={night} />
 
       {/* App Status Modal (Error/Loading Overlay) */}
       <AppStatus isLoading={isWeatherLoading} error={appError} isReady={isAuthReady} />
