@@ -230,7 +230,7 @@ const Footer = ({ current, locationName, alerts }) => {
     }
 
     // Ticker Text Construction
-    const baseText = `CURRENTLY IN ${locationName.toUpperCase()}: ${temp}°F ${cond} - WIND: ${wind} ::: 🎄 MERRY CHRISTMAS FROM WEATHERBIRD! 🎄 ::: CAW CAW! ::: THANK YOU FOR USING WEATHERBIRD! ::: `;
+    const baseText = `CURRENTLY IN ${locationName.toUpperCase()}: ${temp}°F ${cond} - WIND: ${wind} ::: 🎉 HAPPY NEW YEAR FROM WEATHERBIRD! 🎉 ::: CAW CAW! ::: THANK YOU FOR USING WEATHERBIRD! ::: `;
 
     // If alerts exist, put them FIRST
     const tickerText = alertText ? `${alertText} ${baseText}` : baseText;
