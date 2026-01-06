@@ -1169,6 +1169,7 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
     const [nwsForecast, setNwsForecast] = useState(null);
     const [nwsLoading, setNwsLoading] = useState(true);
     const [nwsError, setNwsError] = useState(false);
+    const [selectedDay, setSelectedDay] = useState(null);
 
     // Fetch NWS forecast for more accurate US weather data
     useEffect(() => {
@@ -1234,6 +1235,7 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
                     pop: period.probabilityOfPrecipitation?.value || 0,
                     wind: period.windSpeed,
                     shortForecast: period.shortForecast,
+                    detailedForecast: period.detailedForecast,
                     icon: period.icon,
                 };
                 days.push(currentDay);
@@ -1243,6 +1245,8 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
                 // Use higher precip chance
                 const nightPop = period.probabilityOfPrecipitation?.value || 0;
                 if (nightPop > currentDay.pop) currentDay.pop = nightPop;
+                // Add night forecast info
+                currentDay.nightForecast = period.detailedForecast;
             } else if (!currentDay) {
                 // Starts with tonight - create a partial day
                 currentDay = {
@@ -1253,6 +1257,7 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
                     pop: period.probabilityOfPrecipitation?.value || 0,
                     wind: period.windSpeed,
                     shortForecast: period.shortForecast,
+                    detailedForecast: period.detailedForecast,
                     icon: period.icon,
                 };
                 days.push(currentDay);
@@ -1268,6 +1273,8 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
             pop: d.pop || 0,
             wind: d.wind || '--',
             shortForecast: d.shortForecast,
+            detailedForecast: d.detailedForecast,
+            nightForecast: d.nightForecast,
             isToday: idx === 0,
             isNightOnly: d.max === null,
         }));
@@ -1276,15 +1283,26 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
         data = daily?.time ? daily.time.slice(0, 7).map((timeStr, idx) => {
             const [year, month, day] = timeStr.split('-').map(Number);
             const date = new Date(year, month - 1, day);
+            const code = daily.weather_code[idx] ?? 0;
+            const high = Math.round(daily.temperature_2m_max[idx] ?? 0);
+            const low = Math.round(daily.temperature_2m_min[idx] ?? 0);
+            const pop = Math.round(daily.precipitation_probability_max[idx] ?? 0);
+            const windSpeed = Math.round(daily.wind_speed_10m_max[idx] ?? 0);
+
+            // Generate a brief description for Open-Meteo fallback
+            const condition = getWeatherDescription(code);
+            const description = `${condition}. High of ${high}°F, low of ${low}°F. ${pop > 0 ? `${pop}% chance of precipitation. ` : ''}Winds up to ${windSpeed} mph.`;
 
             return {
                 day: idx === 0 ? 'Today' : date.toLocaleDateString([], { weekday: 'short' }),
                 date: date.toLocaleDateString([], { month: 'short', day: 'numeric' }),
-                max: Math.round(daily.temperature_2m_max[idx] ?? 0),
-                min: Math.round(daily.temperature_2m_min[idx] ?? 0),
-                pop: Math.round(daily.precipitation_probability_max[idx] ?? 0),
-                wind: `${Math.round(daily.wind_speed_10m_max[idx] ?? 0)} mph`,
-                code: daily.weather_code[idx] ?? 0,
+                max: high,
+                min: low,
+                pop: pop,
+                wind: `${windSpeed} mph`,
+                code: code,
+                shortForecast: condition,
+                detailedForecast: description,
                 isToday: idx === 0,
                 isNightOnly: false,
             };
@@ -1312,38 +1330,60 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
             )}
             <div className="space-y-3">
                 {data.map((d, index) => (
-                    <div key={index} className={`flex items-center p-3 rounded-lg border-2 ${
-                        d.isToday
-                            ? 'bg-cyan-900/30 border-cyan-500'
-                            : index % 2 === 0
-                                ? 'bg-black/20 border-cyan-900'
-                                : 'bg-black/40 border-cyan-800'
-                    }`}>
-                        <div className="w-1/6 text-left">
-                            <p className={`text-lg font-bold font-vt323 ${d.isToday ? 'text-cyan-200' : 'text-cyan-300'}`}>{d.day}</p>
-                            <p className="text-xs text-cyan-400">{d.date}</p>
+                    <div
+                        key={index}
+                        className={`rounded-lg border-2 cursor-pointer transition-all duration-200 hover:border-cyan-400 ${
+                            d.isToday
+                                ? 'bg-cyan-900/30 border-cyan-500'
+                                : index % 2 === 0
+                                    ? 'bg-black/20 border-cyan-900'
+                                    : 'bg-black/40 border-cyan-800'
+                        } ${selectedDay === index ? 'ring-2 ring-cyan-400' : ''}`}
+                        onClick={() => setSelectedDay(selectedDay === index ? null : index)}
+                    >
+                        <div className="flex items-center p-3">
+                            <div className="w-1/6 text-left">
+                                <p className={`text-lg font-bold font-vt323 ${d.isToday ? 'text-cyan-200' : 'text-cyan-300'}`}>{d.day}</p>
+                                <p className="text-xs text-cyan-400">{d.date}</p>
+                            </div>
+                            <div className="w-1/6 text-4xl text-center">
+                                {d.shortForecast ? getForecastIcon(d.shortForecast, d.icon) : getWeatherIcon(d.code, false)}
+                            </div>
+                            <div className="w-2/6 text-center">
+                                {d.isNightOnly ? (
+                                    <span className="text-xl text-cyan-400">Low: {d.min}°</span>
+                                ) : (
+                                    <>
+                                        <span className="text-2xl font-vt323 text-white">{d.max}°</span>
+                                        <span className="text-xl text-cyan-400"> / {d.min !== null ? `${d.min}°` : '--'}</span>
+                                    </>
+                                )}
+                            </div>
+                            <div className="w-1/6 text-sm text-center flex flex-col items-center">
+                                <Droplets size={16} className="text-cyan-400" />
+                                <span className="text-white">{d.pop}%</span>
+                            </div>
+                            <div className="w-1/6 text-sm text-center flex flex-col items-center">
+                                <Wind size={16} className="text-cyan-400" />
+                                <span className="text-white">{d.wind}</span>
+                            </div>
+                            <div className="w-8 flex justify-center">
+                                <ChevronRight
+                                    size={20}
+                                    className={`text-cyan-400 transition-transform duration-200 ${selectedDay === index ? 'rotate-90' : ''}`}
+                                />
+                            </div>
                         </div>
-                        <div className="w-1/6 text-4xl text-center">
-                            {d.shortForecast ? getForecastIcon(d.shortForecast, d.icon) : getWeatherIcon(d.code, false)}
-                        </div>
-                        <div className="w-2/6 text-center">
-                            {d.isNightOnly ? (
-                                <span className="text-xl text-cyan-400">Low: {d.min}°</span>
-                            ) : (
-                                <>
-                                    <span className="text-2xl font-vt323 text-white">{d.max}°</span>
-                                    <span className="text-xl text-cyan-400"> / {d.min !== null ? `${d.min}°` : '--'}</span>
-                                </>
-                            )}
-                        </div>
-                        <div className="w-1/6 text-sm text-center flex flex-col items-center">
-                            <Droplets size={16} className="text-cyan-400" />
-                            <span className="text-white">{d.pop}%</span>
-                        </div>
-                        <div className="w-1/6 text-sm text-center flex flex-col items-center">
-                            <Wind size={16} className="text-cyan-400" />
-                            <span className="text-white">{d.wind}</span>
-                        </div>
+                        {selectedDay === index && d.detailedForecast && (
+                            <div className="px-4 pb-3 pt-1 border-t border-cyan-800/50">
+                                <p className="text-sm text-cyan-100 leading-relaxed">{d.detailedForecast}</p>
+                                {d.nightForecast && (
+                                    <p className="text-sm text-cyan-300 mt-2 leading-relaxed">
+                                        <span className="text-cyan-400 font-bold">Tonight: </span>{d.nightForecast}
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
