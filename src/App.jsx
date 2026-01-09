@@ -2431,17 +2431,27 @@ const TripWeatherTab = ({ location }) => {
                     try {
                         await new Promise(resolve => setTimeout(resolve, idx * 200));
                         const res = await fetch(
-                            `https://nominatim.openstreetmap.org/reverse?lat=${waypoint.lat}&lon=${waypoint.lon}&format=json`
+                            `https://nominatim.openstreetmap.org/reverse?lat=${waypoint.lat}&lon=${waypoint.lon}&format=json`,
+                            { headers: { 'User-Agent': 'WeatherBird-App' } }
                         );
                         if (res.ok) {
                             const data = await res.json();
-                            return data.address?.city || data.address?.town ||
-                                   data.address?.village || data.address?.county ||
-                                   'Unknown Location';
+                            const addr = data.address || {};
+                            // Try multiple location fields in order of preference
+                            const place = addr.city || addr.town || addr.village ||
+                                         addr.hamlet || addr.municipality || addr.suburb ||
+                                         addr.county || addr.road || addr.highway;
+                            const state = addr.state;
+                            if (place && state) {
+                                // Abbreviate state name if too long
+                                const stateAbbr = state.length > 3 ? state.slice(0, 2).toUpperCase() : state;
+                                return `${place}, ${stateAbbr}`;
+                            }
+                            return place || `Near ${waypoint.lat.toFixed(2)}, ${waypoint.lon.toFixed(2)}`;
                         }
-                        return 'Unknown Location';
+                        return `Near ${waypoint.lat.toFixed(2)}, ${waypoint.lon.toFixed(2)}`;
                     } catch {
-                        return 'Unknown Location';
+                        return `Near ${waypoint.lat.toFixed(2)}, ${waypoint.lon.toFixed(2)}`;
                     }
                 }));
 
