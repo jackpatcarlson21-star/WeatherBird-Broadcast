@@ -407,10 +407,10 @@ const Footer = ({ current, locationName, alerts }) => {
 
 const TabNavigation = ({ currentTab, setTab }) => {
     const tabs = [
-        { id: SCREENS.DASHBOARD, name: 'DASHBOARD' },
         { id: SCREENS.CONDITIONS, name: 'CURRENT' },
         { id: SCREENS.HOURLY, name: '12HR' },
         { id: SCREENS.DAILY, name: '7-DAY' },
+        { id: SCREENS.DASHBOARD, name: 'DASHBOARD' },
         { id: SCREENS.PRECIP, name: 'PRECIP' },
         { id: SCREENS.ALERTS, name: 'ALERTS' },
         { id: SCREENS.RADAR, name: 'RADAR' },
