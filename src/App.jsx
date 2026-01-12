@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Play, Pause, Thermometer, Wind, Droplets, ArrowRight, Sun, CloudRain, MapPin, X, Volume2, VolumeX, Volume1, Menu, Clock, Calendar, Radio, AlertTriangle, Settings, Zap, Home, ChevronRight, ChevronDown, Sunrise, Sunset, Maximize, Minimize, ShieldAlert, Map as MapIcon, CloudRainWind, Moon, Gauge, Navigation } from 'lucide-react';
+import { Play, Pause, Thermometer, Wind, Droplets, ArrowRight, Sun, CloudRain, MapPin, X, Volume2, VolumeX, Volume1, Menu, Clock, Calendar, Radio, AlertTriangle, Settings, Zap, Home, ChevronRight, ChevronDown, Sunrise, Sunset, Maximize, Minimize, ShieldAlert, Map as MapIcon, CloudRainWind, Moon, Gauge, Navigation, Star } from 'lucide-react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -307,8 +307,9 @@ const TabNavigation = ({ currentTab, setTab }) => {
     );
 };
 
-const LocationModal = ({ location, onSave, onClose }) => {
+const LocationModal = ({ location, onSave, onClose, savedLocations = [], onSaveLocation, onDeleteLocation }) => {
   const [temp, setTemp] = useState({ ...location, error: null });
+  const [showSaved, setShowSaved] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -552,6 +553,67 @@ const LocationModal = ({ location, onSave, onClose }) => {
             <p className="text-red-300 text-sm">{temp.error}</p>
           </div>
         )}
+
+        {/* Saved Locations Section */}
+        <div className="border-t border-cyan-700 pt-4 mt-4">
+          <button
+            onClick={() => setShowSaved(!showSaved)}
+            className="w-full flex items-center justify-between text-cyan-400 hover:text-cyan-300 transition"
+          >
+            <span className="flex items-center gap-2">
+              <Star size={18} />
+              <span className="text-lg">SAVED LOCATIONS ({savedLocations.length})</span>
+            </span>
+            <span className="text-xl">{showSaved ? '−' : '+'}</span>
+          </button>
+
+          {showSaved && (
+            <div className="mt-3 space-y-2">
+              {savedLocations.length === 0 ? (
+                <p className="text-cyan-600 text-sm text-center py-2">No saved locations yet</p>
+              ) : (
+                savedLocations.map((saved) => (
+                  <div
+                    key={saved.id}
+                    className="flex items-center gap-2 p-2 rounded border border-cyan-800 hover:border-cyan-600 transition"
+                    style={{ backgroundColor: DARK_BLUE }}
+                  >
+                    <button
+                      onClick={() => {
+                        setTemp({ name: saved.name, lat: saved.lat, lon: saved.lon, error: null });
+                        setShowSaved(false);
+                      }}
+                      className="flex-grow text-left text-white hover:text-cyan-400 transition flex items-center gap-2"
+                    >
+                      <MapPin size={16} className="text-cyan-400 shrink-0" />
+                      <span className="truncate">{saved.name}</span>
+                    </button>
+                    <button
+                      onClick={() => onDeleteLocation(saved.id)}
+                      className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded transition"
+                      title="Delete location"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                ))
+              )}
+
+              {/* Save current location button */}
+              {temp.name && temp.lat && temp.lon && (
+                <button
+                  onClick={() => {
+                    onSaveLocation({ name: temp.name, lat: parseFloat(temp.lat), lon: parseFloat(temp.lon) });
+                  }}
+                  className="w-full mt-2 p-2 text-sm rounded border border-yellow-600 text-yellow-400 hover:bg-yellow-900/30 transition flex items-center justify-center gap-2"
+                >
+                  <Star size={16} />
+                  SAVE "{temp.name}" TO FAVORITES
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         <button
           onClick={handleSave}
@@ -3089,6 +3151,33 @@ const App = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const [currentScreen, setCurrentScreen] = useState(SCREENS.CONDITIONS);
+  const [savedLocations, setSavedLocations] = useState(() => {
+    try {
+      const saved = localStorage.getItem('weatherbird-saved-locations');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // --- Saved Locations Handlers ---
+  const saveLocation = (loc) => {
+    // Check if location already exists (by coordinates)
+    const exists = savedLocations.some(
+      saved => Math.abs(saved.lat - loc.lat) < 0.01 && Math.abs(saved.lon - loc.lon) < 0.01
+    );
+    if (exists) return;
+
+    const newSaved = [...savedLocations, { ...loc, id: Date.now() }];
+    setSavedLocations(newSaved);
+    localStorage.setItem('weatherbird-saved-locations', JSON.stringify(newSaved));
+  };
+
+  const deleteLocation = (id) => {
+    const newSaved = savedLocations.filter(loc => loc.id !== id);
+    setSavedLocations(newSaved);
+    localStorage.setItem('weatherbird-saved-locations', JSON.stringify(newSaved));
+  };
 
   // --- Refs ---
   const audioRef = useRef(null);
@@ -3417,6 +3506,9 @@ const App = () => {
           location={location}
           onSave={handleLocationSave}
           onClose={() => setIsModalOpen(false)}
+          savedLocations={savedLocations}
+          onSaveLocation={saveLocation}
+          onDeleteLocation={deleteLocation}
         />
       )}
 
