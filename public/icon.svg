@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="64" fill="#001a33"/>
+
+  <!-- Cloud -->
+  <ellipse cx="280" cy="200" rx="100" ry="60" fill="#00FFFF" opacity="0.3"/>
+  <ellipse cx="200" cy="220" rx="80" ry="50" fill="#00FFFF" opacity="0.3"/>
+  <ellipse cx="340" cy="220" rx="70" ry="45" fill="#00FFFF" opacity="0.3"/>
+
+  <!-- Bird body -->
+  <ellipse cx="256" cy="300" rx="120" ry="80" fill="#00FFFF"/>
+
+  <!-- Bird head -->
+  <circle cx="340" cy="260" r="50" fill="#00FFFF"/>
+
+  <!-- Bird eye -->
+  <circle cx="355" cy="250" r="12" fill="#001a33"/>
+  <circle cx="358" cy="247" r="4" fill="white"/>
+
+  <!-- Bird beak -->
+  <polygon points="390,260 430,270 390,280" fill="#FFD700"/>
+
+  <!-- Bird wing -->
+  <ellipse cx="220" cy="290" rx="70" ry="40" fill="#008B8B"/>
+
+  <!-- Bird tail -->
+  <polygon points="136,280 80,240 80,320 136,320" fill="#00FFFF"/>
+
+  <!-- Rain drops -->
+  <line x1="180" y1="400" x2="180" y2="440" stroke="#00FFFF" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+  <line x1="256" y1="420" x2="256" y2="460" stroke="#00FFFF" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+  <line x1="332" y1="400" x2="332" y2="440" stroke="#00FFFF" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- Sun rays behind cloud -->
+  <circle cx="380" cy="140" r="30" fill="#FFD700" opacity="0.8"/>
+  <line x1="380" y1="90" x2="380" y2="70" stroke="#FFD700" stroke-width="6" stroke-linecap="round" opacity="0.6"/>
+  <line x1="420" y1="100" x2="435" y2="85" stroke="#FFD700" stroke-width="6" stroke-linecap="round" opacity="0.6"/>
+  <line x1="430" y1="140" x2="450" y2="140" stroke="#FFD700" stroke-width="6" stroke-linecap="round" opacity="0.6"/>
+</svg>
