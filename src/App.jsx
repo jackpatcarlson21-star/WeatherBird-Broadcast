@@ -80,8 +80,8 @@ const degreeToCardinal = (deg) => {
 
 // Wind Compass Component - shows arrow pointing in wind direction
 const WindCompass = ({ degrees, size = 48 }) => {
-  // Wind direction is where wind comes FROM, arrow points where it's going TO
-  const rotation = (degrees + 180) % 360;
+  // Wind direction is where wind comes FROM, arrow points that direction
+  const rotation = degrees;
 
   return (
     <div
