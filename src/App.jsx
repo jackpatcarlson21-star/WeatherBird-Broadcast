@@ -303,7 +303,7 @@ const Scanlines = () => (
   </div>
 );
 
-const Header = ({ time, locationName, onLocationClick, timezone, isPlaying, toggleMusic, volume, setVolume }) => {
+const Header = ({ time, locationName, onLocationClick, timezone, isPlaying, toggleMusic, volume, setVolume, autoCycle, setAutoCycle }) => {
   const timeOptions = { hour: 'numeric', minute: '2-digit', second: '2-digit' };
   const dateOptions = { weekday: 'short', month: 'short', day: 'numeric' };
 
@@ -321,6 +321,16 @@ const Header = ({ time, locationName, onLocationClick, timezone, isPlaying, togg
       </div>
     </div>
     <div className="flex items-center gap-3 sm:gap-5">
+      {/* Auto-Cycle Button */}
+      <button
+        onClick={() => setAutoCycle(!autoCycle)}
+        className={`p-2 sm:p-3 rounded-full transition shadow-md ${autoCycle ? 'bg-cyan-600' : 'bg-white/10 hover:bg-white/20'}`}
+        style={{ border: `1px solid ${BRIGHT_CYAN}` }}
+        title={autoCycle ? 'Stop Auto-Cycle' : 'Start Auto-Cycle'}
+      >
+        <Radio size={20} className={autoCycle ? 'text-white animate-pulse' : 'text-cyan-400'} />
+      </button>
+
       {/* Music Controls */}
       <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-black/30" style={{ border: `1px solid ${BRIGHT_CYAN}` }}>
         <button
@@ -410,10 +420,10 @@ const TabNavigation = ({ currentTab, setTab }) => {
         { id: SCREENS.CONDITIONS, name: 'CURRENT' },
         { id: SCREENS.HOURLY, name: '12HR' },
         { id: SCREENS.DAILY, name: '7-DAY' },
+        { id: SCREENS.RADAR, name: 'RADAR' },
         { id: SCREENS.DASHBOARD, name: 'DASHBOARD' },
         { id: SCREENS.PRECIP, name: 'PRECIP' },
         { id: SCREENS.ALERTS, name: 'ALERTS' },
-        { id: SCREENS.RADAR, name: 'RADAR' },
         { id: SCREENS.WWA, name: 'WWA MAP' },
         { id: SCREENS.SPC, name: 'SPC' },
         { id: SCREENS.TRIP_WEATHER, name: 'TRIP' },
@@ -3417,6 +3427,38 @@ const App = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const [currentScreen, setCurrentScreen] = useState(SCREENS.CONDITIONS);
+  const [autoCycle, setAutoCycle] = useState(false);
+  const [cycleSpeed, setCycleSpeed] = useState(10); // seconds per screen
+
+  // --- Auto-Cycle Effect ---
+  useEffect(() => {
+    if (!autoCycle) return;
+
+    const screenOrder = [
+      SCREENS.CONDITIONS,
+      SCREENS.HOURLY,
+      SCREENS.DAILY,
+      SCREENS.RADAR,
+      SCREENS.DASHBOARD,
+      SCREENS.PRECIP,
+      SCREENS.ALERTS,
+      SCREENS.WWA,
+      SCREENS.SPC,
+      SCREENS.TRIP_WEATHER,
+      SCREENS.ALMANAC,
+    ];
+
+    const interval = setInterval(() => {
+      setCurrentScreen(current => {
+        const currentIndex = screenOrder.indexOf(current);
+        const nextIndex = (currentIndex + 1) % screenOrder.length;
+        return screenOrder[nextIndex];
+      });
+    }, cycleSpeed * 1000);
+
+    return () => clearInterval(interval);
+  }, [autoCycle, cycleSpeed]);
+
   const [savedLocations, setSavedLocations] = useState(() => {
     try {
       const saved = localStorage.getItem('weatherbird-saved-locations');
@@ -3815,7 +3857,7 @@ const App = () => {
       <AppStatus isLoading={isWeatherLoading} error={appError} isReady={isAuthReady} isAutoDetecting={isAutoDetecting} />
 
       {/* Main Header */}
-      <Header time={time} locationName={location.name} onLocationClick={() => setIsModalOpen(true)} timezone={weatherData?.timezone} isPlaying={isPlaying} toggleMusic={toggleMusic} volume={volume} setVolume={setVolume} />
+      <Header time={time} locationName={location.name} onLocationClick={() => setIsModalOpen(true)} timezone={weatherData?.timezone} isPlaying={isPlaying} toggleMusic={toggleMusic} volume={volume} setVolume={setVolume} autoCycle={autoCycle} setAutoCycle={setAutoCycle} />
 
       {/* Main Content Area: Flex container for Sidebar and Content Panel */}
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col md:flex-row gap-6 overflow-hidden">
