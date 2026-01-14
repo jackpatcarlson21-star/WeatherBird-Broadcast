@@ -1593,7 +1593,7 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
                                 <p className="text-sm text-cyan-100 leading-relaxed">{d.detailedForecast}</p>
                                 {d.nightForecast && (
                                     <p className="text-sm text-cyan-300 mt-2 leading-relaxed">
-                                        <span className="text-cyan-400 font-bold">Tonight: </span>{d.nightForecast}
+                                        <span className="text-cyan-400 font-bold">{d.day === 'Today' || d.day === 'Tonight' ? 'Tonight' : `${d.day} Night`}: </span>{d.nightForecast}
                                     </p>
                                 )}
                             </div>
