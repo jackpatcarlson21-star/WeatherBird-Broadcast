@@ -4117,10 +4117,10 @@ const App = () => {
       `}</style>
 
       {/* Severe Weather Alert Flash Overlay */}
-      {getSevereAlertLevel(alerts) && (
+      {getSevereAlertLevel(alerts.filter(a => !dismissedAlertIds.has(a.properties?.id))) && (
         <div
           className={`fixed inset-0 pointer-events-none z-40 ${
-            getSevereAlertLevel(alerts) === 'warning' ? 'alert-flash-warning' : 'alert-flash-watch'
+            getSevereAlertLevel(alerts.filter(a => !dismissedAlertIds.has(a.properties?.id))) === 'warning' ? 'alert-flash-warning' : 'alert-flash-watch'
           }`}
         />
       )}
