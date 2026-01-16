@@ -3680,6 +3680,23 @@ const App = () => {
   const [autoCycle, setAutoCycle] = useState(false);
   const [cycleSpeed, setCycleSpeed] = useState(10); // seconds per screen
   const [dismissedAlertIds, setDismissedAlertIds] = useState(new Set()); // Track dismissed alert banners
+  const [showAlertFlash, setShowAlertFlash] = useState(false); // Controls the flash overlay
+  const lastAlertIdsRef = useRef(''); // Track alert IDs to detect new alerts
+
+  // --- Alert Flash Timeout (flash for 3 seconds when new severe alerts arrive) ---
+  useEffect(() => {
+    const activeAlerts = alerts.filter(a => !dismissedAlertIds.has(a.properties?.id));
+    const severeLevel = getSevereAlertLevel(activeAlerts);
+    const currentAlertIds = activeAlerts.map(a => a.properties?.id).sort().join(',');
+
+    // Only trigger flash if there are severe alerts AND they're new
+    if (severeLevel && currentAlertIds !== lastAlertIdsRef.current) {
+      lastAlertIdsRef.current = currentAlertIds;
+      setShowAlertFlash(true);
+      const timeout = setTimeout(() => setShowAlertFlash(false), 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, [alerts, dismissedAlertIds]);
 
   // --- Auto-Cycle Effect ---
   useEffect(() => {
@@ -4116,8 +4133,8 @@ const App = () => {
         }
       `}</style>
 
-      {/* Severe Weather Alert Flash Overlay */}
-      {getSevereAlertLevel(alerts.filter(a => !dismissedAlertIds.has(a.properties?.id))) && (
+      {/* Severe Weather Alert Flash Overlay (auto-stops after 3 seconds) */}
+      {showAlertFlash && getSevereAlertLevel(alerts.filter(a => !dismissedAlertIds.has(a.properties?.id))) && (
         <div
           className={`fixed inset-0 pointer-events-none z-40 ${
             getSevereAlertLevel(alerts.filter(a => !dismissedAlertIds.has(a.properties?.id))) === 'warning' ? 'alert-flash-warning' : 'alert-flash-watch'
