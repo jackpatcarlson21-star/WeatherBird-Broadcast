@@ -3679,15 +3679,7 @@ const App = () => {
   const [currentScreen, setCurrentScreen] = useState(SCREENS.CONDITIONS);
   const [autoCycle, setAutoCycle] = useState(false);
   const [cycleSpeed, setCycleSpeed] = useState(10); // seconds per screen
-  const [testAlertLevel, setTestAlertLevel] = useState(null); // 'warning', 'watch', or null - TEMP FOR TESTING
   const [dismissedAlertIds, setDismissedAlertIds] = useState(new Set()); // Track dismissed alert banners
-
-  // --- Test Alert Timeout ---
-  useEffect(() => {
-    if (!testAlertLevel) return;
-    const timeout = setTimeout(() => setTestAlertLevel(null), 3000);
-    return () => clearTimeout(timeout);
-  }, [testAlertLevel]);
 
   // --- Auto-Cycle Effect ---
   useEffect(() => {
@@ -4125,37 +4117,13 @@ const App = () => {
       `}</style>
 
       {/* Severe Weather Alert Flash Overlay */}
-      {(testAlertLevel || getSevereAlertLevel(alerts)) && (
+      {getSevereAlertLevel(alerts) && (
         <div
           className={`fixed inset-0 pointer-events-none z-40 ${
-            (testAlertLevel || getSevereAlertLevel(alerts)) === 'warning' ? 'alert-flash-warning' : 'alert-flash-watch'
+            getSevereAlertLevel(alerts) === 'warning' ? 'alert-flash-warning' : 'alert-flash-watch'
           }`}
         />
       )}
-
-      {/* TEMP: Test Alert Flash Button */}
-      <div className="fixed bottom-20 right-4 z-50 flex flex-col gap-2">
-        <button
-          onClick={() => setTestAlertLevel(testAlertLevel === 'warning' ? null : 'warning')}
-          className={`px-3 py-2 rounded text-sm font-bold transition-all ${
-            testAlertLevel === 'warning'
-              ? 'bg-red-600 text-white ring-2 ring-white'
-              : 'bg-red-900/80 text-red-300 hover:bg-red-800'
-          }`}
-        >
-          {testAlertLevel === 'warning' ? '■ STOP' : '▶ TEST'} WARNING
-        </button>
-        <button
-          onClick={() => setTestAlertLevel(testAlertLevel === 'watch' ? null : 'watch')}
-          className={`px-3 py-2 rounded text-sm font-bold transition-all ${
-            testAlertLevel === 'watch'
-              ? 'bg-orange-600 text-white ring-2 ring-white'
-              : 'bg-orange-900/80 text-orange-300 hover:bg-orange-800'
-          }`}
-        >
-          {testAlertLevel === 'watch' ? '■ STOP' : '▶ TEST'} WATCH
-        </button>
-      </div>
 
       {/* App Status Modal (Error/Loading Overlay) */}
       <AppStatus isLoading={isWeatherLoading} error={appError} isReady={isAuthReady} isAutoDetecting={isAutoDetecting} />
@@ -4191,28 +4159,6 @@ const App = () => {
             </div>
           );
         })}
-
-      {/* TEMP: Test Alert Banner */}
-      {testAlertLevel && (
-        <div
-          onClick={() => setCurrentScreen(SCREENS.ALERTS)}
-          className={`relative flex items-center justify-center px-4 py-3 font-bold text-white cursor-pointer hover:brightness-110 transition-all ${
-            testAlertLevel === 'warning' ? 'bg-red-600' : 'bg-orange-500'
-          }`}
-        >
-          <AlertTriangle size={24} className="mr-2 flex-shrink-0" />
-          <span className="text-center text-lg sm:text-xl md:text-2xl">
-            ⚠️ TEST {testAlertLevel === 'warning' ? 'TORNADO WARNING' : 'SEVERE THUNDERSTORM WATCH'} IN EFFECT - YOUR AREA
-          </span>
-          <button
-            onClick={(e) => { e.stopPropagation(); setTestAlertLevel(null); }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-black/20 rounded transition-colors"
-            aria-label="Dismiss alert"
-          >
-            <X size={20} />
-          </button>
-        </div>
-      )}
 
       {/* Main Content Area: Flex container for Sidebar and Content Panel */}
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col md:flex-row gap-6 overflow-hidden">
