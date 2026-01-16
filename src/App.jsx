@@ -870,6 +870,61 @@ const LoadingIndicator = () => (
 
 const AlertsTab = ({ alerts, location }) => {
     const [showRadioModal, setShowRadioModal] = useState(false);
+    const [speakingAlertId, setSpeakingAlertId] = useState(null);
+
+    // Text-to-speech handler with toggle support
+    const handleSpeak = (alert) => {
+        if (!('speechSynthesis' in window)) return;
+
+        const alertId = alert.properties?.id;
+
+        // If already speaking this alert, stop it
+        if (speakingAlertId === alertId) {
+            window.speechSynthesis.cancel();
+            setSpeakingAlertId(null);
+            return;
+        }
+
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+
+        // Build the text to speak
+        const text = `${alert.properties.event}. ${alert.properties.headline}. ${alert.properties.description}. ${alert.properties.instruction || ''}`;
+
+        const utterance = new SpeechSynthesisUtterance(text);
+
+        // Try to find a better voice
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(v =>
+            v.name.includes('Google') ||
+            v.name.includes('Microsoft') ||
+            v.name.includes('Samantha') ||
+            v.name.includes('Daniel')
+        ) || voices.find(v => v.lang.startsWith('en'));
+
+        if (preferredVoice) {
+            utterance.voice = preferredVoice;
+        }
+
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        utterance.onend = () => setSpeakingAlertId(null);
+        utterance.onerror = () => setSpeakingAlertId(null);
+
+        setSpeakingAlertId(alertId);
+        window.speechSynthesis.speak(utterance);
+    };
+
+    // Cleanup speech on unmount
+    useEffect(() => {
+        return () => {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+        };
+    }, []);
 
     // Alerts are now passed down from App to avoid double fetching
     if (!alerts) return <TabPanel title="ACTIVE ALERTS"><LoadingIndicator /></TabPanel>;
@@ -955,21 +1010,19 @@ const AlertsTab = ({ alerts, location }) => {
                             <div className="flex items-center gap-2">
                                 {/* Text-to-Speech Button */}
                                 <button
-                                    onClick={() => {
-                                        if ('speechSynthesis' in window) {
-                                            // Cancel any ongoing speech
-                                            window.speechSynthesis.cancel();
-                                            const text = `${alert.properties.event}. ${alert.properties.headline}. ${alert.properties.description}. ${alert.properties.instruction || ''}`;
-                                            const utterance = new SpeechSynthesisUtterance(text);
-                                            utterance.rate = 0.9;
-                                            utterance.pitch = 1;
-                                            window.speechSynthesis.speak(utterance);
-                                        }
-                                    }}
-                                    className="p-1.5 bg-cyan-900/50 hover:bg-cyan-700 rounded transition-colors"
-                                    title="Read alert aloud"
+                                    onClick={() => handleSpeak(alert)}
+                                    className={`p-1.5 rounded transition-colors ${
+                                        speakingAlertId === alert.properties?.id
+                                            ? 'bg-cyan-500 animate-pulse'
+                                            : 'bg-cyan-900/50 hover:bg-cyan-700'
+                                    }`}
+                                    title={speakingAlertId === alert.properties?.id ? "Stop reading" : "Read alert aloud"}
                                 >
-                                    <Volume2 size={16} className="text-cyan-300" />
+                                    {speakingAlertId === alert.properties?.id ? (
+                                        <VolumeX size={16} className="text-white" />
+                                    ) : (
+                                        <Volume2 size={16} className="text-cyan-300" />
+                                    )}
                                 </button>
                                 <span className="text-xs bg-black/50 px-2 py-1 rounded text-cyan-300">{alert.properties.severity.toUpperCase()}</span>
                             </div>
