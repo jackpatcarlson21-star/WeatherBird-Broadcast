@@ -125,6 +125,33 @@ const getSevereAlerts = (alerts) => {
   });
 };
 
+// Get tornado warnings specifically (for full-screen takeover)
+const getTornadoWarnings = (alerts) => {
+  if (!alerts || alerts.length === 0) return [];
+  return alerts.filter(alert => {
+    const event = alert.properties?.event?.toLowerCase() || '';
+    return event.includes('tornado') && event.includes('warning');
+  });
+};
+
+// Calculate time remaining until alert expires
+const getExpirationCountdown = (expiresTime) => {
+  if (!expiresTime) return null;
+  const now = new Date();
+  const expires = new Date(expiresTime);
+  const diffMs = expires - now;
+
+  if (diffMs <= 0) return 'Expired';
+
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m remaining`;
+  }
+  return `${minutes}m remaining`;
+};
+
 const degreeToCardinal = (deg) => {
   const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
   return dirs[Math.round(deg / 45) % 8] || "VRB";
@@ -925,9 +952,37 @@ const AlertsTab = ({ alerts, location }) => {
                     }`}>
                         <div className="flex justify-between items-start mb-2">
                             <h3 className="text-xl font-bold text-white">{alert.properties.headline}</h3>
-                            <span className="text-xs bg-black/50 px-2 py-1 rounded text-cyan-300">{alert.properties.severity.toUpperCase()}</span>
+                            <div className="flex items-center gap-2">
+                                {/* Text-to-Speech Button */}
+                                <button
+                                    onClick={() => {
+                                        if ('speechSynthesis' in window) {
+                                            // Cancel any ongoing speech
+                                            window.speechSynthesis.cancel();
+                                            const text = `${alert.properties.event}. ${alert.properties.headline}. ${alert.properties.description}. ${alert.properties.instruction || ''}`;
+                                            const utterance = new SpeechSynthesisUtterance(text);
+                                            utterance.rate = 0.9;
+                                            utterance.pitch = 1;
+                                            window.speechSynthesis.speak(utterance);
+                                        }
+                                    }}
+                                    className="p-1.5 bg-cyan-900/50 hover:bg-cyan-700 rounded transition-colors"
+                                    title="Read alert aloud"
+                                >
+                                    <Volume2 size={16} className="text-cyan-300" />
+                                </button>
+                                <span className="text-xs bg-black/50 px-2 py-1 rounded text-cyan-300">{alert.properties.severity.toUpperCase()}</span>
+                            </div>
                         </div>
-                        <p className="text-sm text-gray-300 mb-2 font-vt323">Effective: {new Date(alert.properties.effective).toLocaleString()}</p>
+                        <div className="flex flex-wrap gap-4 text-sm text-gray-300 mb-2 font-vt323">
+                            <span>Effective: {new Date(alert.properties.effective).toLocaleString()}</span>
+                            {alert.properties.expires && (
+                                <span className="text-yellow-400">
+                                    <Clock size={14} className="inline mr-1" />
+                                    {getExpirationCountdown(alert.properties.expires)}
+                                </span>
+                            )}
+                        </div>
                         <p className="text-sm text-cyan-100 font-vt323 whitespace-pre-wrap">{alert.properties.description}</p>
                         {alert.properties.instruction && (
                             <div className="mt-2 pt-2 border-t border-white/10">
@@ -3680,6 +3735,7 @@ const App = () => {
   const [autoCycle, setAutoCycle] = useState(false);
   const [cycleSpeed, setCycleSpeed] = useState(10); // seconds per screen
   const [dismissedAlertIds, setDismissedAlertIds] = useState(new Set()); // Track dismissed alert banners
+  const [dismissedTornadoModals, setDismissedTornadoModals] = useState(new Set()); // Track dismissed tornado warning modals
   const [showAlertFlash, setShowAlertFlash] = useState(false); // Controls the flash overlay
   const lastAlertIdsRef = useRef(''); // Track alert IDs to detect new alerts
 
@@ -4144,6 +4200,50 @@ const App = () => {
 
       {/* App Status Modal (Error/Loading Overlay) */}
       <AppStatus isLoading={isWeatherLoading} error={appError} isReady={isAuthReady} isAutoDetecting={isAutoDetecting} />
+
+      {/* TORNADO WARNING Full-Screen Takeover */}
+      {getTornadoWarnings(alerts)
+        .filter(alert => !dismissedTornadoModals.has(alert.properties?.id))
+        .slice(0, 1) // Only show one at a time
+        .map(alert => (
+          <div
+            key={alert.properties?.id}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-red-900/95 p-4 animate-pulse"
+          >
+            <div className="bg-black border-4 border-red-500 rounded-xl p-6 md:p-8 max-w-2xl w-full shadow-2xl text-center">
+              <div className="flex justify-center mb-4">
+                <AlertTriangle size={80} className="text-red-500 animate-bounce" />
+              </div>
+              <h1 className="text-4xl md:text-6xl font-bold text-red-500 mb-4 tracking-wider">
+                ⚠️ TORNADO WARNING ⚠️
+              </h1>
+              <p className="text-2xl md:text-3xl text-white mb-4">
+                {alert.properties?.areaDesc}
+              </p>
+              <div className="bg-red-900/50 rounded-lg p-4 mb-6 text-left">
+                <p className="text-lg text-red-200 font-bold mb-2">TAKE SHELTER IMMEDIATELY!</p>
+                <ul className="text-yellow-300 space-y-1 text-sm md:text-base">
+                  <li>• Move to an interior room on the lowest floor</li>
+                  <li>• Stay away from windows, doors, and outside walls</li>
+                  <li>• Get under a sturdy table and cover your head</li>
+                  <li>• If in a mobile home, evacuate to a sturdy building</li>
+                </ul>
+              </div>
+              {alert.properties?.expires && (
+                <p className="text-cyan-400 mb-4">
+                  <Clock size={16} className="inline mr-1" />
+                  {getExpirationCountdown(alert.properties.expires)}
+                </p>
+              )}
+              <button
+                onClick={() => setDismissedTornadoModals(prev => new Set([...prev, alert.properties?.id]))}
+                className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white text-xl font-bold rounded-lg transition-colors"
+              >
+                I UNDERSTAND - DISMISS
+              </button>
+            </div>
+          </div>
+        ))}
 
       {/* Main Header */}
       <Header time={time} locationName={location.name} onLocationClick={() => setIsModalOpen(true)} timezone={weatherData?.timezone} isPlaying={isPlaying} toggleMusic={toggleMusic} volume={volume} setVolume={setVolume} autoCycle={autoCycle} setAutoCycle={setAutoCycle} />
