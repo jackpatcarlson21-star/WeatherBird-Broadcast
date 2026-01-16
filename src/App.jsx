@@ -74,6 +74,57 @@ const isNight = (now, sunrise, sunset) => {
   return nowTime < sunriseTime || nowTime > sunsetTime;
 };
 
+// Severe weather alert detection for screen flashing
+const SEVERE_ALERT_KEYWORDS = [
+  'Severe Thunderstorm',
+  'Tornado',
+  'Tropical Storm',
+  'Hurricane',
+  'Winter Storm',
+  'Blizzard'
+];
+
+const getSevereAlertLevel = (alerts) => {
+  if (!alerts || alerts.length === 0) return null;
+
+  let hasWarning = false;
+  let hasWatch = false;
+
+  for (const alert of alerts) {
+    const event = alert.properties?.event?.toLowerCase() || '';
+
+    for (const keyword of SEVERE_ALERT_KEYWORDS) {
+      if (event.includes(keyword.toLowerCase())) {
+        if (event.includes('warning')) {
+          hasWarning = true;
+        } else if (event.includes('watch')) {
+          hasWatch = true;
+        }
+      }
+    }
+  }
+
+  if (hasWarning) return 'warning';
+  if (hasWatch) return 'watch';
+  return null;
+};
+
+// Get severe alerts for banner display
+const getSevereAlerts = (alerts) => {
+  if (!alerts || alerts.length === 0) return [];
+
+  return alerts.filter(alert => {
+    const event = alert.properties?.event?.toLowerCase() || '';
+    for (const keyword of SEVERE_ALERT_KEYWORDS) {
+      if (event.includes(keyword.toLowerCase()) &&
+          (event.includes('warning') || event.includes('watch'))) {
+        return true;
+      }
+    }
+    return false;
+  });
+};
+
 const degreeToCardinal = (deg) => {
   const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
   return dirs[Math.round(deg / 45) % 8] || "VRB";
@@ -320,19 +371,19 @@ const Header = ({ time, locationName, onLocationClick, timezone, isPlaying, togg
         <MapPin size={16} /> <span className="truncate max-w-56">{locationName}</span>
       </div>
     </div>
-    <div className="flex items-center gap-3 sm:gap-5">
+    <div className="flex items-center gap-2 sm:gap-5">
       {/* Auto-Cycle Button */}
       <button
         onClick={() => setAutoCycle(!autoCycle)}
-        className={`p-2 sm:p-3 rounded-full transition shadow-md ${autoCycle ? 'bg-cyan-600' : 'bg-white/10 hover:bg-white/20'}`}
+        className={`p-2 rounded-full transition shadow-md shrink-0 ${autoCycle ? 'bg-cyan-600' : 'bg-white/10 hover:bg-white/20'}`}
         style={{ border: `1px solid ${BRIGHT_CYAN}` }}
         title={autoCycle ? 'Stop Auto-Cycle' : 'Start Auto-Cycle'}
       >
-        <Radio size={20} className={autoCycle ? 'text-white animate-pulse' : 'text-cyan-400'} />
+        <Radio size={18} className={autoCycle ? 'text-white animate-pulse' : 'text-cyan-400'} />
       </button>
 
       {/* Music Controls */}
-      <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-black/30" style={{ border: `1px solid ${BRIGHT_CYAN}` }}>
+      <div className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-full bg-black/30 shrink-0" style={{ border: `1px solid ${BRIGHT_CYAN}` }}>
         <button
           onClick={toggleMusic}
           className="text-cyan-400 hover:text-white transition"
@@ -357,8 +408,8 @@ const Header = ({ time, locationName, onLocationClick, timezone, isPlaying, togg
       </div>
 
       {/* Location Button */}
-      <button onClick={onLocationClick} className="p-2 sm:p-3 bg-white/10 rounded-full hover:bg-white/20 transition shadow-md" style={{ border: `1px solid ${BRIGHT_CYAN}`, color: BRIGHT_CYAN }}>
-        <MapPin size={20} style={{ color: BRIGHT_CYAN }} />
+      <button onClick={onLocationClick} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition shadow-md shrink-0" style={{ border: `1px solid ${BRIGHT_CYAN}`, color: BRIGHT_CYAN }}>
+        <MapPin size={18} style={{ color: BRIGHT_CYAN }} />
       </button>
 
       {/* Clock */}
@@ -790,12 +841,74 @@ const LoadingIndicator = () => (
 
 // --- Tab Components ---
 
-const AlertsTab = ({ alerts }) => {
+const AlertsTab = ({ alerts, location }) => {
+    const [showRadioModal, setShowRadioModal] = useState(false);
+
     // Alerts are now passed down from App to avoid double fetching
     if (!alerts) return <TabPanel title="ACTIVE ALERTS"><LoadingIndicator /></TabPanel>;
 
     return (
         <TabPanel title="ACTIVE ALERTS">
+            {/* NOAA Radio Button */}
+            <div className="flex justify-end mb-4">
+                <button
+                    onClick={() => setShowRadioModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-900/50 text-red-300 rounded border border-red-500 hover:bg-red-800 hover:text-white transition font-vt323 text-lg"
+                >
+                    <Radio size={20} /> NOAA WEATHER RADIO
+                </button>
+            </div>
+
+            {/* NOAA Radio Modal */}
+            {showRadioModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+                    <div className="bg-gradient-to-b from-gray-900 to-black border-2 border-red-500 rounded-xl p-6 max-w-md w-full shadow-2xl">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-2xl font-bold text-red-400 flex items-center gap-2">
+                                <Radio size={24} /> NOAA WEATHER RADIO
+                            </h2>
+                            <button
+                                onClick={() => setShowRadioModal(false)}
+                                className="text-gray-400 hover:text-white transition"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <p className="text-cyan-300 mb-4 text-sm">
+                            Listen to live NOAA Weather Radio for emergency alerts and forecasts near <span className="text-white font-bold">{location?.name || 'your area'}</span>.
+                        </p>
+
+                        <div className="space-y-3">
+                            <a
+                                href="https://noaaweatherradio.org/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-red-700/50 text-white rounded border border-red-400 hover:bg-red-600 hover:text-white transition font-vt323 text-xl"
+                            >
+                                <Radio size={20} /> LISTEN LIVE - 131+ STATIONS
+                            </a>
+
+                            <a
+                                href={`https://www.weather.gov/nwr/stations?state=${location?.name?.split(', ').pop() || ''}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-900/50 text-blue-300 rounded border border-blue-500 hover:bg-blue-800 hover:text-white transition font-vt323 text-lg"
+                            >
+                                <MapPin size={18} /> NWS STATION INFO & FREQUENCIES
+                            </a>
+                        </div>
+
+                        <p className="text-gray-500 text-xs mt-4 text-center">
+                            NOAA Weather Radio broadcasts 24/7 weather information directly from National Weather Service offices.
+                        </p>
+                        <p className="text-yellow-600 text-xs mt-2 text-center">
+                            ⚠️ Online streams should not be relied upon for life safety - use a dedicated weather radio receiver.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {alerts.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-64 text-center">
                     <ShieldAlert size={64} className="text-green-500 mb-4" />
@@ -3566,6 +3679,15 @@ const App = () => {
   const [currentScreen, setCurrentScreen] = useState(SCREENS.CONDITIONS);
   const [autoCycle, setAutoCycle] = useState(false);
   const [cycleSpeed, setCycleSpeed] = useState(10); // seconds per screen
+  const [testAlertLevel, setTestAlertLevel] = useState(null); // 'warning', 'watch', or null - TEMP FOR TESTING
+  const [dismissedAlertIds, setDismissedAlertIds] = useState(new Set()); // Track dismissed alert banners
+
+  // --- Test Alert Timeout ---
+  useEffect(() => {
+    if (!testAlertLevel) return;
+    const timeout = setTimeout(() => setTestAlertLevel(null), 3000);
+    return () => clearTimeout(timeout);
+  }, [testAlertLevel]);
 
   // --- Auto-Cycle Effect ---
   useEffect(() => {
@@ -3957,7 +4079,7 @@ const App = () => {
       case SCREENS.CONDITIONS:
         return <CurrentConditionsTab current={current} daily={daily} hourly={hourly} night={night} isWeatherLoading={isWeatherLoading} alerts={alerts} />;
       case SCREENS.ALERTS:
-        return <AlertsTab alerts={alerts} />; // Pass alerts here
+        return <AlertsTab alerts={alerts} location={location} />;
       case SCREENS.HOURLY:
         return <HourlyForecastTab hourly={hourly} night={night} isWeatherLoading={isWeatherLoading} />;
       case SCREENS.DAILY:
@@ -3988,13 +4110,109 @@ const App = () => {
         .shadow-neon-md { box-shadow: 0 0 10px 2px rgba(0, 255, 255, 0.5), 0 0 20px 5px rgba(0, 255, 255, 0.2); }
         .shadow-neon-lg { box-shadow: 0 0 15px 3px rgba(0, 255, 255, 0.7), 0 0 30px 8px rgba(0, 255, 255, 0.4); }
         .shadow-inner-neon { box-shadow: inset 0 0 8px rgba(0, 255, 255, 0.5); }
+        @keyframes alertFlash {
+          0%, 100% { opacity: 0; }
+          50% { opacity: 0.3; }
+        }
+        .alert-flash-warning {
+          animation: alertFlash 1s ease-in-out infinite;
+          background-color: rgba(239, 68, 68, 1);
+        }
+        .alert-flash-watch {
+          animation: alertFlash 1.5s ease-in-out infinite;
+          background-color: rgba(249, 115, 22, 1);
+        }
       `}</style>
+
+      {/* Severe Weather Alert Flash Overlay */}
+      {(testAlertLevel || getSevereAlertLevel(alerts)) && (
+        <div
+          className={`fixed inset-0 pointer-events-none z-40 ${
+            (testAlertLevel || getSevereAlertLevel(alerts)) === 'warning' ? 'alert-flash-warning' : 'alert-flash-watch'
+          }`}
+        />
+      )}
+
+      {/* TEMP: Test Alert Flash Button */}
+      <div className="fixed bottom-20 right-4 z-50 flex flex-col gap-2">
+        <button
+          onClick={() => setTestAlertLevel(testAlertLevel === 'warning' ? null : 'warning')}
+          className={`px-3 py-2 rounded text-sm font-bold transition-all ${
+            testAlertLevel === 'warning'
+              ? 'bg-red-600 text-white ring-2 ring-white'
+              : 'bg-red-900/80 text-red-300 hover:bg-red-800'
+          }`}
+        >
+          {testAlertLevel === 'warning' ? '■ STOP' : '▶ TEST'} WARNING
+        </button>
+        <button
+          onClick={() => setTestAlertLevel(testAlertLevel === 'watch' ? null : 'watch')}
+          className={`px-3 py-2 rounded text-sm font-bold transition-all ${
+            testAlertLevel === 'watch'
+              ? 'bg-orange-600 text-white ring-2 ring-white'
+              : 'bg-orange-900/80 text-orange-300 hover:bg-orange-800'
+          }`}
+        >
+          {testAlertLevel === 'watch' ? '■ STOP' : '▶ TEST'} WATCH
+        </button>
+      </div>
 
       {/* App Status Modal (Error/Loading Overlay) */}
       <AppStatus isLoading={isWeatherLoading} error={appError} isReady={isAuthReady} isAutoDetecting={isAutoDetecting} />
 
       {/* Main Header */}
       <Header time={time} locationName={location.name} onLocationClick={() => setIsModalOpen(true)} timezone={weatherData?.timezone} isPlaying={isPlaying} toggleMusic={toggleMusic} volume={volume} setVolume={setVolume} autoCycle={autoCycle} setAutoCycle={setAutoCycle} />
+
+      {/* Severe Weather Alert Banner */}
+      {getSevereAlerts(alerts)
+        .filter(alert => !dismissedAlertIds.has(alert.properties?.id))
+        .map(alert => {
+          const event = alert.properties?.event?.toLowerCase() || '';
+          const isWarning = event.includes('warning');
+          return (
+            <div
+              key={alert.properties?.id}
+              onClick={() => setCurrentScreen(SCREENS.ALERTS)}
+              className={`relative flex items-center justify-center px-4 py-3 font-bold text-white cursor-pointer hover:brightness-110 transition-all ${
+                isWarning ? 'bg-red-600' : 'bg-orange-500'
+              }`}
+            >
+              <AlertTriangle size={24} className="mr-2 flex-shrink-0" />
+              <span className="text-center text-lg sm:text-xl md:text-2xl">
+                ⚠️ {alert.properties?.event?.toUpperCase()} IN EFFECT - {alert.properties?.areaDesc}
+              </span>
+              <button
+                onClick={(e) => { e.stopPropagation(); setDismissedAlertIds(prev => new Set([...prev, alert.properties?.id])); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-black/20 rounded transition-colors"
+                aria-label="Dismiss alert"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          );
+        })}
+
+      {/* TEMP: Test Alert Banner */}
+      {testAlertLevel && (
+        <div
+          onClick={() => setCurrentScreen(SCREENS.ALERTS)}
+          className={`relative flex items-center justify-center px-4 py-3 font-bold text-white cursor-pointer hover:brightness-110 transition-all ${
+            testAlertLevel === 'warning' ? 'bg-red-600' : 'bg-orange-500'
+          }`}
+        >
+          <AlertTriangle size={24} className="mr-2 flex-shrink-0" />
+          <span className="text-center text-lg sm:text-xl md:text-2xl">
+            ⚠️ TEST {testAlertLevel === 'warning' ? 'TORNADO WARNING' : 'SEVERE THUNDERSTORM WATCH'} IN EFFECT - YOUR AREA
+          </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); setTestAlertLevel(null); }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-black/20 rounded transition-colors"
+            aria-label="Dismiss alert"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      )}
 
       {/* Main Content Area: Flex container for Sidebar and Content Panel */}
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col md:flex-row gap-6 overflow-hidden">
