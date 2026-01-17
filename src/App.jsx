@@ -52,6 +52,10 @@ const MID_BLUE = '#0055AA';
 const getWeatherApiUrl = (lat, lon) =>
   `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,pressure_msl,dew_point_2m&hourly=temperature_2m,precipitation_probability,precipitation,snowfall,weather_code,wind_speed_10m,pressure_msl&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,wind_speed_10m_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=8&past_hours=6`;
 
+// Air Quality API (Open-Meteo)
+const getAirQualityUrl = (lat, lon) =>
+  `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,ozone&timezone=auto`;
+
 // NWS Alerts API
 const getNWSAlertsUrl = (lat, lon) => `https://api.weather.gov/alerts/active?point=${lat},${lon}`;
 
@@ -72,6 +76,17 @@ const isNight = (now, sunrise, sunset) => {
   const sunsetTime = new Date(sunset).getTime();
   const nowTime = now.getTime();
   return nowTime < sunriseTime || nowTime > sunsetTime;
+};
+
+// AQI level info (US EPA standard)
+const getAQIInfo = (aqi) => {
+  if (aqi === null || aqi === undefined) return { level: 'Unknown', color: 'gray', bgColor: 'bg-gray-500', textColor: 'text-gray-300', description: 'Data unavailable' };
+  if (aqi <= 50) return { level: 'Good', color: '#00e400', bgColor: 'bg-green-500', textColor: 'text-green-400', description: 'Air quality is satisfactory' };
+  if (aqi <= 100) return { level: 'Moderate', color: '#ffff00', bgColor: 'bg-yellow-500', textColor: 'text-yellow-400', description: 'Acceptable; moderate concern for sensitive people' };
+  if (aqi <= 150) return { level: 'Unhealthy for Sensitive Groups', color: '#ff7e00', bgColor: 'bg-orange-500', textColor: 'text-orange-400', description: 'Sensitive groups may experience health effects' };
+  if (aqi <= 200) return { level: 'Unhealthy', color: '#ff0000', bgColor: 'bg-red-500', textColor: 'text-red-400', description: 'Everyone may experience health effects' };
+  if (aqi <= 300) return { level: 'Very Unhealthy', color: '#8f3f97', bgColor: 'bg-purple-500', textColor: 'text-purple-400', description: 'Health alert: everyone may experience serious effects' };
+  return { level: 'Hazardous', color: '#7e0023', bgColor: 'bg-red-900', textColor: 'text-red-300', description: 'Health emergency: everyone is affected' };
 };
 
 // Severe weather alert detection for screen flashing
@@ -1460,7 +1475,7 @@ const WeatherBird = ({ temp, weatherCode, windSpeed, night }) => {
     );
 };
 
-const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading, alerts }) => {
+const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading, alerts, aqiData }) => {
     if (isWeatherLoading) return <LoadingIndicator />;
 
     const currentData = current || {};
@@ -1470,6 +1485,9 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
         sunrise: daily.sunrise[0],
         sunset: daily.sunset[0],
     } : {};
+
+    const aqi = aqiData?.current?.us_aqi;
+    const aqiInfo = getAQIInfo(aqi);
 
     const weatherSummary = generateWeatherSummary(current, daily, night, alerts);
 
@@ -1549,6 +1567,27 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
                 </div>
                 <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 flex flex-col items-center">
                     <PressureTrend hourlyData={hourly} currentPressure={currentData.pressure_msl} />
+                </div>
+                {/* Air Quality Index */}
+                <div className={`p-3 rounded-lg border flex flex-col items-center col-span-2 ${
+                    aqi <= 50 ? 'border-green-500 bg-green-900/20' :
+                    aqi <= 100 ? 'border-yellow-500 bg-yellow-900/20' :
+                    aqi <= 150 ? 'border-orange-500 bg-orange-900/20' :
+                    aqi <= 200 ? 'border-red-500 bg-red-900/20' :
+                    aqi <= 300 ? 'border-purple-500 bg-purple-900/20' :
+                    'border-red-900 bg-red-950/30'
+                }`}>
+                    <div className="flex items-center gap-2">
+                        <Wind size={20} className={aqiInfo.textColor} />
+                        <span className="text-sm text-cyan-300">AIR QUALITY INDEX</span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1">
+                        <span className={`text-3xl font-bold ${aqiInfo.textColor}`}>{aqi ?? '--'}</span>
+                        <div className="text-left">
+                            <span className={`font-bold ${aqiInfo.textColor}`}>{aqiInfo.level}</span>
+                            <p className="text-xs text-gray-400">{aqiInfo.description}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </TabPanel>
@@ -3777,6 +3816,7 @@ const App = () => {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [location, setLocation] = useState(INITIAL_LOCATION);
   const [weatherData, setWeatherData] = useState(null);
+  const [aqiData, setAqiData] = useState(null); // Air Quality Index data
   const [alerts, setAlerts] = useState([]); // State for Alerts
   const [isLoading, setIsLoading] = useState(false);
   const [appError, setAppError] = useState(null);
@@ -4052,6 +4092,23 @@ const App = () => {
     }
   }, []);
 
+  // --- AQI Fetching Logic ---
+  const fetchAQI = useCallback(async (loc) => {
+    if (!loc.lat || !loc.lon) return;
+
+    try {
+      const url = getAirQualityUrl(loc.lat, loc.lon);
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`AQI API returned status ${response.status}`);
+      const data = await response.json();
+      setAqiData(data);
+      console.log("AQI data fetched successfully.", data);
+    } catch (error) {
+      console.error("AQI fetching failed:", error);
+      setAqiData(null);
+    }
+  }, []);
+
   // --- Alert Fetching Logic (Refactored to App level) ---
   const fetchAlerts = useCallback(async () => {
       if (!location.lat || !location.lon) return;
@@ -4148,19 +4205,21 @@ const App = () => {
       clearInterval(weatherIntervalRef.current);
     }
 
-    // Immediately fetch weather for the new location
+    // Immediately fetch weather and AQI for the new location
     fetchWeather(location);
+    fetchAQI(location);
 
     // Set up recurring fetch (UPDATED TO 60 SECONDS)
     weatherIntervalRef.current = setInterval(() => {
       fetchWeather(location);
+      fetchAQI(location);
     }, REFRESH_RATE_MS);
 
     // Clean up on component unmount or location change
     return () => {
       if (weatherIntervalRef.current) clearInterval(weatherIntervalRef.current);
     };
-  }, [location, isAuthReady, fetchWeather]);
+  }, [location, isAuthReady, fetchWeather, fetchAQI]);
 
   // --- Location Save Handler ---
   const handleLocationSave = async (newLoc) => {
@@ -4195,7 +4254,7 @@ const App = () => {
           setCurrentScreen(SCREENS.CONDITIONS);
         }} />;
       case SCREENS.CONDITIONS:
-        return <CurrentConditionsTab current={current} daily={daily} hourly={hourly} night={night} isWeatherLoading={isWeatherLoading} alerts={alerts} />;
+        return <CurrentConditionsTab current={current} daily={daily} hourly={hourly} night={night} isWeatherLoading={isWeatherLoading} alerts={alerts} aqiData={aqiData} />;
       case SCREENS.ALERTS:
         return <AlertsTab alerts={alerts} location={location} />;
       case SCREENS.HOURLY:
