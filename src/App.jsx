@@ -914,18 +914,26 @@ const AlertsTab = ({ alerts, location }) => {
         // Cancel any ongoing speech
         window.speechSynthesis.cancel();
 
-        // Build the text to speak
-        const text = `${alert.properties.event}. ${alert.properties.headline}. ${alert.properties.description}. ${alert.properties.instruction || ''}`;
+        // Build the text to speak (remove symbols that get read aloud, convert ... to pause)
+        const rawText = `${alert.properties.event}. ${alert.properties.headline}. ${alert.properties.description}. ${alert.properties.instruction || ''}`;
+        const text = rawText.replace(/\*/g, '').replace(/\.{3,}/g, ', , ').replace(/\.{2}/g, '.');
 
         const utterance = new SpeechSynthesisUtterance(text);
 
-        // Try to find a better voice
+        // Try to find a natural-sounding voice (prioritize neural/natural voices)
         const voices = window.speechSynthesis.getVoices();
         const preferredVoice = voices.find(v =>
-            v.name.includes('Google') ||
-            v.name.includes('Microsoft') ||
+            v.name.includes('Natural') ||
+            v.name.includes('Neural')
+        ) || voices.find(v =>
+            v.name.includes('Google UK English Female') ||
+            v.name.includes('Google US English')
+        ) || voices.find(v =>
             v.name.includes('Samantha') ||
-            v.name.includes('Daniel')
+            v.name.includes('Karen') ||
+            v.name.includes('Moira')
+        ) || voices.find(v =>
+            v.name.includes('Microsoft') && v.name.includes('Online')
         ) || voices.find(v => v.lang.startsWith('en'));
 
         if (preferredVoice) {
