@@ -2043,22 +2043,66 @@ const findNearestRadar = (lat, lon) => {
 
 const RadarTab = ({ location }) => {
   const nearestRadar = useMemo(() => findNearestRadar(location.lat, location.lon), [location.lat, location.lon]);
-  const radarUrl = `https://radar.weather.gov/ridge/standard/${nearestRadar.id}_loop.gif`;
+  const [showNational, setShowNational] = useState(false);
+
+  const localRadarUrl = `https://radar.weather.gov/ridge/standard/${nearestRadar.id}_loop.gif`;
 
   return (
     <TabPanel title="DOPPLER RADAR">
       <div className="text-center space-y-4">
-        <h3 className="text-xl sm:text-2xl text-cyan-300">NEXRAD RADAR - {nearestRadar.id}</h3>
-        <p className="text-sm text-cyan-400">{nearestRadar.name}</p>
-        <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden bg-black flex items-center justify-center" style={{ minHeight: '500px' }}>
-          <img
-            src={radarUrl}
-            alt={`NEXRAD Radar ${nearestRadar.id}`}
-            className="max-w-full max-h-full"
-            style={{ imageRendering: 'pixelated' }}
-          />
+        {/* Toggle buttons */}
+        <div className="flex justify-center gap-2">
+          <button
+            onClick={() => setShowNational(false)}
+            className={`px-4 py-2 rounded-lg font-vt323 text-lg transition-all ${
+              !showNational
+                ? 'bg-cyan-600 text-white border-2 border-white'
+                : 'bg-black/30 text-cyan-300 border-2 border-cyan-700 hover:border-cyan-500'
+            }`}
+          >
+            LOCAL
+          </button>
+          <button
+            onClick={() => setShowNational(true)}
+            className={`px-4 py-2 rounded-lg font-vt323 text-lg transition-all ${
+              showNational
+                ? 'bg-cyan-600 text-white border-2 border-white'
+                : 'bg-black/30 text-cyan-300 border-2 border-cyan-700 hover:border-cyan-500'
+            }`}
+          >
+            NATIONAL
+          </button>
         </div>
-        <p className="text-xs text-cyan-400">Source: NOAA/NWS RIDGE Radar - Auto-refreshes every few minutes</p>
+
+        <h3 className="text-xl sm:text-2xl text-cyan-300">
+          {showNational ? 'NATIONAL RADAR' : `NEXRAD RADAR - ${nearestRadar.id}`}
+        </h3>
+        <p className="text-sm text-cyan-400">
+          {showNational ? 'Continental United States' : nearestRadar.name}
+        </p>
+
+        {showNational ? (
+          <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden bg-black flex items-center justify-center" style={{ minHeight: '500px' }}>
+            <img
+              src="https://radar.weather.gov/ridge/standard/CONUS-LARGE_loop.gif"
+              alt="National CONUS Radar"
+              className="max-w-full max-h-full"
+            />
+          </div>
+        ) : (
+          <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden bg-black flex items-center justify-center" style={{ minHeight: '500px' }}>
+            <img
+              src={localRadarUrl}
+              alt={`NEXRAD Radar ${nearestRadar.id}`}
+              className="max-w-full max-h-full"
+              style={{ imageRendering: 'pixelated' }}
+            />
+          </div>
+        )}
+
+        <p className="text-xs text-cyan-400">
+          Source: NOAA/NWS RIDGE Radar
+        </p>
       </div>
     </TabPanel>
   );
