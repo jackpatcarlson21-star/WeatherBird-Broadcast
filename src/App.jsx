@@ -2442,10 +2442,42 @@ const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
     );
 };
 
+// Weather facts that rotate hourly
+const WEATHER_FACTS = [
+    "Lightning strikes the Earth about 8 million times per day.",
+    "A hurricane can release energy equivalent to 10,000 nuclear bombs.",
+    "The fastest wind speed ever recorded was 253 mph during a tornado in Oklahoma.",
+    "Snowflakes can take up to an hour to fall from the cloud to the ground.",
+    "The average thunderstorm is 15 miles in diameter and lasts 30 minutes.",
+    "A single cloud can weigh more than 1 million pounds.",
+    "The coldest temperature ever recorded was -128.6°F in Antarctica.",
+    "Rain contains vitamin B12, which is why plants thrive after a storm.",
+    "The hottest temperature ever recorded was 134°F in Death Valley, California.",
+    "Fog is actually a cloud that touches the ground.",
+    "A bolt of lightning is 5 times hotter than the surface of the sun.",
+    "The US has more tornadoes than any other country in the world.",
+    "Hailstones can fall at speeds over 100 mph.",
+    "The eye of a hurricane is completely calm with clear skies.",
+    "Raindrops are not teardrop-shaped - they're actually shaped like hamburger buns.",
+    "Mount Waialeale in Hawaii has rain about 350 days per year.",
+    "The smell after rain is called 'petrichor' and comes from oils released by plants.",
+    "Crickets chirp faster when it's warmer - you can estimate temperature by counting chirps.",
+    "Lake-effect snow can dump several feet of snow in just hours.",
+    "The Great Blizzard of 1888 dropped 50 inches of snow on the northeastern US.",
+    "Dust from the Sahara Desert can travel across the Atlantic to the Americas.",
+    "Ball lightning is a rare phenomenon that scientists still don't fully understand.",
+    "The wind doesn't make a sound until it blows against something.",
+    "Yuma, Arizona is the sunniest place on Earth with 90% of daylight hours being sunny.",
+];
+
 const AlmanacTab = ({ location, userId }) => {
     const today = new Date();
     const [almanacData, setAlmanacData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+
+    // Get weather fact based on current hour (changes every hour)
+    const currentHour = today.getHours();
+    const weatherFact = WEATHER_FACTS[currentHour % WEATHER_FACTS.length];
 
     useEffect(() => {
         const fetchAlmanacData = async () => {
@@ -2695,7 +2727,18 @@ const AlmanacTab = ({ location, userId }) => {
 
     return (
         <TabPanel title="ALMANAC">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="space-y-4">
+                {/* Weather Fact Banner */}
+                <div className="p-4 rounded-lg text-center" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                        <Star size={18} className="text-yellow-400"/>
+                        <h3 className="text-lg text-white font-bold">WEATHER FACT OF THE HOUR</h3>
+                        <Star size={18} className="text-yellow-400"/>
+                    </div>
+                    <p className="text-cyan-200 text-lg italic">"{weatherFact}"</p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
                 {/* Sunrise/Sunset & Daylight Box */}
                 <div className="lg:col-span-1 p-4 rounded-lg space-y-3" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
@@ -2815,6 +2858,7 @@ const AlmanacTab = ({ location, userId }) => {
                     </div>
                 </div>
 
+                </div>
             </div>
         </TabPanel>
     );
