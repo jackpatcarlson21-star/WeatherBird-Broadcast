@@ -500,7 +500,7 @@ const Footer = ({ current, locationName, alerts }) => {
 
             {/* Scrolling Ticker - Full Width */}
             <div className="w-full relative h-full flex items-center overflow-hidden bg-black/20">
-                <div className={`whitespace-nowrap animate-marquee font-vt323 text-xl px-4 tracking-widest absolute ${alerts && alerts.length > 0 ? 'text-red-300 font-bold' : 'text-cyan-300'}`}>
+                <div className={`whitespace-nowrap font-vt323 text-xl px-4 tracking-widest absolute ${alerts && alerts.length > 0 ? 'text-red-300 font-bold animate-marquee-slow' : 'text-cyan-300 animate-marquee'}`}>
                     {tickerText.repeat(5)}
                 </div>
             </div>
@@ -512,6 +512,10 @@ const Footer = ({ current, locationName, alerts }) => {
                 }
                 .animate-marquee {
                     animation: marquee 60s linear infinite;
+                    will-change: transform;
+                }
+                .animate-marquee-slow {
+                    animation: marquee 120s linear infinite;
                     will-change: transform;
                 }
             `}</style>
