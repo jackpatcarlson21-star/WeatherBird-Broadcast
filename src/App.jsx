@@ -2001,6 +2001,19 @@ const NEXRAD_STATIONS = [
   { id: 'KVNX', name: 'Vance AFB, OK', lat: 36.741, lon: -98.128 },
   { id: 'KICT', name: 'Wichita, KS', lat: 37.655, lon: -97.443 },
   { id: 'KLTX', name: 'Wilmington, NC', lat: 33.989, lon: -78.429 },
+  // Alaska
+  { id: 'PAHG', name: 'Kenai/Anchorage, AK', lat: 60.726, lon: -151.351 },
+  { id: 'PAPD', name: 'Fairbanks, AK', lat: 65.035, lon: -147.502 },
+  { id: 'PACG', name: 'Sitka, AK', lat: 56.853, lon: -135.529 },
+  { id: 'PAEC', name: 'Nome, AK', lat: 64.512, lon: -165.295 },
+  { id: 'PAKC', name: 'King Salmon, AK', lat: 58.680, lon: -156.629 },
+  { id: 'PAIH', name: 'Middleton Island, AK', lat: 59.461, lon: -146.303 },
+  { id: 'PABC', name: 'Bethel, AK', lat: 60.792, lon: -161.876 },
+  // Hawaii
+  { id: 'PHKM', name: 'Kohala, HI (Big Island)', lat: 20.125, lon: -155.778 },
+  { id: 'PHKI', name: 'Kauai, HI', lat: 21.894, lon: -159.552 },
+  { id: 'PHMO', name: 'Molokai, HI', lat: 21.133, lon: -157.180 },
+  { id: 'PHWA', name: 'South Shore, HI (Oahu)', lat: 21.305, lon: -158.019 },
 ];
 
 // Find nearest radar station to a given location
