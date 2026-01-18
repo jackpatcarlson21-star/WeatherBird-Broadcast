@@ -96,7 +96,8 @@ const SEVERE_ALERT_KEYWORDS = [
   'Tropical Storm',
   'Hurricane',
   'Winter Storm',
-  'Blizzard'
+  'Blizzard',
+  'Ice Storm'
 ];
 
 const getSevereAlertLevel = (alerts) => {
