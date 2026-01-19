@@ -2502,10 +2502,10 @@ const AlmanacTab = ({ location, userId }) => {
                     );
                 }
 
-                // Fetch YTD precipitation and temperature data (Jan 1 to today)
+                // Fetch YTD precipitation (Jan 1 to today)
                 const ytdStartDate = `${currentYear}-01-01`;
                 const ytdEndDate = `${currentYear}-${month}-${day}`;
-                const ytdPromise = fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${ytdStartDate}&end_date=${ytdEndDate}&daily=precipitation_sum,temperature_2m_max,temperature_2m_min&precipitation_unit=inch&temperature_unit=fahrenheit&timezone=auto`)
+                const ytdPromise = fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${ytdStartDate}&end_date=${ytdEndDate}&daily=precipitation_sum&precipitation_unit=inch&timezone=auto`)
                     .then(res => res.ok ? res.json() : null)
                     .catch(() => null);
 
@@ -2565,24 +2565,10 @@ const AlmanacTab = ({ location, userId }) => {
                     }
                 });
 
-                // Calculate YTD precipitation and degree days
+                // Calculate YTD precipitation
                 let ytdPrecip = 0;
-                let heatingDegreeDays = 0;
-                let coolingDegreeDays = 0;
-                if (ytdData?.daily) {
-                    if (ytdData.daily.precipitation_sum) {
-                        ytdPrecip = ytdData.daily.precipitation_sum.reduce((sum, p) => sum + (p || 0), 0);
-                    }
-                    // Calculate heating and cooling degree days (base 65°F)
-                    const highs = ytdData.daily.temperature_2m_max || [];
-                    const lows = ytdData.daily.temperature_2m_min || [];
-                    for (let i = 0; i < highs.length; i++) {
-                        if (highs[i] != null && lows[i] != null) {
-                            const avgTemp = (highs[i] + lows[i]) / 2;
-                            if (avgTemp < 65) heatingDegreeDays += (65 - avgTemp);
-                            if (avgTemp > 65) coolingDegreeDays += (avgTemp - 65);
-                        }
-                    }
+                if (ytdData?.daily?.precipitation_sum) {
+                    ytdPrecip = ytdData.daily.precipitation_sum.reduce((sum, p) => sum + (p || 0), 0);
                 }
 
                 // Calculate monthly averages
@@ -2626,6 +2612,8 @@ const AlmanacTab = ({ location, userId }) => {
                 // Estimate frost dates from historical data
                 let lastSpringFrost = '--';
                 let firstFallFrost = '--';
+                let lastSpringFrostDOY = null;
+                let firstFallFrostDOY = null;
                 if (springFrostData?.daily?.temperature_2m_min && springFrostData?.daily?.time) {
                     const springFrostDates = [];
                     springFrostData.daily.time.forEach((date, i) => {
@@ -2639,8 +2627,8 @@ const AlmanacTab = ({ location, userId }) => {
                         }
                     });
                     if (springFrostDates.length > 0) {
-                        const avgLastFrost = Math.round(springFrostDates.reduce((a, b) => Math.max(a, b), 0));
-                        const frostDate = new Date(currentYear, 0, avgLastFrost);
+                        lastSpringFrostDOY = Math.round(springFrostDates.reduce((a, b) => Math.max(a, b), 0));
+                        const frostDate = new Date(currentYear, 0, lastSpringFrostDOY);
                         lastSpringFrost = frostDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
                     }
                 }
@@ -2657,10 +2645,16 @@ const AlmanacTab = ({ location, userId }) => {
                         }
                     });
                     if (fallFrostDates.length > 0) {
-                        const avgFirstFrost = Math.round(fallFrostDates.reduce((a, b) => Math.min(a, b), 366));
-                        const frostDate = new Date(currentYear, 0, avgFirstFrost);
+                        firstFallFrostDOY = Math.round(fallFrostDates.reduce((a, b) => Math.min(a, b), 366));
+                        const frostDate = new Date(currentYear, 0, firstFallFrostDOY);
                         firstFallFrost = frostDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
                     }
+                }
+
+                // Calculate growing season length
+                let growingSeasonDays = '--';
+                if (lastSpringFrostDOY && firstFallFrostDOY) {
+                    growingSeasonDays = firstFallFrostDOY - lastSpringFrostDOY;
                 }
 
                 setAlmanacData({
@@ -2677,8 +2671,7 @@ const AlmanacTab = ({ location, userId }) => {
                     sunset,
                     dayLength,
                     daylightChange,
-                    heatingDegreeDays: Math.round(heatingDegreeDays),
-                    coolingDegreeDays: Math.round(coolingDegreeDays),
+                    growingSeasonDays,
                     lastSpringFrost,
                     firstFallFrost,
                     historicalTemps: historicalTemps.slice(-10), // Last 10 years for "On This Day"
@@ -2718,8 +2711,7 @@ const AlmanacTab = ({ location, userId }) => {
         sunset: '--',
         dayLength: '--',
         daylightChange: '--',
-        heatingDegreeDays: '--',
-        coolingDegreeDays: '--',
+        growingSeasonDays: '--',
         lastSpringFrost: '--',
         firstFallFrost: '--',
         historicalTemps: [],
@@ -2781,22 +2773,18 @@ const AlmanacTab = ({ location, userId }) => {
                     </div>
                 </div>
 
-                {/* Degree Days Box */}
+                {/* Growing Season Box */}
                 <div className="lg:col-span-1 p-4 rounded-lg space-y-3" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
-                    <h3 className="text-lg text-white font-bold border-b border-cyan-700 pb-2 flex items-center gap-2"><Gauge size={18}/> DEGREE DAYS (YTD)</h3>
-                    <div className="space-y-3">
-                        <div className="bg-black/20 rounded p-3 text-center">
-                            <p className="text-xs text-cyan-400">Heating Degree Days</p>
-                            <p className="text-2xl font-bold text-orange-400">{displayData.heatingDegreeDays}</p>
-                            <p className="text-xs text-cyan-500">Energy for heating</p>
-                        </div>
-                        <div className="bg-black/20 rounded p-3 text-center">
-                            <p className="text-xs text-cyan-400">Cooling Degree Days</p>
-                            <p className="text-2xl font-bold text-blue-400">{displayData.coolingDegreeDays}</p>
-                            <p className="text-xs text-cyan-500">Energy for cooling</p>
-                        </div>
+                    <h3 className="text-lg text-white font-bold border-b border-cyan-700 pb-2 flex items-center gap-2"><Sun size={18}/> GROWING SEASON</h3>
+                    <div className="text-center bg-black/20 rounded p-4">
+                        <p className="text-xs text-cyan-400">Frost-Free Days</p>
+                        <p className="text-4xl font-bold text-green-400">{displayData.growingSeasonDays}</p>
+                        <p className="text-sm text-cyan-300 mt-2">days per year</p>
                     </div>
-                    <p className="text-xs text-cyan-400">Base: 65°F</p>
+                    <div className="text-center text-xs text-cyan-400 space-y-1">
+                        <p>From {displayData.lastSpringFrost} to {displayData.firstFallFrost}</p>
+                        <p className="text-cyan-500">Based on 5-year historical data</p>
+                    </div>
                 </div>
 
                 {/* Historical Data */}
