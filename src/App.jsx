@@ -1139,6 +1139,22 @@ const WWADisplayTab = () => (
                             <span className="text-xs text-cyan-100 font-vt323">Severe T-Storm</span>
                         </div>
                         <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#DC143C] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Hurricane</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#B22222] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Tropical Storm</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#B524F7] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Storm Surge</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#FF8C00] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Extreme Wind</span>
+                        </div>
+                        <div className="flex items-center gap-2">
                             <div className="w-5 h-5 bg-[#8B0000] border border-white shrink-0"></div>
                             <span className="text-xs text-cyan-100 font-vt323">Flash Flood</span>
                         </div>
@@ -1157,6 +1173,10 @@ const WWADisplayTab = () => (
                         <div className="flex items-center gap-2">
                             <div className="w-5 h-5 bg-[#CD5C5C] border border-white shrink-0"></div>
                             <span className="text-xs text-cyan-100 font-vt323">Blizzard</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#C71585] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Snow Squall</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-5 h-5 bg-[#FF1493] border border-white shrink-0"></div>
@@ -1178,6 +1198,18 @@ const WWADisplayTab = () => (
                             <div className="w-5 h-5 bg-[#4169E1] border border-white shrink-0"></div>
                             <span className="text-xs text-cyan-100 font-vt323">Lake Effect Snow</span>
                         </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#B0C4DE] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Wind Chill</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#C71585] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Excessive Heat</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#9400D3] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Hard Freeze</span>
+                        </div>
                     </div>
                 </div>
 
@@ -1192,6 +1224,18 @@ const WWADisplayTab = () => (
                         <div className="flex items-center gap-2">
                             <div className="w-5 h-5 bg-[#DB7093] border border-white shrink-0"></div>
                             <span className="text-xs text-cyan-100 font-vt323">Severe T-Storm</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#FF00FF] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Hurricane</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#F08080] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Tropical Storm</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#DB7FF7] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Storm Surge</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-5 h-5 bg-[#2E8B57] border border-white shrink-0"></div>
@@ -1216,6 +1260,18 @@ const WWADisplayTab = () => (
                         <div className="flex items-center gap-2">
                             <div className="w-5 h-5 bg-[#48D1CC] border border-white shrink-0"></div>
                             <span className="text-xs text-cyan-100 font-vt323">Freeze</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#800000] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Excessive Heat</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#5F9EA0] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Wind Chill</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#4169E1] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Hard Freeze</span>
                         </div>
                     </div>
                 </div>
@@ -1253,6 +1309,10 @@ const WWADisplayTab = () => (
                             <span className="text-xs text-cyan-100 font-vt323">Dense Fog</span>
                         </div>
                         <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#F0E68C] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Dense Smoke</span>
+                        </div>
+                        <div className="flex items-center gap-2">
                             <div className="w-5 h-5 bg-[#FF7F50] border border-white shrink-0"></div>
                             <span className="text-xs text-cyan-100 font-vt323">Heat</span>
                         </div>
@@ -1265,19 +1325,31 @@ const WWADisplayTab = () => (
                             <span className="text-xs text-cyan-100 font-vt323">Dust</span>
                         </div>
                         <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#BDB76B] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Blowing Dust</span>
+                        </div>
+                        <div className="flex items-center gap-2">
                             <div className="w-5 h-5 bg-[#EE82EE] border border-white shrink-0"></div>
                             <span className="text-xs text-cyan-100 font-vt323">Freezing Rain</span>
                         </div>
                         <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#EE82EE] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Freezing Spray</span>
+                        </div>
+                        <div className="flex items-center gap-2">
                             <div className="w-5 h-5 bg-[#C71585] border border-white shrink-0"></div>
                             <span className="text-xs text-cyan-100 font-vt323">Extreme Cold</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#D8BFD8] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Small Craft</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Special */}
                 <div>
-                    <h5 className="text-sm text-purple-400 font-bold mb-2">SPECIAL STATEMENTS</h5>
+                    <h5 className="text-sm text-purple-400 font-bold mb-2">SPECIAL STATEMENTS & MARINE</h5>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-left">
                         <div className="flex items-center gap-2">
                             <div className="w-5 h-5 bg-[#FFE4C4] border border-white shrink-0"></div>
@@ -1294,6 +1366,22 @@ const WWADisplayTab = () => (
                         <div className="flex items-center gap-2">
                             <div className="w-5 h-5 bg-[#40E0D0] border border-white shrink-0"></div>
                             <span className="text-xs text-cyan-100 font-vt323">Rip Current</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#40E0D0] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Beach Hazards</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#DDA0DD] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Gale Warning</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#D2691E] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Hazardous Seas</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-[#228B22] border border-white shrink-0"></div>
+                            <span className="text-xs text-cyan-100 font-vt323">Hydrologic Outlook</span>
                         </div>
                     </div>
                 </div>
