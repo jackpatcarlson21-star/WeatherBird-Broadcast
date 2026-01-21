@@ -1731,27 +1731,70 @@ const HourlyForecastTab = ({ hourly, night, isWeatherLoading }) => {
         return {
             time: formatTime(time),
             temp: Math.round(hourly.temperature_2m[idx]),
+            feelsLike: Math.round(hourly.apparent_temperature?.[idx] || hourly.temperature_2m[idx]),
             pop: Math.round(hourly.precipitation_probability[idx]),
             code: hourly.weather_code[idx],
             wind: Math.round(hourly.wind_speed_10m[idx]),
+            humidity: Math.round(hourly.relative_humidity_2m?.[idx] || 0),
         };
     }) : [];
 
+    // Find min/max temps for the temperature bar visualization
+    const temps = data.map(h => h.temp);
+    const minTemp = Math.min(...temps);
+    const maxTemp = Math.max(...temps);
+    const tempRange = maxTemp - minTemp || 1;
+
     return (
-        <TabPanel title="NEXT 12 HOUR FORECAST">
-            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-3 text-center overflow-x-auto pb-2">
+        <TabPanel title="12-HOUR FORECAST">
+            {/* Header row */}
+            <div className="flex items-center px-3 py-2 text-xs text-cyan-500 border-b border-cyan-800/50 mb-1">
+                <div className="w-16 sm:w-20">TIME</div>
+                <div className="w-12 sm:w-16 text-center"></div>
+                <div className="flex-1 text-center">TEMP</div>
+                <div className="w-14 sm:w-16 text-center">RAIN</div>
+                <div className="w-14 sm:w-16 text-center">WIND</div>
+            </div>
+
+            <div className="space-y-0.5">
                 {data.map((h, index) => (
-                    <div key={index} className={`flex flex-col items-center p-3 rounded-lg transition min-w-[70px]
-                        ${index === 0 ? '' : 'bg-black/20'}`}
-                        style={index === 0 ? { backgroundColor: MID_BLUE, border: `1px solid ${BRIGHT_CYAN}` } : {}}>
-                        <p className="text-xs text-cyan-300 font-vt323 mb-1">{h.time}</p>
-                        <p className="text-3xl mt-1">{getWeatherIcon(h.code, night)}</p>
-                        <p className="text-xl font-bold text-white font-vt323">{h.temp}°F</p>
-                        <div className="flex items-center text-xs text-cyan-400 mt-1">
-                            <Droplets size={12} className="mr-1" /> {h.pop}%
+                    <div
+                        key={index}
+                        className={`flex items-center px-3 py-2.5 rounded-md transition-colors
+                            ${index === 0
+                                ? 'bg-cyan-900/50 border border-cyan-500/50'
+                                : index % 2 === 0 ? 'bg-black/20' : 'bg-black/10'}`}
+                    >
+                        {/* Time */}
+                        <div className="w-16 sm:w-20">
+                            <p className={`text-sm sm:text-base font-bold font-vt323 ${index === 0 ? 'text-cyan-300' : 'text-cyan-400'}`}>
+                                {index === 0 ? 'NOW' : h.time}
+                            </p>
                         </div>
-                        <div className="flex items-center text-xs text-cyan-400 mt-1">
-                            <Wind size={12} className="mr-1" /> {h.wind} mph
+
+                        {/* Icon */}
+                        <div className="w-12 sm:w-16 flex justify-center">
+                            <span className="text-2xl">{getWeatherIcon(h.code, night)}</span>
+                        </div>
+
+                        {/* Temperature */}
+                        <div className="flex-1 text-center">
+                            <span className="text-xl sm:text-2xl font-bold text-white">{h.temp}°F</span>
+                            {h.feelsLike !== h.temp && (
+                                <span className="text-xs text-gray-400 ml-2">({h.feelsLike}°)</span>
+                            )}
+                        </div>
+
+                        {/* Precip */}
+                        <div className="w-14 sm:w-16 text-center">
+                            <span className={`text-sm sm:text-base font-bold ${h.pop >= 50 ? 'text-blue-400' : h.pop >= 20 ? 'text-blue-300' : 'text-gray-400'}`}>
+                                {h.pop}%
+                            </span>
+                        </div>
+
+                        {/* Wind */}
+                        <div className="w-14 sm:w-16 text-center">
+                            <span className="text-sm sm:text-base text-gray-300">{h.wind} mph</span>
                         </div>
                     </div>
                 ))}
