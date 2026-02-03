@@ -1,0 +1,53 @@
+import React from 'react';
+import { DARK_BLUE, NAVY_BLUE, BRIGHT_CYAN } from '../../utils/constants';
+import { getWeatherDescription } from '../../utils/helpers';
+
+const Footer = ({ current, locationName, alerts }) => {
+  const temp = current ? Math.round(current.temperature_2m) : '--';
+  const cond = current ? getWeatherDescription(current.weather_code) : 'LOADING';
+  const wind = current ? `${Math.round(current.wind_speed_10m)} MPH` : '--';
+
+  // Construct Alerts Text
+  let alertText = "";
+  if (alerts && alerts.length > 0) {
+    alertText = alerts.map(a => ` ${a.properties.headline.toUpperCase()} `).join(" ::: ");
+    alertText += " ::: "; // Spacer
+  }
+
+  // Ticker Text Construction
+  const baseText = `CURRENTLY IN ${locationName.toUpperCase()}: ${temp}°F ${cond} - WIND: ${wind} ::: WE LOVE YOU SHANNON! ::: CAW CAW! ::: THANK YOU FOR USING WEATHERBIRD! ::: `;
+
+  // If alerts exist, put them FIRST
+  const tickerText = alertText ? `${alertText} ${baseText}` : baseText;
+
+  return (
+    <footer
+      className="h-12 shrink-0 flex items-center relative overflow-hidden"
+      style={{ background: `linear-gradient(to top, ${NAVY_BLUE}, ${DARK_BLUE})`, borderTop: `4px solid ${BRIGHT_CYAN}` }}
+    >
+      {/* Scrolling Ticker - Full Width */}
+      <div className="w-full relative h-full flex items-center overflow-hidden bg-black/20">
+        <div className={`whitespace-nowrap font-vt323 text-xl px-4 tracking-widest absolute ${alerts && alerts.length > 0 ? 'text-red-300 font-bold animate-marquee-slow' : 'text-cyan-300 animate-marquee'}`}>
+          {tickerText.repeat(5)}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+          animation: marquee 60s linear infinite;
+          will-change: transform;
+        }
+        .animate-marquee-slow {
+          animation: marquee 120s linear infinite;
+          will-change: transform;
+        }
+      `}</style>
+    </footer>
+  );
+};
+
+export default Footer;
