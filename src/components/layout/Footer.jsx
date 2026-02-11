@@ -6,10 +6,11 @@ const Footer = ({ current, locationName, alerts }) => {
   const temp = current ? Math.round(current.temperature_2m) : '--';
   const cond = current ? getWeatherDescription(current.weather_code) : 'LOADING';
   const wind = current ? `${Math.round(current.wind_speed_10m)} MPH` : '--';
+  const hasAlerts = alerts && alerts.length > 0;
 
   // Construct Alerts Text
   let alertText = "";
-  if (alerts && alerts.length > 0) {
+  if (hasAlerts) {
     alertText = alerts.map(a => ` ${a.properties.headline.toUpperCase()} `).join(" ::: ");
     alertText += " ::: "; // Spacer
   }
@@ -22,8 +23,12 @@ const Footer = ({ current, locationName, alerts }) => {
 
   return (
     <footer
-      className="h-12 shrink-0 flex items-center relative overflow-hidden"
-      style={{ background: `linear-gradient(to top, ${NAVY_BLUE}, ${DARK_BLUE})`, borderTop: `4px solid ${BRIGHT_CYAN}` }}
+      className={`h-12 shrink-0 flex items-center relative overflow-hidden ${hasAlerts ? 'alert-glow-border' : ''}`}
+      style={{
+        background: `linear-gradient(to top, ${NAVY_BLUE}, ${DARK_BLUE})`,
+        borderTop: `4px solid ${hasAlerts ? '#EF4444' : BRIGHT_CYAN}`,
+        transition: 'border-top-color 0.5s ease',
+      }}
     >
       {/* Scrolling Ticker - Full Width */}
       <div className="w-full relative h-full flex items-center overflow-hidden bg-black/20">

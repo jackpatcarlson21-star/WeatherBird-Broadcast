@@ -25,6 +25,7 @@ import { isNight, getSevereAlertLevel, getSevereAlerts, getTornadoWarnings, getE
 import { Header, Footer, Scanlines, TabNavigation } from './components/layout';
 import { AppStatus, LocationModal } from './components/common';
 import { WidgetView } from './components/widgets';
+import { WeatherBackground } from './components/weather';
 import {
   AlertsTab,
   CurrentConditionsTab,
@@ -502,6 +503,9 @@ const App = () => {
         }
       `}</style>
 
+      {/* Animated Weather Background Particles */}
+      <WeatherBackground weatherCode={current?.weather_code} night={night} />
+
       {/* Severe Weather Alert Flash Overlay */}
       {showAlertFlash && getSevereAlertLevel(alerts.filter(a => !dismissedAlertIds.has(a.properties?.id))) && (
         <div
@@ -572,6 +576,10 @@ const App = () => {
         setAutoCycle={setAutoCycle}
         isWidgetMode={isWidgetMode}
         setIsWidgetMode={setIsWidgetMode}
+        night={night}
+        weatherCode={current?.weather_code}
+        sunrise={daily?.sunrise?.[0]}
+        sunset={daily?.sunset?.[0]}
       />
 
       {/* Severe Weather Alert Banner */}
@@ -606,7 +614,9 @@ const App = () => {
       {/* Main Content Area */}
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col md:flex-row gap-6 overflow-hidden">
         <TabNavigation currentTab={currentScreen} setTab={setCurrentScreen} />
-        {renderTabContent()}
+        <div key={currentScreen} className="tab-content-enter flex-grow overflow-auto">
+          {renderTabContent()}
+        </div>
       </main>
 
       {/* Footer Ticker */}

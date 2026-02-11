@@ -12,3 +12,158 @@ html, body, #root {
   height: 100%;
   width: 100%;
 }
+
+/* ===== Weather Particle System ===== */
+.weather-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.particle-rain {
+  position: absolute;
+  width: 2px;
+  height: 20px;
+  background: linear-gradient(to bottom, transparent, rgba(0, 255, 255, 0.6));
+  animation: rain-fall linear infinite;
+}
+.particle-rain:nth-child(1) { left: 5%; animation-duration: 0.8s; animation-delay: 0s; }
+.particle-rain:nth-child(2) { left: 15%; animation-duration: 1s; animation-delay: 0.2s; }
+.particle-rain:nth-child(3) { left: 25%; animation-duration: 0.9s; animation-delay: 0.4s; }
+.particle-rain:nth-child(4) { left: 40%; animation-duration: 1.1s; animation-delay: 0.1s; }
+.particle-rain:nth-child(5) { left: 55%; animation-duration: 0.7s; animation-delay: 0.5s; }
+.particle-rain:nth-child(6) { left: 65%; animation-duration: 1s; animation-delay: 0.3s; }
+.particle-rain:nth-child(7) { left: 75%; animation-duration: 0.85s; animation-delay: 0.6s; }
+.particle-rain:nth-child(8) { left: 85%; animation-duration: 0.95s; animation-delay: 0.15s; }
+.particle-rain:nth-child(9) { left: 92%; animation-duration: 1.05s; animation-delay: 0.45s; }
+.particle-rain:nth-child(10) { left: 50%; animation-duration: 0.75s; animation-delay: 0.7s; }
+
+.particle-snow {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: snow-fall linear infinite;
+}
+.particle-snow:nth-child(1) { left: 8%; animation-duration: 4s; animation-delay: 0s; }
+.particle-snow:nth-child(2) { left: 18%; animation-duration: 5s; animation-delay: 1s; }
+.particle-snow:nth-child(3) { left: 30%; animation-duration: 4.5s; animation-delay: 0.5s; }
+.particle-snow:nth-child(4) { left: 42%; animation-duration: 5.5s; animation-delay: 1.5s; }
+.particle-snow:nth-child(5) { left: 58%; animation-duration: 3.5s; animation-delay: 0.8s; }
+.particle-snow:nth-child(6) { left: 68%; animation-duration: 4.2s; animation-delay: 2s; }
+.particle-snow:nth-child(7) { left: 78%; animation-duration: 5.2s; animation-delay: 0.3s; }
+.particle-snow:nth-child(8) { left: 88%; animation-duration: 4.8s; animation-delay: 1.2s; }
+
+.particle-star {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: white;
+  border-radius: 50%;
+  animation: star-twinkle ease-in-out infinite;
+}
+.particle-star:nth-child(1) { top: 10%; left: 12%; animation-duration: 2s; animation-delay: 0s; }
+.particle-star:nth-child(2) { top: 20%; left: 35%; animation-duration: 3s; animation-delay: 0.5s; }
+.particle-star:nth-child(3) { top: 8%; left: 55%; animation-duration: 2.5s; animation-delay: 1s; }
+.particle-star:nth-child(4) { top: 30%; left: 72%; animation-duration: 3.5s; animation-delay: 0.3s; }
+.particle-star:nth-child(5) { top: 15%; left: 88%; animation-duration: 2.2s; animation-delay: 1.5s; }
+.particle-star:nth-child(6) { top: 40%; left: 20%; animation-duration: 2.8s; animation-delay: 0.7s; }
+.particle-star:nth-child(7) { top: 5%; left: 45%; animation-duration: 3.2s; animation-delay: 1.2s; }
+
+.particle-cloud {
+  position: absolute;
+  font-size: 2rem;
+  opacity: 0.15;
+  animation: cloud-drift linear infinite;
+}
+.particle-cloud:nth-child(1) { top: 10%; animation-duration: 25s; animation-delay: 0s; }
+.particle-cloud:nth-child(2) { top: 25%; animation-duration: 30s; animation-delay: 5s; }
+.particle-cloud:nth-child(3) { top: 40%; animation-duration: 22s; animation-delay: 10s; }
+.particle-cloud:nth-child(4) { top: 55%; animation-duration: 28s; animation-delay: 3s; }
+.particle-cloud:nth-child(5) { top: 15%; animation-duration: 35s; animation-delay: 8s; }
+
+/* ===== Tab Content Transition ===== */
+.tab-content-enter {
+  animation: fade-in 0.3s ease-out, slide-in 0.3s ease-out;
+}
+
+/* ===== Temperature Color Classes ===== */
+.temp-freezing { color: #60A5FA; }
+.temp-cold { color: #93C5FD; }
+.temp-cool { color: #67E8F9; }
+.temp-mild { color: #4ADE80; }
+.temp-warm { color: #FACC15; }
+.temp-hot { color: #FB923C; }
+.temp-extreme { color: #EF4444; }
+
+/* ===== Skeleton Shimmer ===== */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 255, 255, 0.05) 25%,
+    rgba(0, 255, 255, 0.15) 50%,
+    rgba(0, 255, 255, 0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite, skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(0, 255, 255, 0.1);
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ===== Alert Glow Border ===== */
+.alert-glow-border {
+  animation: alert-glow-border 2s ease-in-out infinite;
+}
+
+@keyframes alert-glow-border {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.3), 0 0 10px rgba(239, 68, 68, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.6), 0 0 30px rgba(249, 115, 22, 0.3);
+  }
+}
+
+/* ===== Keyframes referenced by particle classes ===== */
+@keyframes rain-fall {
+  0% { transform: translateY(-100%) translateX(0); opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-20px); opacity: 0.3; }
+}
+
+@keyframes snow-fall {
+  0% { transform: translateY(-100%) translateX(0); opacity: 1; }
+  100% { transform: translateY(100vh) translateX(30px); opacity: 0; }
+}
+
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
+@keyframes cloud-drift {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100vw); }
+}
+
+@keyframes fade-in {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in {
+  0% { opacity: 0; transform: translateX(-10px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}

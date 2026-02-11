@@ -2,6 +2,42 @@ import React from 'react';
 import { Play, Pause, MapPin, Volume2, VolumeX, Radio, Minimize } from 'lucide-react';
 import { DARK_BLUE, NAVY_BLUE, BRIGHT_CYAN } from '../../utils/constants';
 
+const getHeaderGradient = (weatherCode, night, sunrise, sunset, currentTime) => {
+  // Check for golden hour (within 45 minutes of sunrise/sunset)
+  if (sunrise && sunset && currentTime) {
+    const now = currentTime.getTime();
+    const sunriseTime = new Date(sunrise).getTime();
+    const sunsetTime = new Date(sunset).getTime();
+    const goldenWindow = 45 * 60 * 1000; // 45 minutes in ms
+
+    if (Math.abs(now - sunriseTime) < goldenWindow) {
+      return 'linear-gradient(to bottom, #4C1D95, #F97316)'; // purple to orange (sunrise)
+    }
+    if (Math.abs(now - sunsetTime) < goldenWindow) {
+      return 'linear-gradient(to bottom, #4C1D95, #D97706)'; // purple to amber (sunset)
+    }
+  }
+
+  // Night
+  if (night) {
+    return 'linear-gradient(to bottom, #020617, #0A0F1E)'; // very deep navy
+  }
+
+  // Weather-based gradients
+  if (weatherCode >= 95) {
+    return 'linear-gradient(to bottom, #1E1038, #0D0A1A)'; // deep purple (storms)
+  }
+  if ((weatherCode >= 51 && weatherCode <= 67) || (weatherCode >= 80 && weatherCode <= 82)) {
+    return 'linear-gradient(to bottom, #1E3A5F, #0A1929)'; // muted blue (rain)
+  }
+  if (weatherCode === 0) {
+    return 'linear-gradient(to bottom, #0A3D6B, #001A33)'; // brighter blue (clear day)
+  }
+
+  // Default
+  return `linear-gradient(to bottom, ${DARK_BLUE}, ${NAVY_BLUE})`;
+};
+
 const Header = ({
   time,
   locationName,
@@ -14,7 +50,11 @@ const Header = ({
   autoCycle,
   setAutoCycle,
   isWidgetMode,
-  setIsWidgetMode
+  setIsWidgetMode,
+  night,
+  weatherCode,
+  sunrise,
+  sunset
 }) => {
   const timeOptions = { hour: 'numeric', minute: '2-digit', second: '2-digit' };
   const dateOptions = { weekday: 'short', month: 'short', day: 'numeric' };
@@ -24,10 +64,16 @@ const Header = ({
     dateOptions.timeZone = timezone;
   }
 
+  const headerGradient = getHeaderGradient(weatherCode, night, sunrise, sunset, time);
+
   return (
     <header
       className="p-4 flex justify-between items-center h-20 shrink-0 shadow-neon-lg z-10"
-      style={{ background: `linear-gradient(to bottom, ${DARK_BLUE}, ${NAVY_BLUE})`, borderBottom: `4px solid ${BRIGHT_CYAN}` }}
+      style={{
+        background: headerGradient,
+        borderBottom: `4px solid ${BRIGHT_CYAN}`,
+        transition: 'background 2s ease',
+      }}
     >
       <div className="flex flex-col">
         <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-widest font-vt323">WEATHERBIRD</h1>
