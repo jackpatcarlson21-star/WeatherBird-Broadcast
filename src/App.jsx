@@ -99,6 +99,41 @@ const App = () => {
     return () => clearInterval(interval);
   }, [autoCycle, cycleSpeed]);
 
+  // --- Auto-Scroll Effect (scrolls content panel during auto-cycle) ---
+  useEffect(() => {
+    if (!autoCycle) return;
+
+    // Reset scroll to top when screen changes
+    if (contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
+
+    let animationId;
+    let scrollPos = 0;
+    const pixelsPerFrame = 0.3;
+
+    const scroll = () => {
+      if (contentRef.current) {
+        const { scrollHeight, clientHeight } = contentRef.current;
+        if (scrollPos < scrollHeight - clientHeight) {
+          scrollPos += pixelsPerFrame;
+          contentRef.current.scrollTop = scrollPos;
+        }
+      }
+      animationId = requestAnimationFrame(scroll);
+    };
+
+    // 2 second pause before scrolling starts
+    const timeout = setTimeout(() => {
+      animationId = requestAnimationFrame(scroll);
+    }, 2000);
+
+    return () => {
+      clearTimeout(timeout);
+      cancelAnimationFrame(animationId);
+    };
+  }, [autoCycle, currentScreen]);
+
   const [savedLocations, setSavedLocations] = useState(() => {
     try {
       const saved = localStorage.getItem('weatherbird-saved-locations');
@@ -175,6 +210,7 @@ const App = () => {
   const audioRef = useRef(null);
   const weatherIntervalRef = useRef(null);
   const initialLoadRef = useRef(true);
+  const contentRef = useRef(null);
 
   // --- Auth and Firebase Initialization ---
   useEffect(() => {
@@ -614,7 +650,7 @@ const App = () => {
       {/* Main Content Area */}
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col md:flex-row gap-6 overflow-hidden">
         <TabNavigation currentTab={currentScreen} setTab={setCurrentScreen} />
-        <div key={currentScreen} className="tab-content-enter flex-grow overflow-auto">
+        <div ref={contentRef} key={currentScreen} className="tab-content-enter flex-grow overflow-auto">
           {renderTabContent()}
         </div>
       </main>
