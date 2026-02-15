@@ -14,6 +14,7 @@ const TabNavigation = ({ currentTab, setTab }) => {
     { id: SCREENS.SPC, name: 'SPC' },
     { id: SCREENS.TRIP_WEATHER, name: 'TRIP' },
     { id: SCREENS.ALMANAC, name: 'ALMANAC' },
+    { id: SCREENS.HURRICANE, name: 'HURRICANE' },
   ];
 
   return (

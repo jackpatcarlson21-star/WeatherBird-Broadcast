@@ -11,6 +11,7 @@ export const SCREENS = {
   ALMANAC: 'ALMANAC',
   TRIP_WEATHER: 'TRIP_WEATHER',
   DASHBOARD: 'DASHBOARD',
+  HURRICANE: 'HURRICANE',
 };
 
 // --- Config ---
@@ -29,6 +30,11 @@ export const RADAR_URL = "https://radar.weather.gov/ridge/standard/CONUS_loop.gi
 export const SPC_OUTLOOK_URL = "https://www.spc.noaa.gov/products/outlook/day1otlk.gif";
 export const NWS_WWA_MAP_URL = "https://forecast.weather.gov/wwamap/png/US.png";
 export const PLACEHOLDER_IMG = "https://placehold.co/800x400/003366/00ffff?text=UNABLE+TO+LOAD+EXTERNAL+IMAGE+FEED";
+
+// --- NHC Hurricane Imagery ---
+export const NHC_ATLANTIC_OUTLOOK_URL = "https://www.nhc.noaa.gov/xgtwo/two_atl_5d0.png";
+export const NHC_PACIFIC_OUTLOOK_URL = "https://www.nhc.noaa.gov/xgtwo/two_pac_5d0.png";
+export const NHC_CURRENT_SUMMARIES_URL = "https://www.nhc.noaa.gov/CurrentSummaries.json";
 
 // --- Severe Weather Keywords ---
 export const SEVERE_ALERT_KEYWORDS = [

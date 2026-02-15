@@ -22,7 +22,7 @@ import { getWeatherApiUrl, getAirQualityUrl, getNWSAlertsUrl, getNWSPointsUrl } 
 import { isNight, getSevereAlertLevel, getSevereAlerts, getTornadoWarnings, getExpirationCountdown } from './utils/helpers';
 
 // Components
-import { Header, Footer, Scanlines, TabNavigation } from './components/layout';
+import { Header, Footer, Scanlines, TabNavigation, CRTPowerOn, ChannelStatic } from './components/layout';
 import { AppStatus, LocationModal } from './components/common';
 import { WidgetView } from './components/widgets';
 import { WeatherBackground } from './components/weather';
@@ -38,7 +38,9 @@ import {
   AlmanacTab,
   DashboardTab,
   TripWeatherTab,
+  HurricaneTab,
 } from './components/tabs';
+import { getNarrationText, speakNarration, cancelNarration } from './utils/narration';
 
 const App = () => {
   // --- State Hooks ---
@@ -62,6 +64,8 @@ const App = () => {
   const [dismissedAlertIds, setDismissedAlertIds] = useState(new Set());
   const [dismissedTornadoModals, setDismissedTornadoModals] = useState(new Set());
   const [showAlertFlash, setShowAlertFlash] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [crtDone, setCrtDone] = useState(false);
   const lastAlertIdsRef = useRef('');
 
   // --- Alert Flash Timeout ---
@@ -86,6 +90,7 @@ const App = () => {
       SCREENS.CONDITIONS, SCREENS.HOURLY, SCREENS.DAILY, SCREENS.RADAR,
       SCREENS.PRECIP, SCREENS.DASHBOARD, SCREENS.ALERTS, SCREENS.WWA,
       SCREENS.SPC, SCREENS.TRIP_WEATHER, SCREENS.ALMANAC,
+      SCREENS.HURRICANE,
     ];
 
     const interval = setInterval(() => {
@@ -133,6 +138,27 @@ const App = () => {
       cancelAnimationFrame(animationId);
     };
   }, [autoCycle, currentScreen]);
+
+  // --- Voice Narration Effect ---
+  useEffect(() => {
+    if (!autoCycle || !voiceEnabled) {
+      cancelNarration();
+      return;
+    }
+
+    const text = getNarrationText(currentScreen, {
+      weatherData,
+      alerts,
+      location,
+      aqiData,
+    });
+
+    if (text) {
+      speakNarration(text);
+    }
+
+    return () => cancelNarration();
+  }, [currentScreen, autoCycle, voiceEnabled]);
 
   const [savedLocations, setSavedLocations] = useState(() => {
     try {
@@ -498,6 +524,8 @@ const App = () => {
         return <AlmanacTab location={location} userId={userId} />;
       case SCREENS.TRIP_WEATHER:
         return <TripWeatherTab location={location} />;
+      case SCREENS.HURRICANE:
+        return <HurricaneTab />;
       default:
         return <div>Error: Tab Not Found</div>;
     }
@@ -538,6 +566,12 @@ const App = () => {
           background-color: rgba(249, 115, 22, 1);
         }
       `}</style>
+
+      {/* CRT Power-On Animation */}
+      {!crtDone && <CRTPowerOn onComplete={() => setCrtDone(true)} />}
+
+      {/* Channel Switch Static */}
+      <ChannelStatic trigger={currentScreen} />
 
       {/* Animated Weather Background Particles */}
       <WeatherBackground weatherCode={current?.weather_code} night={night} />
@@ -616,6 +650,8 @@ const App = () => {
         weatherCode={current?.weather_code}
         sunrise={daily?.sunrise?.[0]}
         sunset={daily?.sunset?.[0]}
+        voiceEnabled={voiceEnabled}
+        setVoiceEnabled={setVoiceEnabled}
       />
 
       {/* Severe Weather Alert Banner */}

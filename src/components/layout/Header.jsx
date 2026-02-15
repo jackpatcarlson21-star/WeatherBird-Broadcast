@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, MapPin, Volume2, VolumeX, Radio, Minimize } from 'lucide-react';
+import { Play, Pause, MapPin, Volume2, VolumeX, Radio, Minimize, Mic, MicOff } from 'lucide-react';
 import { DARK_BLUE, NAVY_BLUE, BRIGHT_CYAN } from '../../utils/constants';
 
 const getHeaderGradient = (weatherCode, night, sunrise, sunset, currentTime) => {
@@ -54,7 +54,9 @@ const Header = ({
   night,
   weatherCode,
   sunrise,
-  sunset
+  sunset,
+  voiceEnabled,
+  setVoiceEnabled
 }) => {
   const timeOptions = { hour: 'numeric', minute: '2-digit', second: '2-digit' };
   const dateOptions = { weekday: 'short', month: 'short', day: 'numeric' };
@@ -76,11 +78,29 @@ const Header = ({
       }}
     >
       <div className="flex flex-col">
-        <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-widest font-vt323">WEATHERBIRD</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-widest font-vt323">WEATHERBIRD</h1>
+          <span className="live-badge flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold tracking-wider border border-red-500/60 bg-red-900/40 text-red-300 shrink-0">
+            <span className="live-dot w-2 h-2 rounded-full bg-red-500" />
+            LIVE
+          </span>
+        </div>
         <div className="flex items-center gap-2 text-cyan-300 font-vt323 text-lg">
           <MapPin size={16} /> <span className="truncate max-w-56">{locationName}</span>
         </div>
       </div>
+      <style>{`
+        @keyframes live-pulse {
+          0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+          50% { opacity: 0.4; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
+        }
+        .live-dot {
+          animation: live-pulse 1.5s ease-in-out infinite;
+        }
+        .live-badge {
+          text-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+        }
+      `}</style>
       <div className="flex items-center gap-2 sm:gap-5">
         {/* Auto-Cycle Button */}
         <button
@@ -91,6 +111,21 @@ const Header = ({
         >
           <Radio size={18} className={autoCycle ? 'text-white animate-pulse' : 'text-cyan-400'} />
         </button>
+
+        {/* Voice Narration Toggle (only visible during auto-cycle) */}
+        {autoCycle && (
+          <button
+            onClick={() => setVoiceEnabled(!voiceEnabled)}
+            className={`p-2 rounded-full transition shadow-md shrink-0 ${voiceEnabled ? 'bg-cyan-600' : 'bg-white/10 hover:bg-white/20'}`}
+            style={{ border: `1px solid ${BRIGHT_CYAN}` }}
+            title={voiceEnabled ? 'Disable Voice Narration' : 'Enable Voice Narration'}
+          >
+            {voiceEnabled
+              ? <Mic size={18} className="text-white" />
+              : <MicOff size={18} className="text-cyan-400" />
+            }
+          </button>
+        )}
 
         {/* Widget Mode Button */}
         <button
