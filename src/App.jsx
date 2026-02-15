@@ -22,7 +22,7 @@ import { getWeatherApiUrl, getAirQualityUrl, getNWSAlertsUrl, getNWSPointsUrl } 
 import { isNight, getSevereAlertLevel, getSevereAlerts, getTornadoWarnings, getExpirationCountdown } from './utils/helpers';
 
 // Components
-import { Header, Footer, Scanlines, TabNavigation, CRTPowerOn, ChannelStatic } from './components/layout';
+import { Header, Footer, Scanlines, TabNavigation, CRTPowerOn } from './components/layout';
 import { AppStatus, LocationModal } from './components/common';
 import { WidgetView } from './components/widgets';
 import { WeatherBackground } from './components/weather';
@@ -569,9 +569,6 @@ const App = () => {
 
       {/* CRT Power-On Animation */}
       {!crtDone && <CRTPowerOn onComplete={() => setCrtDone(true)} />}
-
-      {/* Channel Switch Static */}
-      <ChannelStatic trigger={currentScreen} />
 
       {/* Animated Weather Background Particles */}
       <WeatherBackground weatherCode={current?.weather_code} night={night} />

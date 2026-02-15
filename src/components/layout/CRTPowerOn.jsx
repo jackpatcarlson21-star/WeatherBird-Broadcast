@@ -47,16 +47,15 @@ const CRTPowerOn = ({ onComplete }) => {
     img.src = url;
   }, []);
 
-  // Phase timing
+  // Phase timing: radar runs for 2.8s, then fade out for 0.6s
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase('logo'), 1600);
-    const t2 = setTimeout(() => setPhase('zoom'), 2600);
-    const t3 = setTimeout(() => {
+    const t1 = setTimeout(() => setPhase('fadeout'), 2800);
+    const t2 = setTimeout(() => {
       setPhase('done');
       onCompleteRef.current?.();
-    }, 3200);
+    }, 3400);
 
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
   // Generate random radar blips once
@@ -218,95 +217,41 @@ const CRTPowerOn = ({ onComplete }) => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
-        @keyframes logo-reveal {
-          0% { opacity: 0; transform: scale(0.5); filter: blur(10px); }
-          60% { opacity: 1; transform: scale(1.05); filter: blur(0); }
-          100% { opacity: 1; transform: scale(1); filter: blur(0); }
-        }
-        @keyframes logo-subtitle {
-          0% { opacity: 0; transform: translateY(10px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes zoom-out {
-          0% { opacity: 1; transform: scale(1); }
-          100% { opacity: 0; transform: scale(2.5); filter: blur(8px); }
-        }
-        .intro-logo {
-          animation: logo-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        .intro-subtitle {
-          animation: logo-subtitle 0.5s ease-out 0.4s both;
-        }
-        .intro-zoom-out {
-          animation: zoom-out 0.8s cubic-bezier(0.4, 0, 1, 1) forwards;
+        @keyframes fade-out {
+          0% { opacity: 1; }
+          100% { opacity: 0; }
         }
         .radar-glow {
           filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.3));
         }
+        .intro-fadeout {
+          animation: fade-out 0.6s ease-out forwards;
+        }
       `}</style>
 
-      {/* Radar Phase */}
-      {phase === 'radar' && (
-        <div className="relative flex items-center justify-center radar-glow">
-          <canvas ref={canvasRef} />
-          <div className="absolute bottom-8 text-center">
-            <p className="text-cyan-500/50 text-sm tracking-[0.3em]" style={{ fontFamily: 'VT323, monospace' }}>
-              SCANNING
-            </p>
+      {/* Radar + Logo (overlaid) */}
+      {(phase === 'radar' || phase === 'fadeout') && (
+        <div className={`relative flex flex-col items-center justify-center ${phase === 'fadeout' ? 'intro-fadeout' : ''}`}>
+          <div className="relative radar-glow">
+            <canvas ref={canvasRef} />
           </div>
-        </div>
-      )}
 
-      {/* Logo Reveal Phase */}
-      {phase === 'logo' && (
-        <div className="flex flex-col items-center intro-logo">
-          <svg viewBox="0 0 32 24" width="96" height="72" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 12px rgba(0, 255, 255, 0.8))' }} className="mb-4">
-            <rect x="12" y="2" width="8" height="2" fill="#00FFFF"/><rect x="10" y="4" width="12" height="2" fill="#00FFFF"/><rect x="10" y="6" width="12" height="2" fill="#00FFFF"/>
-            <rect x="12" y="6" width="2" height="2" fill="#000"/><rect x="18" y="6" width="2" height="2" fill="#000"/><rect x="12" y="6" width="1" height="1" fill="#FFF"/><rect x="18" y="6" width="1" height="1" fill="#FFF"/>
-            <rect x="22" y="6" width="4" height="2" fill="#FFA500"/><rect x="22" y="8" width="2" height="2" fill="#FFA500"/>
-            <rect x="8" y="8" width="14" height="2" fill="#00FFFF"/><rect x="6" y="10" width="16" height="2" fill="#00FFFF"/><rect x="6" y="12" width="16" height="2" fill="#00FFFF"/><rect x="6" y="14" width="16" height="2" fill="#00FFFF"/><rect x="8" y="16" width="14" height="2" fill="#00FFFF"/>
-            <rect x="4" y="10" width="2" height="2" fill="#00FFFF" opacity="0.8"/><rect x="2" y="12" width="4" height="2" fill="#00FFFF" opacity="0.8"/>
-            <rect x="22" y="14" width="4" height="2" fill="#00FFFF" opacity="0.7"/><rect x="24" y="12" width="4" height="2" fill="#00FFFF" opacity="0.5"/>
-            <rect x="10" y="18" width="2" height="2" fill="#FFA500"/><rect x="8" y="20" width="2" height="2" fill="#FFA500"/><rect x="12" y="20" width="2" height="2" fill="#FFA500"/>
-            <rect x="16" y="18" width="2" height="2" fill="#FFA500"/><rect x="14" y="20" width="2" height="2" fill="#FFA500"/><rect x="18" y="20" width="2" height="2" fill="#FFA500"/>
-          </svg>
-          <div className="text-6xl sm:text-8xl font-bold text-white tracking-[0.2em] mb-2"
-               style={{ fontFamily: 'VT323, monospace', textShadow: '0 0 30px rgba(0, 255, 255, 0.8), 0 0 60px rgba(0, 255, 255, 0.4)' }}>
-            WEATHERBIRD
-          </div>
-          <div className="intro-subtitle flex items-center gap-3">
-            <div className="h-px w-16 bg-gradient-to-r from-transparent to-cyan-400" />
-            <span className="text-cyan-400 text-xl tracking-[0.5em]" style={{ fontFamily: 'VT323, monospace' }}>
-              BROADCAST
-            </span>
-            <div className="h-px w-16 bg-gradient-to-l from-transparent to-cyan-400" />
-          </div>
-        </div>
-      )}
-
-      {/* Zoom Out Phase */}
-      {phase === 'zoom' && (
-        <div className="flex flex-col items-center intro-zoom-out">
-          <svg viewBox="0 0 32 24" width="96" height="72" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 12px rgba(0, 255, 255, 0.8))' }} className="mb-4">
-            <rect x="12" y="2" width="8" height="2" fill="#00FFFF"/><rect x="10" y="4" width="12" height="2" fill="#00FFFF"/><rect x="10" y="6" width="12" height="2" fill="#00FFFF"/>
-            <rect x="12" y="6" width="2" height="2" fill="#000"/><rect x="18" y="6" width="2" height="2" fill="#000"/><rect x="12" y="6" width="1" height="1" fill="#FFF"/><rect x="18" y="6" width="1" height="1" fill="#FFF"/>
-            <rect x="22" y="6" width="4" height="2" fill="#FFA500"/><rect x="22" y="8" width="2" height="2" fill="#FFA500"/>
-            <rect x="8" y="8" width="14" height="2" fill="#00FFFF"/><rect x="6" y="10" width="16" height="2" fill="#00FFFF"/><rect x="6" y="12" width="16" height="2" fill="#00FFFF"/><rect x="6" y="14" width="16" height="2" fill="#00FFFF"/><rect x="8" y="16" width="14" height="2" fill="#00FFFF"/>
-            <rect x="4" y="10" width="2" height="2" fill="#00FFFF" opacity="0.8"/><rect x="2" y="12" width="4" height="2" fill="#00FFFF" opacity="0.8"/>
-            <rect x="22" y="14" width="4" height="2" fill="#00FFFF" opacity="0.7"/><rect x="24" y="12" width="4" height="2" fill="#00FFFF" opacity="0.5"/>
-            <rect x="10" y="18" width="2" height="2" fill="#FFA500"/><rect x="8" y="20" width="2" height="2" fill="#FFA500"/><rect x="12" y="20" width="2" height="2" fill="#FFA500"/>
-            <rect x="16" y="18" width="2" height="2" fill="#FFA500"/><rect x="14" y="20" width="2" height="2" fill="#FFA500"/><rect x="18" y="20" width="2" height="2" fill="#FFA500"/>
-          </svg>
-          <div className="text-6xl sm:text-8xl font-bold text-white tracking-[0.2em] mb-2"
-               style={{ fontFamily: 'VT323, monospace', textShadow: '0 0 30px rgba(0, 255, 255, 0.8), 0 0 60px rgba(0, 255, 255, 0.4)' }}>
-            WEATHERBIRD
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="h-px w-16 bg-gradient-to-r from-transparent to-cyan-400" />
-            <span className="text-cyan-400 text-xl tracking-[0.5em]" style={{ fontFamily: 'VT323, monospace' }}>
-              BROADCAST
-            </span>
-            <div className="h-px w-16 bg-gradient-to-l from-transparent to-cyan-400" />
+          {/* Bird + Title overlaid below radar */}
+          <div className="flex flex-col items-center mt-6">
+            <svg viewBox="0 0 32 24" width="64" height="48" style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 10px rgba(0, 255, 255, 0.8))' }} className="mb-2">
+              <rect x="12" y="2" width="8" height="2" fill="#00FFFF"/><rect x="10" y="4" width="12" height="2" fill="#00FFFF"/><rect x="10" y="6" width="12" height="2" fill="#00FFFF"/>
+              <rect x="12" y="6" width="2" height="2" fill="#000"/><rect x="18" y="6" width="2" height="2" fill="#000"/><rect x="12" y="6" width="1" height="1" fill="#FFF"/><rect x="18" y="6" width="1" height="1" fill="#FFF"/>
+              <rect x="22" y="6" width="4" height="2" fill="#FFA500"/><rect x="22" y="8" width="2" height="2" fill="#FFA500"/>
+              <rect x="8" y="8" width="14" height="2" fill="#00FFFF"/><rect x="6" y="10" width="16" height="2" fill="#00FFFF"/><rect x="6" y="12" width="16" height="2" fill="#00FFFF"/><rect x="6" y="14" width="16" height="2" fill="#00FFFF"/><rect x="8" y="16" width="14" height="2" fill="#00FFFF"/>
+              <rect x="4" y="10" width="2" height="2" fill="#00FFFF" opacity="0.8"/><rect x="2" y="12" width="4" height="2" fill="#00FFFF" opacity="0.8"/>
+              <rect x="22" y="14" width="4" height="2" fill="#00FFFF" opacity="0.7"/><rect x="24" y="12" width="4" height="2" fill="#00FFFF" opacity="0.5"/>
+              <rect x="10" y="18" width="2" height="2" fill="#FFA500"/><rect x="8" y="20" width="2" height="2" fill="#FFA500"/><rect x="12" y="20" width="2" height="2" fill="#FFA500"/>
+              <rect x="16" y="18" width="2" height="2" fill="#FFA500"/><rect x="14" y="20" width="2" height="2" fill="#FFA500"/><rect x="18" y="20" width="2" height="2" fill="#FFA500"/>
+            </svg>
+            <div className="text-4xl sm:text-5xl font-bold text-white tracking-[0.2em]"
+                 style={{ fontFamily: 'VT323, monospace', textShadow: '0 0 20px rgba(0, 255, 255, 0.8), 0 0 40px rgba(0, 255, 255, 0.4)' }}>
+              WEATHERBIRD
+            </div>
           </div>
         </div>
       )}
