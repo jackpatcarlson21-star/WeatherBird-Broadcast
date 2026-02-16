@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { AlertTriangle, X, Clock } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -26,7 +26,7 @@ import { Header, Footer, Scanlines, TabNavigation, CRTPowerOn } from './componen
 import { AppStatus, LocationModal } from './components/common';
 import { WidgetView } from './components/widgets';
 import { WeatherBackground } from './components/weather';
-import IconTestPage from './components/weather/IconTestPage';
+const IconTestPage = lazy(() => import('./components/weather/IconTestPage'));
 import {
   AlertsTab,
   CurrentConditionsTab,
@@ -472,9 +472,9 @@ const App = () => {
     }
   };
 
-  // Icon test page: append ?icontest to URL
+  // Icon test page: append ?icontest to URL (lazy-loaded, not in production bundle)
   if (window.location.search.includes('icontest')) {
-    return <IconTestPage />;
+    return <Suspense fallback={<div style={{ color: '#00FFFF', padding: 24 }}>Loading icon test...</div>}><IconTestPage /></Suspense>;
   }
 
   const current = weatherData?.current;

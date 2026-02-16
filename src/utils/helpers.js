@@ -98,19 +98,6 @@ export const getExpirationCountdown = (expiresTime) => {
 };
 
 // --- Weather Helpers ---
-export const getWeatherIcon = (code, night) => {
-  if (code === 0) return night ? "🌙" : "☀️";
-  if (code <= 3) return night ? "☁️" : "⛅";
-  if (code <= 48) return "🌫️"; // Fog
-  if (code <= 57) return "🌧️"; // Drizzle
-  if (code <= 67) return "🌧️"; // Rain
-  if (code <= 77) return "❄️"; // Snow (71-77)
-  if (code <= 82) return "🌧️"; // Rain showers
-  if (code <= 86) return "🌨️"; // Snow showers (85-86)
-  if (code >= 95) return "⛈️"; // Thunderstorm
-  return "❓";
-};
-
 export const getWeatherDescription = (code) => {
   const map = {
     0: "CLEAR SKY", 1: "MAINLY CLEAR", 2: "PARTLY CLOUDY", 3: "OVERCAST",

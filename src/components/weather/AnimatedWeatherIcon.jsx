@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { getWeatherDescription } from '../../utils/helpers';
 
 // Inject CSS keyframes once into <head>
 const STYLE_ID = 'wx-icon-styles';
@@ -178,18 +179,24 @@ const FogIcon = () => (
   </g>
 );
 
-const DrizzleIcon = () => (
+// Night cloud color: darker gray for nighttime precipitation icons
+const CLOUD_DAY = '#D1D5DB';
+const CLOUD_NIGHT = '#8B95A3';
+const THUNDER_DAY = '#9CA3AF';
+const THUNDER_NIGHT = '#6B7280';
+
+const DrizzleIcon = ({ night }) => (
   <g>
-    <Cloud x={0} y={0} />
+    <Cloud x={0} y={0} color={night ? CLOUD_NIGHT : CLOUD_DAY} />
     {/* 2 small drops */}
     <rect x="10" y="16" width="2" height="4" fill="#60A5FA" style={{ animation: 'wx-drop-slow 2s ease-in infinite' }} />
     <rect x="18" y="18" width="2" height="4" fill="#60A5FA" style={{ animation: 'wx-drop-slow 2s ease-in 0.7s infinite' }} />
   </g>
 );
 
-const RainIcon = () => (
+const RainIcon = ({ night }) => (
   <g>
-    <Cloud x={0} y={0} />
+    <Cloud x={0} y={0} color={night ? CLOUD_NIGHT : CLOUD_DAY} />
     {/* 3 drops */}
     <rect x="8" y="16" width="2" height="4" fill="#60A5FA" style={{ animation: 'wx-drop-fast 1.2s ease-in infinite' }} />
     <rect x="14" y="16" width="2" height="4" fill="#60A5FA" style={{ animation: 'wx-drop-fast 1.2s ease-in 0.3s infinite' }} />
@@ -197,9 +204,9 @@ const RainIcon = () => (
   </g>
 );
 
-const SnowIcon = () => (
+const SnowIcon = ({ night }) => (
   <g>
-    <Cloud x={0} y={0} />
+    <Cloud x={0} y={0} color={night ? CLOUD_NIGHT : CLOUD_DAY} />
     {/* 3 plus-shaped flakes */}
     <g style={{ animation: 'wx-snow-drift 3s ease-in-out infinite' }}>
       <rect x="8" y="18" width="2" height="2" fill="#FFF" />
@@ -222,10 +229,10 @@ const SnowIcon = () => (
   </g>
 );
 
-const ThunderIcon = () => (
+const ThunderIcon = ({ night }) => (
   <g>
     {/* Dark cloud */}
-    <Cloud x={0} y={0} color="#9CA3AF" />
+    <Cloud x={0} y={0} color={night ? THUNDER_NIGHT : THUNDER_DAY} />
     {/* Lightning bolt */}
     <g style={{ animation: 'wx-flash 3s ease-in-out infinite' }}>
       <rect x="14" y="14" width="4" height="2" fill="#FACC15" />
@@ -265,6 +272,9 @@ const ICON_MAP = {
   thunder: ThunderIcon,
 };
 
+// Icons that accept a night prop for darker clouds
+const NIGHT_AWARE = new Set(['drizzle', 'rain', 'snow', 'thunder']);
+
 const AnimatedWeatherIcon = ({ code = 0, night = false, size = 64 }) => {
   useEffect(() => {
     injectStyles();
@@ -272,6 +282,7 @@ const AnimatedWeatherIcon = ({ code = 0, night = false, size = 64 }) => {
 
   const iconType = getIconType(code, night);
   const IconComponent = ICON_MAP[iconType];
+  const description = getWeatherDescription(code) || iconType;
 
   return (
     <svg
@@ -281,9 +292,9 @@ const AnimatedWeatherIcon = ({ code = 0, night = false, size = 64 }) => {
       style={{ imageRendering: 'pixelated' }}
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label={iconType}
+      aria-label={description}
     >
-      <IconComponent />
+      {NIGHT_AWARE.has(iconType) ? <IconComponent night={night} /> : <IconComponent />}
     </svg>
   );
 };
