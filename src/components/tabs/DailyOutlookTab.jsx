@@ -3,7 +3,8 @@ import { Droplets, Wind, ChevronRight } from 'lucide-react';
 import TabPanel from '../layout/TabPanel';
 import LoadingIndicator from '../common/LoadingIndicator';
 import { getNWSPointsUrl } from '../../utils/api';
-import { getWeatherIcon, getWeatherDescription } from '../../utils/helpers';
+import { getWeatherDescription } from '../../utils/helpers';
+import { AnimatedWeatherIcon } from '../weather';
 
 const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
   const [nwsForecast, setNwsForecast] = useState(null);
@@ -149,19 +150,21 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
     }) : [];
   }
 
-  // Helper to get icon from NWS forecast text
-  const getForecastIcon = (shortForecast, nwsIcon) => {
+  // Convert NWS forecast text to WMO code for AnimatedWeatherIcon
+  const getForecastCode = (shortForecast, nwsIcon) => {
     const forecast = (shortForecast || '').toLowerCase();
-    if (forecast.includes('snow')) return '❄️';
-    if (forecast.includes('rain') || forecast.includes('shower')) return '🌧️';
-    if (forecast.includes('thunder') || forecast.includes('storm')) return '⛈️';
-    if (forecast.includes('cloud') || forecast.includes('overcast')) return '☁️';
-    if (forecast.includes('partly') || forecast.includes('mostly sunny')) return '⛅';
-    if (forecast.includes('fog')) return '🌫️';
-    if (forecast.includes('sunny') || forecast.includes('clear')) return '☀️';
-    if (nwsIcon?.includes('night')) return '🌙';
-    return '☀️';
+    if (forecast.includes('thunder') || forecast.includes('storm')) return 95;
+    if (forecast.includes('snow')) return 73;
+    if (forecast.includes('rain') || forecast.includes('shower')) return 63;
+    if (forecast.includes('drizzle')) return 53;
+    if (forecast.includes('fog')) return 45;
+    if (forecast.includes('overcast')) return 3;
+    if (forecast.includes('cloud') || forecast.includes('partly') || forecast.includes('mostly sunny')) return 2;
+    if (nwsIcon?.includes('night')) return 0; // clear night
+    return 0; // clear/sunny
   };
+
+  const isForecastNight = (nwsIcon) => !!(nwsIcon?.includes('night'));
 
   return (
     <TabPanel title="7-DAY FORECAST">
@@ -186,8 +189,12 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
                 <p className={`text-lg font-bold font-vt323 ${d.isToday ? 'text-cyan-200' : 'text-cyan-300'}`}>{d.day}</p>
                 <p className="text-xs text-cyan-400">{d.date}</p>
               </div>
-              <div className="w-1/6 text-4xl text-center">
-                {d.shortForecast ? getForecastIcon(d.shortForecast, d.icon) : getWeatherIcon(d.code, false)}
+              <div className="w-1/6 flex justify-center">
+                <AnimatedWeatherIcon
+                  code={d.shortForecast ? getForecastCode(d.shortForecast, d.icon) : (d.code || 0)}
+                  night={d.shortForecast ? isForecastNight(d.icon) : false}
+                  size={40}
+                />
               </div>
               <div className="w-2/6 text-center">
                 {d.isNightOnly ? (

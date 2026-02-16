@@ -26,6 +26,7 @@ import { Header, Footer, Scanlines, TabNavigation, CRTPowerOn } from './componen
 import { AppStatus, LocationModal } from './components/common';
 import { WidgetView } from './components/widgets';
 import { WeatherBackground } from './components/weather';
+import IconTestPage from './components/weather/IconTestPage';
 import {
   AlertsTab,
   CurrentConditionsTab,
@@ -40,7 +41,7 @@ import {
   TripWeatherTab,
   HurricaneTab,
 } from './components/tabs';
-import { getNarrationText, speakNarration, cancelNarration } from './utils/narration';
+
 
 const App = () => {
   // --- State Hooks ---
@@ -64,7 +65,7 @@ const App = () => {
   const [dismissedAlertIds, setDismissedAlertIds] = useState(new Set());
   const [dismissedTornadoModals, setDismissedTornadoModals] = useState(new Set());
   const [showAlertFlash, setShowAlertFlash] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
+
   const [crtDone, setCrtDone] = useState(false);
   const lastAlertIdsRef = useRef('');
 
@@ -139,26 +140,6 @@ const App = () => {
     };
   }, [autoCycle, currentScreen]);
 
-  // --- Voice Narration Effect ---
-  useEffect(() => {
-    if (!autoCycle || !voiceEnabled) {
-      cancelNarration();
-      return;
-    }
-
-    const text = getNarrationText(currentScreen, {
-      weatherData,
-      alerts,
-      location,
-      aqiData,
-    });
-
-    if (text) {
-      speakNarration(text);
-    }
-
-    return () => cancelNarration();
-  }, [currentScreen, autoCycle, voiceEnabled]);
 
   const [savedLocations, setSavedLocations] = useState(() => {
     try {
@@ -491,6 +472,11 @@ const App = () => {
     }
   };
 
+  // Icon test page: append ?icontest to URL
+  if (window.location.search.includes('icontest')) {
+    return <IconTestPage />;
+  }
+
   const current = weatherData?.current;
   const hourly = weatherData?.hourly;
   const daily = weatherData?.daily;
@@ -647,8 +633,7 @@ const App = () => {
         weatherCode={current?.weather_code}
         sunrise={daily?.sunrise?.[0]}
         sunset={daily?.sunset?.[0]}
-        voiceEnabled={voiceEnabled}
-        setVoiceEnabled={setVoiceEnabled}
+
       />
 
       {/* Severe Weather Alert Banner */}

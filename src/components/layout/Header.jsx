@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, MapPin, Volume2, VolumeX, Radio, Minimize, Mic, MicOff } from 'lucide-react';
+import { Play, Pause, MapPin, Volume2, VolumeX, Radio, Minimize } from 'lucide-react';
 import { DARK_BLUE, NAVY_BLUE, BRIGHT_CYAN } from '../../utils/constants';
 
 const getHeaderGradient = (weatherCode, night, sunrise, sunset, currentTime) => {
@@ -55,8 +55,6 @@ const Header = ({
   weatherCode,
   sunrise,
   sunset,
-  voiceEnabled,
-  setVoiceEnabled
 }) => {
   const timeOptions = { hour: 'numeric', minute: '2-digit', second: '2-digit' };
   const dateOptions = { weekday: 'short', month: 'short', day: 'numeric' };
@@ -111,21 +109,6 @@ const Header = ({
         >
           <Radio size={18} className={autoCycle ? 'text-white animate-pulse' : 'text-cyan-400'} />
         </button>
-
-        {/* Voice Narration Toggle (only visible during auto-cycle) */}
-        {autoCycle && (
-          <button
-            onClick={() => setVoiceEnabled(!voiceEnabled)}
-            className={`p-2 rounded-full transition shadow-md shrink-0 ${voiceEnabled ? 'bg-cyan-600' : 'bg-white/10 hover:bg-white/20'}`}
-            style={{ border: `1px solid ${BRIGHT_CYAN}` }}
-            title={voiceEnabled ? 'Disable Voice Narration' : 'Enable Voice Narration'}
-          >
-            {voiceEnabled
-              ? <Mic size={18} className="text-white" />
-              : <MicOff size={18} className="text-cyan-400" />
-            }
-          </button>
-        )}
 
         {/* Widget Mode Button */}
         <button

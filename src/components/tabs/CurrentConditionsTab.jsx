@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Thermometer, Wind, Droplets, Zap, Sunrise, Sunset, Maximize, Radio, ChevronDown, ChevronUp } from 'lucide-react';
 import TabPanel from '../layout/TabPanel';
 import LoadingIndicator from '../common/LoadingIndicator';
-import { WindCompass, PressureTrend, TemperatureTrend, WeatherBird } from '../weather';
+import { WindCompass, PressureTrend, TemperatureTrend, WeatherBird, AnimatedWeatherIcon } from '../weather';
 import { BRIGHT_CYAN } from '../../utils/constants';
-import { formatTime, getAQIInfo, getWeatherIcon, getWeatherDescription, degreeToCardinal } from '../../utils/helpers';
+import { formatTime, getAQIInfo, getWeatherDescription, degreeToCardinal } from '../../utils/helpers';
 
 // Temperature color coding based on Fahrenheit
 const getTemperatureColorClass = (tempF) => {
@@ -228,8 +228,8 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
           </p>
           <TemperatureTrend dailyData={dailyData} />
         </div>
-        <div className="text-9xl sm:text-[150px] text-white/90">
-          {getWeatherIcon(currentData.weather_code, night)}
+        <div className="text-white/90 flex items-center justify-center">
+          <AnimatedWeatherIcon code={currentData.weather_code} night={night} size={150} />
         </div>
       </div>
 

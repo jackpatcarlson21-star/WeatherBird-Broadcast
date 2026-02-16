@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { MapPin, Star } from 'lucide-react';
 import TabPanel from '../layout/TabPanel';
 import LoadingIndicator from '../common/LoadingIndicator';
-import { getWeatherIcon, getWeatherDescription } from '../../utils/helpers';
+import { getWeatherDescription } from '../../utils/helpers';
+import { AnimatedWeatherIcon } from '../weather';
 
 const DashboardTab = ({ currentLocation, savedLocations, onSelectLocation }) => {
   const [locationWeather, setLocationWeather] = useState({});
@@ -95,7 +96,7 @@ const DashboardTab = ({ currentLocation, savedLocations, onSelectLocation }) => 
                     </span>
                   )}
                 </div>
-                <span className="text-4xl ml-2">{weather ? getWeatherIcon(weather.code, false) : '...'}</span>
+                <span className="ml-2">{weather ? <AnimatedWeatherIcon code={weather.code} night={false} size={40} /> : '...'}</span>
               </div>
 
               {weather ? (

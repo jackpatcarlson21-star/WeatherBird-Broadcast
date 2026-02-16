@@ -1,7 +1,8 @@
 import React from 'react';
 import TabPanel from '../layout/TabPanel';
 import LoadingIndicator from '../common/LoadingIndicator';
-import { formatTime, getWeatherIcon } from '../../utils/helpers';
+import { formatTime } from '../../utils/helpers';
+import { AnimatedWeatherIcon } from '../weather';
 
 const HourlyForecastTab = ({ hourly, night, isWeatherLoading }) => {
   if (isWeatherLoading) return <LoadingIndicator />;
@@ -72,7 +73,7 @@ const HourlyForecastTab = ({ hourly, night, isWeatherLoading }) => {
 
             {/* Icon */}
             <div className="w-12 sm:w-16 flex justify-center">
-              <span className="text-2xl">{getWeatherIcon(h.code, night)}</span>
+              <AnimatedWeatherIcon code={h.code} night={night} size={28} />
             </div>
 
             {/* Temperature */}

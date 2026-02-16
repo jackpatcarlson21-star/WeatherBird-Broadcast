@@ -1,7 +1,8 @@
 import React from 'react';
 import { MapPin, Maximize } from 'lucide-react';
 import { NAVY_BLUE } from '../../utils/constants';
-import { getWeatherIcon, getWeatherDescription, getAQIInfo } from '../../utils/helpers';
+import { getWeatherDescription, getAQIInfo } from '../../utils/helpers';
+import { AnimatedWeatherIcon } from '../weather';
 
 const WidgetView = ({ current, daily, aqiData, locationName, night, onExpand }) => {
   const currentData = current || {};
@@ -23,9 +24,7 @@ const WidgetView = ({ current, daily, aqiData, locationName, night, onExpand }) 
 
         {/* Main Weather Display */}
         <div className="flex items-center justify-center gap-4 mb-4">
-          <span className="text-7xl">
-            {getWeatherIcon(currentData.weather_code, night)}
-          </span>
+          <AnimatedWeatherIcon code={currentData.weather_code} night={night} size={80} />
           <div className="text-center">
             <p className="text-6xl text-white font-bold">
               {Math.round(currentData.temperature_2m || 0)}°

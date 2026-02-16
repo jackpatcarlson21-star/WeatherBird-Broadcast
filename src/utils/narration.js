@@ -10,6 +10,7 @@ export const getNarrationText = (screen, data) => {
   const daily = weatherData?.daily;
   const hourly = weatherData?.hourly;
 
+  // Only narrate current conditions, hourly, and daily tabs
   switch (screen) {
     case SCREENS.CONDITIONS: {
       if (!current) return 'Loading current conditions.';
@@ -49,37 +50,6 @@ export const getNarrationText = (screen, data) => {
       return `7 day outlook. Today, high of ${high} and low of ${low}. Tomorrow, high of ${high2} and low of ${low2}.`;
     }
 
-    case SCREENS.RADAR:
-      return 'Radar view. Displaying current regional radar imagery.';
-
-    case SCREENS.PRECIP:
-      return 'Precipitation graph showing rainfall and snowfall projections for the next 48 hours.';
-
-    case SCREENS.DASHBOARD:
-      return 'Location dashboard. Manage your saved weather locations.';
-
-    case SCREENS.ALERTS: {
-      if (!alerts || alerts.length === 0) return 'No active weather alerts for your area.';
-      const count = alerts.length;
-      const types = [...new Set(alerts.map(a => a.properties?.event).filter(Boolean))];
-      return `${count} active weather ${count === 1 ? 'alert' : 'alerts'}. ${types.join(', ')}.`;
-    }
-
-    case SCREENS.WWA:
-      return 'National Watch Warning Advisory map from the National Weather Service.';
-
-    case SCREENS.SPC:
-      return 'Storm Prediction Center convective outlook for today.';
-
-    case SCREENS.TRIP_WEATHER:
-      return 'Trip weather planner. Check weather conditions for your travel destination.';
-
-    case SCREENS.ALMANAC:
-      return 'Weather almanac with astronomical data and historical records.';
-
-    case SCREENS.HURRICANE:
-      return 'Hurricane tracker. Showing the latest tropical outlook from the National Hurricane Center.';
-
     default:
       return '';
   }
@@ -89,6 +59,32 @@ export const getNarrationText = (screen, data) => {
  * Speak narration text using the Web Speech API.
  * Returns the utterance so it can be cancelled.
  */
+// Cache the best voice once found
+let cachedVoice = null;
+
+const findBestVoice = () => {
+  if (cachedVoice) return cachedVoice;
+
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return null;
+
+  const googleVoices = voices.filter(v => v.name.includes('Google') && v.lang.startsWith('en'));
+
+  // Prefer Google US English
+  const usVoice = googleVoices.find(v => v.lang === 'en-US');
+  if (usVoice) { cachedVoice = usVoice; return usVoice; }
+
+  // Fall back to any Google English voice
+  if (googleVoices.length) { cachedVoice = googleVoices[0]; return googleVoices[0]; }
+
+  return null;
+};
+
+// Ensure voices are loaded (they load async in some browsers)
+if (window.speechSynthesis) {
+  window.speechSynthesis.onvoiceschanged = () => { cachedVoice = null; };
+}
+
 export const speakNarration = (text) => {
   if (!text || !window.speechSynthesis) return null;
 
@@ -96,17 +92,13 @@ export const speakNarration = (text) => {
   window.speechSynthesis.cancel();
 
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 1.0;
+  utterance.rate = 0.95;
   utterance.pitch = 1.0;
-  utterance.volume = 0.8;
+  utterance.volume = 0.85;
 
-  // Try to pick a good English voice
-  const voices = window.speechSynthesis.getVoices();
-  const preferred = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google')) ||
-                    voices.find(v => v.lang.startsWith('en-US')) ||
-                    voices.find(v => v.lang.startsWith('en'));
-  if (preferred) {
-    utterance.voice = preferred;
+  const voice = findBestVoice();
+  if (voice) {
+    utterance.voice = voice;
   }
 
   window.speechSynthesis.speak(utterance);
