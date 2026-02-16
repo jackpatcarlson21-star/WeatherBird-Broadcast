@@ -165,19 +165,25 @@ const CloudMoonIcon = () => (
   </g>
 );
 
-const CloudIcon = () => (
-  <Cloud x={0} y={4} color="#D1D5DB" animate />
+const CloudIcon = ({ night }) => (
+  <Cloud x={0} y={8} color={night ? CLOUD_NIGHT : CLOUD_DAY} animate />
 );
 
-const FogIcon = () => (
-  <g>
-    <rect x="4" y="6" width="24" height="2" fill="#D1D5DB" style={{ animation: 'wx-fog-fade 4s ease-in-out infinite' }} />
-    <rect x="2" y="10" width="20" height="2" fill="#D1D5DB" style={{ animation: 'wx-fog-fade2 4.5s ease-in-out infinite' }} />
-    <rect x="6" y="14" width="22" height="2" fill="#D1D5DB" style={{ animation: 'wx-fog-fade 5s ease-in-out infinite' }} />
-    <rect x="4" y="18" width="18" height="2" fill="#D1D5DB" style={{ animation: 'wx-fog-fade2 3.5s ease-in-out infinite' }} />
-    <rect x="8" y="22" width="20" height="2" fill="#D1D5DB" style={{ animation: 'wx-fog-fade 4.2s ease-in-out infinite' }} />
-  </g>
-);
+const FOG_DAY = '#D1D5DB';
+const FOG_NIGHT = '#8B95A3';
+
+const FogIcon = ({ night }) => {
+  const c = night ? FOG_NIGHT : FOG_DAY;
+  return (
+    <g>
+      <rect x="4" y="6" width="24" height="2" fill={c} style={{ animation: 'wx-fog-fade 4s ease-in-out infinite' }} />
+      <rect x="2" y="10" width="20" height="2" fill={c} style={{ animation: 'wx-fog-fade2 4.5s ease-in-out infinite' }} />
+      <rect x="6" y="14" width="22" height="2" fill={c} style={{ animation: 'wx-fog-fade 5s ease-in-out infinite' }} />
+      <rect x="4" y="18" width="18" height="2" fill={c} style={{ animation: 'wx-fog-fade2 3.5s ease-in-out infinite' }} />
+      <rect x="8" y="22" width="20" height="2" fill={c} style={{ animation: 'wx-fog-fade 4.2s ease-in-out infinite' }} />
+    </g>
+  );
+};
 
 // Night cloud color: darker gray for nighttime precipitation icons
 const CLOUD_DAY = '#D1D5DB';
@@ -194,6 +200,15 @@ const DrizzleIcon = ({ night }) => (
   </g>
 );
 
+// Freezing drizzle: icy cyan drops instead of blue
+const FreezingDrizzleIcon = ({ night }) => (
+  <g>
+    <Cloud x={0} y={0} color={night ? CLOUD_NIGHT : CLOUD_DAY} />
+    <rect x="10" y="16" width="2" height="4" fill="#00FFFF" style={{ animation: 'wx-drop-slow 2s ease-in infinite' }} />
+    <rect x="18" y="18" width="2" height="4" fill="#00FFFF" style={{ animation: 'wx-drop-slow 2s ease-in 0.7s infinite' }} />
+  </g>
+);
+
 const RainIcon = ({ night }) => (
   <g>
     <Cloud x={0} y={0} color={night ? CLOUD_NIGHT : CLOUD_DAY} />
@@ -201,6 +216,16 @@ const RainIcon = ({ night }) => (
     <rect x="8" y="16" width="2" height="4" fill="#60A5FA" style={{ animation: 'wx-drop-fast 1.2s ease-in infinite' }} />
     <rect x="14" y="16" width="2" height="4" fill="#60A5FA" style={{ animation: 'wx-drop-fast 1.2s ease-in 0.3s infinite' }} />
     <rect x="20" y="16" width="2" height="4" fill="#60A5FA" style={{ animation: 'wx-drop-fast 1.2s ease-in 0.6s infinite' }} />
+  </g>
+);
+
+// Freezing rain: icy cyan drops instead of blue
+const FreezingRainIcon = ({ night }) => (
+  <g>
+    <Cloud x={0} y={0} color={night ? CLOUD_NIGHT : CLOUD_DAY} />
+    <rect x="8" y="16" width="2" height="4" fill="#00FFFF" style={{ animation: 'wx-drop-fast 1.2s ease-in infinite' }} />
+    <rect x="14" y="16" width="2" height="4" fill="#00FFFF" style={{ animation: 'wx-drop-fast 1.2s ease-in 0.3s infinite' }} />
+    <rect x="20" y="16" width="2" height="4" fill="#00FFFF" style={{ animation: 'wx-drop-fast 1.2s ease-in 0.6s infinite' }} />
   </g>
 );
 
@@ -252,8 +277,10 @@ const getIconType = (code, night) => {
   if (code <= 2) return night ? 'cloudMoon' : 'cloudSun';
   if (code === 3) return 'cloud';
   if (code >= 45 && code <= 48) return 'fog';
-  if (code >= 51 && code <= 57) return 'drizzle';
-  if ((code >= 58 && code <= 67) || (code >= 80 && code <= 82)) return 'rain';
+  if (code >= 56 && code <= 57) return 'freezingDrizzle';
+  if (code >= 51 && code <= 55) return 'drizzle';
+  if (code >= 66 && code <= 67) return 'freezingRain';
+  if ((code >= 58 && code <= 65) || (code >= 80 && code <= 82)) return 'rain';
   if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return 'snow';
   if (code >= 95) return 'thunder';
   return 'cloud'; // fallback
@@ -267,13 +294,15 @@ const ICON_MAP = {
   cloud: CloudIcon,
   fog: FogIcon,
   drizzle: DrizzleIcon,
+  freezingDrizzle: FreezingDrizzleIcon,
   rain: RainIcon,
+  freezingRain: FreezingRainIcon,
   snow: SnowIcon,
   thunder: ThunderIcon,
 };
 
-// Icons that accept a night prop for darker clouds
-const NIGHT_AWARE = new Set(['drizzle', 'rain', 'snow', 'thunder']);
+// Icons that accept a night prop for darker clouds/fog
+const NIGHT_AWARE = new Set(['cloud', 'fog', 'drizzle', 'freezingDrizzle', 'rain', 'freezingRain', 'snow', 'thunder']);
 
 const AnimatedWeatherIcon = ({ code = 0, night = false, size = 64 }) => {
   useEffect(() => {

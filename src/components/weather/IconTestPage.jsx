@@ -7,8 +7,10 @@ const CODE_GROUPS = [
   { label: 'Partly Cloudy (cloudSun/cloudMoon)', codes: [1, 2] },
   { label: 'Overcast (cloud)', codes: [3] },
   { label: 'Fog', codes: [45, 48] },
-  { label: 'Drizzle', codes: [51, 53, 55, 56, 57] },
-  { label: 'Rain', codes: [58, 59, 61, 63, 65, 66, 67, 80, 81, 82] },
+  { label: 'Drizzle', codes: [51, 53, 55] },
+  { label: 'Freezing Drizzle (cyan drops)', codes: [56, 57] },
+  { label: 'Rain', codes: [58, 59, 61, 63, 65, 80, 81, 82] },
+  { label: 'Freezing Rain (cyan drops)', codes: [66, 67] },
   { label: 'Snow', codes: [71, 73, 75, 77, 85, 86] },
   { label: 'Thunderstorm', codes: [95, 96, 99] },
 ];
