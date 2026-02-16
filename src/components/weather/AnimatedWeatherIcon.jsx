@@ -1,17 +1,21 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, memo } from 'react';
 import { getWeatherDescription } from '../../utils/helpers';
 
-// Inject CSS keyframes once into <head>
+// --- Color Constants (declared before use) ---
+const CLOUD_DAY = '#D1D5DB';
+const CLOUD_NIGHT = '#8B95A3';
+const FOG_DAY = '#D1D5DB';
+const FOG_NIGHT = '#8B95A3';
+const THUNDER_DAY = '#9CA3AF';
+const THUNDER_NIGHT = '#6B7280';
+
+// --- Inject CSS keyframes once into <head> ---
 const STYLE_ID = 'wx-icon-styles';
 const injectStyles = () => {
   if (document.getElementById(STYLE_ID)) return;
   const style = document.createElement('style');
   style.id = STYLE_ID;
   style.textContent = `
-    @keyframes wx-pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
     @keyframes wx-glow {
       0%, 100% { filter: drop-shadow(0 0 2px #FACC15); }
       50% { filter: drop-shadow(0 0 6px #FACC15); }
@@ -114,12 +118,18 @@ const Moon = () => (
   </g>
 );
 
-// Shared cloud shape (positioned at top by default)
-const Cloud = ({ x = 0, y = 0, color = '#D1D5DB', animate = false }) => (
+// Shared cloud shape with bumps on top for pixel character
+const Cloud = ({ x = 0, y = 0, color = CLOUD_DAY, animate = false }) => (
   <g transform={`translate(${x},${y})`} style={animate ? { animation: 'wx-drift 4s ease-in-out infinite' } : undefined}>
-    <rect x="8" y="4" width="8" height="2" fill={color} />
-    <rect x="6" y="6" width="14" height="2" fill={color} />
-    <rect x="4" y="8" width="20" height="2" fill={color} />
+    {/* Top bumps */}
+    <rect x="6" y="2" width="4" height="2" fill={color} />
+    <rect x="14" y="2" width="6" height="2" fill={color} />
+    {/* Upper body */}
+    <rect x="4" y="4" width="8" height="2" fill={color} />
+    <rect x="12" y="4" width="10" height="2" fill={color} />
+    {/* Main body */}
+    <rect x="2" y="6" width="24" height="2" fill={color} />
+    <rect x="2" y="8" width="26" height="2" fill={color} />
     <rect x="4" y="10" width="22" height="2" fill={color} />
     <rect x="6" y="12" width="18" height="2" fill={color} />
   </g>
@@ -166,11 +176,8 @@ const CloudMoonIcon = () => (
 );
 
 const CloudIcon = ({ night }) => (
-  <Cloud x={0} y={8} color={night ? CLOUD_NIGHT : CLOUD_DAY} animate />
+  <Cloud x={0} y={6} color={night ? CLOUD_NIGHT : CLOUD_DAY} animate />
 );
-
-const FOG_DAY = '#D1D5DB';
-const FOG_NIGHT = '#8B95A3';
 
 const FogIcon = ({ night }) => {
   const c = night ? FOG_NIGHT : FOG_DAY;
@@ -184,12 +191,6 @@ const FogIcon = ({ night }) => {
     </g>
   );
 };
-
-// Night cloud color: darker gray for nighttime precipitation icons
-const CLOUD_DAY = '#D1D5DB';
-const CLOUD_NIGHT = '#8B95A3';
-const THUNDER_DAY = '#9CA3AF';
-const THUNDER_NIGHT = '#6B7280';
 
 const DrizzleIcon = ({ night }) => (
   <g>
@@ -304,7 +305,7 @@ const ICON_MAP = {
 // Icons that accept a night prop for darker clouds/fog
 const NIGHT_AWARE = new Set(['cloud', 'fog', 'drizzle', 'freezingDrizzle', 'rain', 'freezingRain', 'snow', 'thunder']);
 
-const AnimatedWeatherIcon = ({ code = 0, night = false, size = 64 }) => {
+const AnimatedWeatherIcon = memo(({ code = 0, night = false, size = 64 }) => {
   useEffect(() => {
     injectStyles();
   }, []);
@@ -326,6 +327,6 @@ const AnimatedWeatherIcon = ({ code = 0, night = false, size = 64 }) => {
       {NIGHT_AWARE.has(iconType) ? <IconComponent night={night} /> : <IconComponent />}
     </svg>
   );
-};
+});
 
 export default AnimatedWeatherIcon;

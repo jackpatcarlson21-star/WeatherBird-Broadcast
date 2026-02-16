@@ -152,16 +152,19 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
 
   // Convert NWS forecast text to WMO code for AnimatedWeatherIcon
   const getForecastCode = (shortForecast, nwsIcon) => {
-    const forecast = (shortForecast || '').toLowerCase();
-    if (forecast.includes('thunder') || forecast.includes('storm')) return 95;
-    if (forecast.includes('snow')) return 73;
-    if (forecast.includes('rain') || forecast.includes('shower')) return 63;
-    if (forecast.includes('drizzle')) return 53;
-    if (forecast.includes('fog')) return 45;
-    if (forecast.includes('overcast')) return 3;
-    if (forecast.includes('cloud') || forecast.includes('partly') || forecast.includes('mostly sunny')) return 2;
-    if (nwsIcon?.includes('night')) return 0; // clear night
-    return 0; // clear/sunny
+    const f = (shortForecast || '').toLowerCase();
+    if (f.includes('thunder') || f.includes('storm')) return 95;
+    if (f.includes('sleet') || f.includes('ice') || f.includes('freezing rain')) return 66;
+    if (f.includes('freezing drizzle')) return 56;
+    if (f.includes('snow') || f.includes('blizzard') || f.includes('flurr')) return 73;
+    if (f.includes('rain') || f.includes('shower')) return 63;
+    if (f.includes('drizzle')) return 53;
+    if (f.includes('fog') || f.includes('haze') || f.includes('mist')) return 45;
+    if (f.includes('overcast') || f.includes('mostly cloudy')) return 3;
+    if (f.includes('cloud') || f.includes('partly') || f.includes('mostly sunny') || f.includes('mostly clear')) return 2;
+    if (f.includes('sunny') || f.includes('clear')) return 0;
+    if (nwsIcon?.includes('night')) return 0;
+    return 0;
   };
 
   const isForecastNight = (nwsIcon) => !!(nwsIcon?.includes('night'));
