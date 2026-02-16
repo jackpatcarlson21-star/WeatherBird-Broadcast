@@ -495,7 +495,7 @@ const App = () => {
       case SCREENS.ALERTS:
         return <AlertsTab alerts={alerts} location={location} />;
       case SCREENS.HOURLY:
-        return <HourlyForecastTab hourly={hourly} night={night} isWeatherLoading={isWeatherLoading} />;
+        return <HourlyForecastTab hourly={hourly} sunrise={daily?.sunrise?.[0]} sunset={daily?.sunset?.[0]} isWeatherLoading={isWeatherLoading} />;
       case SCREENS.DAILY:
         return <DailyOutlookTab location={location} daily={daily} isWeatherLoading={isWeatherLoading} />;
       case SCREENS.RADAR:

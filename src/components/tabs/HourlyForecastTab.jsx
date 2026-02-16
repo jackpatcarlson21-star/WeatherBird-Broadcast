@@ -1,10 +1,10 @@
 import React from 'react';
 import TabPanel from '../layout/TabPanel';
 import LoadingIndicator from '../common/LoadingIndicator';
-import { formatTime } from '../../utils/helpers';
+import { formatTime, isNight } from '../../utils/helpers';
 import { AnimatedWeatherIcon } from '../weather';
 
-const HourlyForecastTab = ({ hourly, night, isWeatherLoading }) => {
+const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading }) => {
   if (isWeatherLoading) return <LoadingIndicator />;
 
   // Find the current hour index in the hourly data
@@ -27,6 +27,7 @@ const HourlyForecastTab = ({ hourly, night, isWeatherLoading }) => {
   // Get next 12 hours starting from current hour
   const data = hourly?.time ? hourly.time.slice(startIndex, startIndex + 12).map((time, i) => {
     const idx = startIndex + i;
+    const hourDate = new Date(time);
     return {
       time: formatTime(time),
       temp: Math.round(hourly.temperature_2m[idx]),
@@ -35,6 +36,7 @@ const HourlyForecastTab = ({ hourly, night, isWeatherLoading }) => {
       code: hourly.weather_code[idx],
       wind: Math.round(hourly.wind_speed_10m[idx]),
       humidity: Math.round(hourly.relative_humidity_2m?.[idx] || 0),
+      night: isNight(hourDate, sunrise, sunset),
     };
   }) : [];
 
@@ -73,7 +75,7 @@ const HourlyForecastTab = ({ hourly, night, isWeatherLoading }) => {
 
             {/* Icon */}
             <div className="w-12 sm:w-16 flex justify-center">
-              <AnimatedWeatherIcon code={h.code} night={night} size={28} />
+              <AnimatedWeatherIcon code={h.code} night={h.night} size={28} />
             </div>
 
             {/* Temperature */}
