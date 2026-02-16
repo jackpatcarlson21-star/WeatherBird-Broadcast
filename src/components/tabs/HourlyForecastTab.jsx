@@ -49,32 +49,32 @@ const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading }) => {
   return (
     <TabPanel title="12-HOUR FORECAST">
       {/* Header row */}
-      <div className="flex items-center px-3 py-2 text-xs text-cyan-500 border-b border-cyan-800/50 mb-1">
-        <div className="w-16 sm:w-20">TIME</div>
-        <div className="w-12 sm:w-16 text-center"></div>
+      <div className="flex items-center px-2 sm:px-3 py-2 text-xs text-cyan-500 border-b border-cyan-800/50 mb-1">
+        <div className="w-14 sm:w-20">TIME</div>
+        <div className="w-10 sm:w-16 text-center"></div>
         <div className="flex-1 text-center">TEMP</div>
-        <div className="w-14 sm:w-16 text-center">RAIN</div>
-        <div className="w-14 sm:w-16 text-center">WIND</div>
+        <div className="w-12 sm:w-16 text-center">RAIN</div>
+        <div className="hidden sm:block w-16 text-center">WIND</div>
       </div>
 
       <div className="space-y-0.5">
         {data.map((h, index) => (
           <div
             key={index}
-            className={`flex items-center px-3 py-2.5 rounded-md transition-colors
+            className={`flex items-center px-2 sm:px-3 py-2.5 rounded-md transition-colors
               ${index === 0
                 ? 'bg-cyan-900/50 border border-cyan-500/50'
                 : index % 2 === 0 ? 'bg-black/20' : 'bg-black/10'}`}
           >
             {/* Time */}
-            <div className="w-16 sm:w-20">
+            <div className="w-14 sm:w-20">
               <p className={`text-sm sm:text-base font-bold font-vt323 ${index === 0 ? 'text-cyan-300' : 'text-cyan-400'}`}>
                 {index === 0 ? 'NOW' : h.time}
               </p>
             </div>
 
             {/* Icon */}
-            <div className="w-12 sm:w-16 flex justify-center">
+            <div className="w-10 sm:w-16 flex justify-center">
               <AnimatedWeatherIcon code={h.code} night={h.night} size={28} />
             </div>
 
@@ -87,14 +87,14 @@ const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading }) => {
             </div>
 
             {/* Precip */}
-            <div className="w-14 sm:w-16 text-center">
+            <div className="w-12 sm:w-16 text-center">
               <span className={`text-sm sm:text-base font-bold ${h.pop >= 50 ? 'text-blue-400' : h.pop >= 20 ? 'text-blue-300' : 'text-gray-400'}`}>
                 {h.pop}%
               </span>
             </div>
 
             {/* Wind */}
-            <div className="w-14 sm:w-16 text-center">
+            <div className="hidden sm:block w-16 text-center">
               <span className="text-sm sm:text-base text-gray-300">{h.wind} mph</span>
             </div>
           </div>

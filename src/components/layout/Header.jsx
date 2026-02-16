@@ -155,11 +155,11 @@ const Header = ({
         </button>
 
         {/* Clock */}
-        <div className="text-right hidden sm:block">
-          <div className="text-3xl font-bold text-white font-vt323 tracking-widest">
+        <div className="text-right">
+          <div className="text-lg sm:text-3xl font-bold text-white font-vt323 tracking-widest">
             {time.toLocaleTimeString([], timeOptions)}
           </div>
-          <div className="text-sm text-white font-vt323">{time.toLocaleDateString([], dateOptions)}</div>
+          <div className="text-sm text-white font-vt323 hidden sm:block">{time.toLocaleDateString([], dateOptions)}</div>
         </div>
       </div>
     </header>

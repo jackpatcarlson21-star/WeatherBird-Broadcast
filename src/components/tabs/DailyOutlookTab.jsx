@@ -187,37 +187,37 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
             } ${selectedDay === index ? 'ring-2 ring-cyan-400' : ''}`}
             onClick={() => setSelectedDay(selectedDay === index ? null : index)}
           >
-            <div className="flex items-center p-3">
-              <div className="w-1/6 text-left">
-                <p className={`text-lg font-bold font-vt323 ${d.isToday ? 'text-cyan-200' : 'text-cyan-300'}`}>{d.day}</p>
+            <div className="flex items-center p-2 sm:p-3">
+              <div className="w-14 sm:w-1/6 shrink-0 text-left">
+                <p className={`text-base sm:text-lg font-bold font-vt323 ${d.isToday ? 'text-cyan-200' : 'text-cyan-300'}`}>{d.day}</p>
                 <p className="text-xs text-cyan-400">{d.date}</p>
               </div>
-              <div className="w-1/6 flex justify-center">
+              <div className="w-10 sm:w-1/6 shrink-0 flex justify-center">
                 <AnimatedWeatherIcon
                   code={d.shortForecast ? getForecastCode(d.shortForecast, d.icon) : (d.code || 0)}
                   night={d.shortForecast ? isForecastNight(d.icon) : false}
                   size={40}
                 />
               </div>
-              <div className="w-2/6 text-center">
+              <div className="flex-1 sm:w-2/6 text-center">
                 {d.isNightOnly ? (
-                  <span className="text-xl text-cyan-400">Low: {d.min}°</span>
+                  <span className="text-lg sm:text-xl text-cyan-400">Low: {d.min}°</span>
                 ) : (
                   <>
-                    <span className="text-2xl font-vt323 text-white">{d.max}°</span>
-                    <span className="text-xl text-cyan-400"> / {d.min !== null ? `${d.min}°` : '--'}</span>
+                    <span className="text-xl sm:text-2xl font-vt323 text-white">{d.max}°</span>
+                    <span className="text-lg sm:text-xl text-cyan-400"> / {d.min !== null ? `${d.min}°` : '--'}</span>
                   </>
                 )}
               </div>
-              <div className="w-1/6 text-sm text-center flex flex-col items-center">
+              <div className="w-12 sm:w-1/6 shrink-0 text-sm text-center flex flex-col items-center">
                 <Droplets size={16} className="text-cyan-400" />
                 <span className="text-white">{d.pop}%</span>
               </div>
-              <div className="w-1/6 text-sm text-center flex flex-col items-center">
+              <div className="hidden sm:flex sm:w-1/6 shrink-0 text-sm text-center flex-col items-center">
                 <Wind size={16} className="text-cyan-400" />
                 <span className="text-white">{d.wind}</span>
               </div>
-              <div className="w-8 flex justify-center">
+              <div className="w-6 sm:w-8 flex justify-center">
                 <ChevronRight
                   size={20}
                   className={`text-cyan-400 transition-transform duration-200 ${selectedDay === index ? 'rotate-90' : ''}`}

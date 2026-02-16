@@ -220,16 +220,17 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
 
       <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start mb-8 border-b border-cyan-800 pb-4">
         <div className="text-center sm:text-left mb-4 sm:mb-0">
-          <p className={`text-8xl sm:text-[120px] transition-colors duration-500 ${getTemperatureColorClass(Math.round(currentData.temperature_2m || 0))}`}>
+          <p className={`text-7xl sm:text-8xl md:text-[120px] transition-colors duration-500 ${getTemperatureColorClass(Math.round(currentData.temperature_2m || 0))}`}>
             {Math.round(currentData.temperature_2m || 0)}°F
           </p>
-          <p className="text-2xl font-vt323 mt-[-10px]" style={{ color: BRIGHT_CYAN }}>
+          <p className="text-xl sm:text-2xl font-vt323" style={{ color: BRIGHT_CYAN }}>
             {getWeatherDescription(currentData.weather_code)}
           </p>
           <TemperatureTrend dailyData={dailyData} />
         </div>
         <div className="text-white/90 flex items-center justify-center">
-          <AnimatedWeatherIcon code={currentData.weather_code} night={night} size={150} />
+          <span className="hidden sm:inline"><AnimatedWeatherIcon code={currentData.weather_code} night={night} size={150} /></span>
+          <span className="sm:hidden"><AnimatedWeatherIcon code={currentData.weather_code} night={night} size={100} /></span>
         </div>
       </div>
 

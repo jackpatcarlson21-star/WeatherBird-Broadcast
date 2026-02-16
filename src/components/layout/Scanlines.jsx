@@ -1,7 +1,7 @@
 import React from 'react';
 
 const Scanlines = () => (
-  <div className="pointer-events-none absolute inset-0 z-50 crt-container">
+  <div className="pointer-events-none absolute inset-0 z-30 crt-container">
     {/* Scanlines - more visible */}
     <div className="absolute inset-0 opacity-40">
       <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.15)_50%)] bg-[length:100%_3px]" />
