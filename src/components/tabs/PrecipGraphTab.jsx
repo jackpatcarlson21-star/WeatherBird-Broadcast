@@ -31,19 +31,18 @@ const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
   // "snowfall" is the actual snow accumulation in cm (converted to inches by API since we use precipitation_unit=inch)
   const data = hourly?.time ? hourly.time.slice(startIndex, startIndex + 12).map((time, i) => {
     const idx = startIndex + i;
-    const totalPrecip = hourly.precipitation?.[idx] || 0; // Total precip (rain + snow water equiv)
+    const rainAmount = hourly.rain?.[idx] || 0; // Rain only (excludes snow)
     const snowfall = hourly.snowfall?.[idx] || 0; // Snow accumulation in inches
     const hasSnow = snowfall > 0;
-    // If there's snowfall, show snow. Otherwise if there's precip, it's rain
-    const hasRain = totalPrecip > 0 && !hasSnow;
+    const hasRain = rainAmount > 0;
 
     return {
       time: new Date(time).toLocaleTimeString([], { hour: 'numeric' }),
       probability: Math.round(hourly.precipitation_probability?.[idx] || 0),
-      rain: hasRain ? totalPrecip : 0,
+      rain: rainAmount,
       snow: snowfall,
-      // For amount, show snowfall if snowing, otherwise show precip (rain)
-      amount: hasSnow ? snowfall : totalPrecip,
+      // Show both rain and snow amounts when mixed precipitation occurs
+      amount: hasSnow ? snowfall : rainAmount,
       hasSnow,
       hasRain,
     };

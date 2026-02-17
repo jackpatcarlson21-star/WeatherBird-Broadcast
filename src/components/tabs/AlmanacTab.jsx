@@ -54,6 +54,9 @@ const AlmanacTab = ({ location, userId }) => {
   const weatherFact = WEATHER_FACTS[currentHour % WEATHER_FACTS.length];
 
   useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     const fetchAlmanacData = async () => {
       setIsLoading(true);
       try {
@@ -70,7 +73,7 @@ const AlmanacTab = ({ location, userId }) => {
         for (let year = startYear; year < currentYear; year++) {
           const dateStr = `${year}-${month}-${day}`;
           historicalPromises.push(
-            fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${dateStr}&end_date=${dateStr}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto`)
+            fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${dateStr}&end_date=${dateStr}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto`, { signal })
               .then(res => res.ok ? res.json() : null)
               .catch(() => null)
           );
@@ -79,14 +82,16 @@ const AlmanacTab = ({ location, userId }) => {
         // Fetch YTD precipitation (Jan 1 to today)
         const ytdStartDate = `${currentYear}-01-01`;
         const ytdEndDate = `${currentYear}-${month}-${day}`;
-        const ytdPromise = fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${ytdStartDate}&end_date=${ytdEndDate}&daily=precipitation_sum&precipitation_unit=inch&timezone=auto`)
+        const ytdPromise = fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${ytdStartDate}&end_date=${ytdEndDate}&daily=precipitation_sum&precipitation_unit=inch&timezone=auto`, { signal })
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 
         // Fetch monthly averages (this month across years)
         const monthStart = `${currentYear - 10}-${month}-01`;
-        const monthEnd = `${currentYear - 1}-${month}-28`;
-        const monthlyPromise = fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${monthStart}&end_date=${monthEnd}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto`)
+        // Use day 0 of next month to get the actual last day of the target month
+        const lastDay = new Date(currentYear - 1, today.getMonth() + 1, 0).getDate();
+        const monthEnd = `${currentYear - 1}-${month}-${String(lastDay).padStart(2, '0')}`;
+        const monthlyPromise = fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${monthStart}&end_date=${monthEnd}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto`, { signal })
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 
@@ -95,7 +100,7 @@ const AlmanacTab = ({ location, userId }) => {
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
-        const sunPromise = fetch(`https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&daily=sunrise,sunset&timezone=auto&start_date=${yesterdayStr}&end_date=${todayStr}`)
+        const sunPromise = fetch(`https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&daily=sunrise,sunset&timezone=auto&start_date=${yesterdayStr}&end_date=${todayStr}`, { signal })
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 
@@ -104,10 +109,10 @@ const AlmanacTab = ({ location, userId }) => {
         const springEnd = `${currentYear - 1}-05-31`;
         const fallStart = `${currentYear - 5}-09-01`;
         const fallEnd = `${currentYear - 1}-11-30`;
-        const springFrostPromise = fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${springStart}&end_date=${springEnd}&daily=temperature_2m_min&temperature_unit=fahrenheit&timezone=auto`)
+        const springFrostPromise = fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${springStart}&end_date=${springEnd}&daily=temperature_2m_min&temperature_unit=fahrenheit&timezone=auto`, { signal })
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
-        const fallFrostPromise = fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${fallStart}&end_date=${fallEnd}&daily=temperature_2m_min&temperature_unit=fahrenheit&timezone=auto`)
+        const fallFrostPromise = fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${fallStart}&end_date=${fallEnd}&daily=temperature_2m_min&temperature_unit=fahrenheit&timezone=auto`, { signal })
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 
@@ -251,16 +256,19 @@ const AlmanacTab = ({ location, userId }) => {
           historicalTemps: historicalTemps.slice(-10), // Last 10 years for "On This Day"
         });
       } catch (e) {
+        if (e.name === 'AbortError') return;
         console.error("Almanac fetch error:", e);
         setAlmanacData(null);
       } finally {
-        setIsLoading(false);
+        if (!signal.aborted) setIsLoading(false);
       }
     };
 
     if (location.lat && location.lon) {
       fetchAlmanacData();
     }
+
+    return () => controller.abort();
   }, [location.lat, location.lon]);
 
   if (isLoading) {

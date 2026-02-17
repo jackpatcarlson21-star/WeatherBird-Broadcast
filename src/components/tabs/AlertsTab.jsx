@@ -61,6 +61,13 @@ const AlertsTab = ({ alerts, location }) => {
     window.speechSynthesis.speak(utterance);
   };
 
+  // Tick counter to force re-render every 60s for live countdowns
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Cleanup speech on unmount
   useEffect(() => {
     return () => {

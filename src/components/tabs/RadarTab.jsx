@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { RefreshCw, AlertTriangle } from 'lucide-react';
 import TabPanel from '../layout/TabPanel';
 
 // NEXRAD Radar Stations with coordinates (decimal degrees)
@@ -151,8 +152,16 @@ const findNearestRadar = (lat, lon) => {
 const RadarTab = ({ location }) => {
   const nearestRadar = useMemo(() => findNearestRadar(location.lat, location.lon), [location.lat, location.lon]);
   const [showNational, setShowNational] = useState(false);
+  const [imgLoading, setImgLoading] = useState(true);
+  const [imgError, setImgError] = useState(false);
 
   const localRadarUrl = `https://radar.weather.gov/ridge/standard/${nearestRadar.id}_loop.gif`;
+
+  const handleToggle = (national) => {
+    setShowNational(national);
+    setImgLoading(true);
+    setImgError(false);
+  };
 
   return (
     <TabPanel title="DOPPLER RADAR">
@@ -160,7 +169,7 @@ const RadarTab = ({ location }) => {
         {/* Toggle buttons */}
         <div className="flex justify-center gap-2">
           <button
-            onClick={() => setShowNational(false)}
+            onClick={() => handleToggle(false)}
             className={`px-4 py-2 rounded-lg font-vt323 text-lg transition-all ${
               !showNational
                 ? 'bg-cyan-600 text-white border-2 border-white'
@@ -170,7 +179,7 @@ const RadarTab = ({ location }) => {
             LOCAL
           </button>
           <button
-            onClick={() => setShowNational(true)}
+            onClick={() => handleToggle(true)}
             className={`px-4 py-2 rounded-lg font-vt323 text-lg transition-all ${
               showNational
                 ? 'bg-cyan-600 text-white border-2 border-white'
@@ -188,24 +197,35 @@ const RadarTab = ({ location }) => {
           {showNational ? 'Continental United States' : nearestRadar.name}
         </p>
 
-        {showNational ? (
-          <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden bg-black flex items-center justify-center" style={{ minHeight: '500px' }}>
-            <img
-              src="https://radar.weather.gov/ridge/standard/CONUS-LARGE_loop.gif"
-              alt="National CONUS Radar"
-              className="max-w-full max-h-full"
-            />
-          </div>
-        ) : (
-          <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden bg-black flex items-center justify-center" style={{ minHeight: '500px' }}>
-            <img
-              src={localRadarUrl}
-              alt={`NEXRAD Radar ${nearestRadar.id}`}
-              className="max-w-full max-h-full"
-              style={{ imageRendering: 'pixelated' }}
-            />
-          </div>
-        )}
+        <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden bg-black flex items-center justify-center" style={{ minHeight: '500px' }}>
+          {imgLoading && !imgError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+              <RefreshCw size={32} className="text-cyan-400 animate-spin mb-2" />
+              <span className="text-cyan-400 text-sm">Loading radar imagery...</span>
+            </div>
+          )}
+          {imgError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+              <AlertTriangle size={32} className="text-yellow-400 mb-2" />
+              <span className="text-yellow-400 text-sm">Failed to load radar image</span>
+              <button
+                onClick={() => { setImgError(false); setImgLoading(true); }}
+                className="mt-2 px-3 py-1 text-xs bg-cyan-900/50 text-cyan-300 rounded border border-cyan-600 hover:bg-cyan-800 transition"
+              >
+                RETRY
+              </button>
+            </div>
+          )}
+          <img
+            key={showNational ? 'national' : nearestRadar.id}
+            src={showNational ? "https://radar.weather.gov/ridge/standard/CONUS-LARGE_loop.gif" : localRadarUrl}
+            alt={showNational ? "National CONUS Radar" : `NEXRAD Radar ${nearestRadar.id}`}
+            className={`max-w-full max-h-full ${imgLoading || imgError ? 'opacity-0' : 'opacity-100'} transition-opacity`}
+            style={showNational ? {} : { imageRendering: 'pixelated' }}
+            onLoad={() => { setImgLoading(false); setImgError(false); }}
+            onError={() => { setImgLoading(false); setImgError(true); }}
+          />
+        </div>
 
         <p className="text-xs text-cyan-400">
           Source: NOAA/NWS RIDGE Radar

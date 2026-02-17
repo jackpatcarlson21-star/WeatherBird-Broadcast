@@ -264,7 +264,8 @@ const App = () => {
 
   // --- Clock and Music Handler ---
   useEffect(() => {
-    const clockTick = setInterval(() => setTime(new Date()), 1000);
+    // Slow tick (60s) - only used for isNight; Header has its own 1s clock
+    const clockTick = setInterval(() => setTime(new Date()), 60000);
 
     if (!audioRef.current) {
       audioRef.current = new Audio(MUSIC_URL);
@@ -617,7 +618,6 @@ const App = () => {
 
       {/* Main Header */}
       <Header
-        time={time}
         locationName={location.name}
         onLocationClick={() => setIsModalOpen(true)}
         timezone={weatherData?.timezone}
@@ -667,7 +667,7 @@ const App = () => {
 
       {/* Main Content Area */}
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col md:flex-row gap-6 overflow-hidden">
-        <TabNavigation currentTab={currentScreen} setTab={setCurrentScreen} />
+        <TabNavigation currentTab={currentScreen} setTab={(tab) => { setAutoCycle(false); setCurrentScreen(tab); }} />
         <div ref={contentRef} key={currentScreen} className="tab-content-enter flex-grow overflow-auto">
           {renderTabContent()}
         </div>

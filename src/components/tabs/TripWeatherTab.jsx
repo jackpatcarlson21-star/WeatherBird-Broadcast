@@ -427,29 +427,31 @@ const TripWeatherTab = ({ location }) => {
     }
   };
 
-  // Helper to find weather for a specific hour from hourly data
+  // Helper to find weather for the nearest hour from hourly data
   const getWeatherForHour = (hourlyData, targetTime) => {
     if (!hourlyData?.time || !hourlyData.time.length) return null;
 
-    // Find the closest hour in the forecast
-    const targetHour = new Date(targetTime);
-    targetHour.setMinutes(0, 0, 0);
+    const targetMs = new Date(targetTime).getTime();
+    let bestIdx = 0;
+    let bestDiff = Infinity;
 
     for (let i = 0; i < hourlyData.time.length; i++) {
-      const forecastTime = new Date(hourlyData.time[i]);
-      if (forecastTime >= targetHour) {
-        return {
-          temperature_2m: hourlyData.temperature_2m?.[i],
-          precipitation_probability: hourlyData.precipitation_probability?.[i],
-          precipitation: hourlyData.precipitation?.[i],
-          weather_code: hourlyData.weather_code?.[i],
-          wind_speed_10m: hourlyData.wind_speed_10m?.[i],
-          snowfall: hourlyData.snowfall?.[i],
-          forecastHour: forecastTime
-        };
+      const diff = Math.abs(new Date(hourlyData.time[i]).getTime() - targetMs);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        bestIdx = i;
       }
     }
-    return null;
+
+    return {
+      temperature_2m: hourlyData.temperature_2m?.[bestIdx],
+      precipitation_probability: hourlyData.precipitation_probability?.[bestIdx],
+      precipitation: hourlyData.precipitation?.[bestIdx],
+      weather_code: hourlyData.weather_code?.[bestIdx],
+      wind_speed_10m: hourlyData.wind_speed_10m?.[bestIdx],
+      snowfall: hourlyData.snowfall?.[bestIdx],
+      forecastHour: new Date(hourlyData.time[bestIdx])
+    };
   };
 
   // Fetch weather for waypoints when route is calculated

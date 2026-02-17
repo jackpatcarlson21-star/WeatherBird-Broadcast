@@ -7,6 +7,8 @@ const PixelBird = ({ bodyColor = '#00FFFF' }) => (
     height="64"
     style={{ imageRendering: 'pixelated' }}
     xmlns="http://www.w3.org/2000/svg"
+    role="img"
+    aria-label="WeatherBird mascot"
   >
     {/* Head */}
     <rect x="12" y="4" width="8" height="2" fill={bodyColor} />
@@ -123,7 +125,7 @@ const WeatherBird = ({ temp, weatherCode, windSpeed, night }) => {
       <div className={`${animation}`}>
         <span className="relative inline-block">
           <PixelBird bodyColor={bodyColor} />
-          {accessory && <span className="absolute -top-2 -right-4 text-3xl">{accessory}</span>}
+          {accessory && <span className="absolute -top-2 -right-4 text-3xl" aria-hidden="true">{accessory}</span>}
         </span>
       </div>
       <p className="text-cyan-300 font-vt323 text-lg mt-2 text-center">{message}</p>

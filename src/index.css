@@ -28,6 +28,8 @@ html, body, #root {
   height: 20px;
   background: linear-gradient(to bottom, transparent, rgba(0, 255, 255, 0.6));
   animation: rain-fall linear infinite;
+  will-change: transform;
+  transform: translateZ(0);
 }
 .particle-rain:nth-child(1) { left: 5%; animation-duration: 0.8s; animation-delay: 0s; }
 .particle-rain:nth-child(2) { left: 15%; animation-duration: 1s; animation-delay: 0.2s; }
@@ -47,6 +49,8 @@ html, body, #root {
   background: rgba(255, 255, 255, 0.8);
   border-radius: 50%;
   animation: snow-fall linear infinite;
+  will-change: transform;
+  transform: translateZ(0);
 }
 .particle-snow:nth-child(1) { left: 8%; animation-duration: 4s; animation-delay: 0s; }
 .particle-snow:nth-child(2) { left: 18%; animation-duration: 5s; animation-delay: 1s; }
@@ -64,6 +68,7 @@ html, body, #root {
   background: white;
   border-radius: 50%;
   animation: star-twinkle ease-in-out infinite;
+  will-change: opacity;
 }
 .particle-star:nth-child(1) { top: 10%; left: 12%; animation-duration: 2s; animation-delay: 0s; }
 .particle-star:nth-child(2) { top: 20%; left: 35%; animation-duration: 3s; animation-delay: 0.5s; }
@@ -78,6 +83,8 @@ html, body, #root {
   font-size: 2rem;
   opacity: 0.15;
   animation: cloud-drift linear infinite;
+  will-change: transform;
+  transform: translateZ(0);
 }
 .particle-cloud:nth-child(1) { top: 10%; animation-duration: 25s; animation-delay: 0s; }
 .particle-cloud:nth-child(2) { top: 25%; animation-duration: 30s; animation-delay: 5s; }

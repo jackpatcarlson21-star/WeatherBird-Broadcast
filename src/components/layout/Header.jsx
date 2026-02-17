@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Play, Pause, MapPin, Volume2, VolumeX, Radio, Minimize } from 'lucide-react';
 import { DARK_BLUE, NAVY_BLUE, BRIGHT_CYAN } from '../../utils/constants';
 
@@ -39,7 +39,6 @@ const getHeaderGradient = (weatherCode, night, sunrise, sunset, currentTime) => 
 };
 
 const Header = ({
-  time,
   locationName,
   onLocationClick,
   timezone,
@@ -56,6 +55,13 @@ const Header = ({
   sunrise,
   sunset,
 }) => {
+  // Local clock state - ticks every second without re-rendering the parent tree
+  const [localTime, setLocalTime] = useState(new Date());
+  useEffect(() => {
+    const tick = setInterval(() => setLocalTime(new Date()), 1000);
+    return () => clearInterval(tick);
+  }, []);
+
   const timeOptions = { hour: 'numeric', minute: '2-digit', second: '2-digit' };
   const dateOptions = { weekday: 'short', month: 'short', day: 'numeric' };
 
@@ -64,7 +70,7 @@ const Header = ({
     dateOptions.timeZone = timezone;
   }
 
-  const headerGradient = getHeaderGradient(weatherCode, night, sunrise, sunset, time);
+  const headerGradient = getHeaderGradient(weatherCode, night, sunrise, sunset, localTime);
 
   return (
     <header
@@ -157,9 +163,9 @@ const Header = ({
         {/* Clock */}
         <div className="text-right">
           <div className="text-lg sm:text-3xl font-bold text-white font-vt323 tracking-widest">
-            {time.toLocaleTimeString([], timeOptions)}
+            {localTime.toLocaleTimeString([], timeOptions)}
           </div>
-          <div className="text-sm text-white font-vt323 hidden sm:block">{time.toLocaleDateString([], dateOptions)}</div>
+          <div className="text-sm text-white font-vt323 hidden sm:block">{localTime.toLocaleDateString([], dateOptions)}</div>
         </div>
       </div>
     </header>
