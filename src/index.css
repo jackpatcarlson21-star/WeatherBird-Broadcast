@@ -174,22 +174,3 @@ html, body, #root {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 0.8; }
 }
-
-/* ===== Mobile Bottom Nav ===== */
-@keyframes slide-up {
-  0% { transform: translateY(100%); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
-}
-
-.more-drawer-enter {
-  animation: slide-up 0.2s ease-out forwards;
-}
-
-@keyframes badge-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-}
-
-.alert-badge-pulse {
-  animation: badge-pulse 2s ease-in-out infinite;
-}

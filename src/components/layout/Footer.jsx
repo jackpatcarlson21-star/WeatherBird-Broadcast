@@ -23,7 +23,7 @@ const Footer = ({ current, locationName, alerts }) => {
 
   return (
     <footer
-      className={`h-12 shrink-0 hidden md:flex items-center relative overflow-hidden ${hasAlerts ? 'alert-glow-border' : ''}`}
+      className={`h-12 shrink-0 flex items-center relative overflow-hidden ${hasAlerts ? 'alert-glow-border' : ''}`}
       style={{
         background: `linear-gradient(to top, ${NAVY_BLUE}, ${DARK_BLUE})`,
         borderTop: `4px solid ${hasAlerts ? '#EF4444' : BRIGHT_CYAN}`,

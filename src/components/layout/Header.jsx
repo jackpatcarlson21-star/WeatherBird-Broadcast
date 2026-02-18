@@ -73,7 +73,7 @@ const Header = ({
 
   return (
     <header
-      className="p-2 sm:p-4 flex justify-between items-center h-14 sm:h-20 shrink-0 shadow-neon-lg z-10"
+      className="p-4 flex justify-between items-center h-20 shrink-0 shadow-neon-lg z-10"
       style={{
         background: headerGradient,
         borderBottom: `4px solid ${BRIGHT_CYAN}`,
@@ -82,7 +82,7 @@ const Header = ({
     >
       <div className="flex flex-col">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl sm:text-4xl font-bold text-white tracking-widest font-vt323">WEATHERBIRD</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-widest font-vt323">WEATHERBIRD</h1>
           {isTracking && (
             <span className="gps-badge flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold tracking-wider border border-green-500/60 bg-green-900/40 text-green-300 shrink-0">
               <span className="gps-dot w-2 h-2 rounded-full bg-green-500" />
@@ -107,18 +107,18 @@ const Header = ({
         }
       `}</style>
       <div className="flex items-center gap-2 sm:gap-5">
-        {/* Auto-Cycle Button (hidden on mobile) */}
+        {/* Auto-Cycle Button */}
         <button
           onClick={() => setAutoCycle(!autoCycle)}
-          className={`hidden sm:flex p-2 rounded-full transition shadow-md shrink-0 ${autoCycle ? 'bg-cyan-600' : 'bg-white/10 hover:bg-white/20'}`}
+          className={`p-2 rounded-full transition shadow-md shrink-0 ${autoCycle ? 'bg-cyan-600' : 'bg-white/10 hover:bg-white/20'}`}
           style={{ border: `1px solid ${BRIGHT_CYAN}` }}
           title={autoCycle ? 'Stop Auto-Cycle' : 'Start Auto-Cycle'}
         >
           <Radio size={18} className={autoCycle ? 'text-white animate-pulse' : 'text-cyan-400'} />
         </button>
 
-        {/* Music Controls (hidden on mobile) */}
-        <div className="hidden sm:flex items-center gap-2 px-2 sm:px-3 py-2 rounded-full bg-black/30 shrink-0" style={{ border: `1px solid ${BRIGHT_CYAN}` }}>
+        {/* Music Controls */}
+        <div className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-full bg-black/30 shrink-0" style={{ border: `1px solid ${BRIGHT_CYAN}` }}>
           <button
             onClick={toggleMusic}
             className="text-cyan-400 hover:text-white transition"
@@ -145,15 +145,15 @@ const Header = ({
         {/* Location Button */}
         <button
           onClick={onLocationClick}
-          className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition shadow-md shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
+          className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition shadow-md shrink-0"
           style={{ border: `1px solid ${BRIGHT_CYAN}`, color: BRIGHT_CYAN }}
         >
-          <MapPin size={22} style={{ color: BRIGHT_CYAN }} />
+          <MapPin size={18} style={{ color: BRIGHT_CYAN }} />
         </button>
 
         {/* Clock */}
         <div className="text-right">
-          <div className="text-xl sm:text-3xl font-bold text-white font-vt323 tracking-widest">
+          <div className="text-lg sm:text-3xl font-bold text-white font-vt323 tracking-widest">
             {localTime.toLocaleTimeString([], timeOptions)}
           </div>
           <div className="text-sm text-white font-vt323 hidden sm:block">{localTime.toLocaleDateString([], dateOptions)}</div>
