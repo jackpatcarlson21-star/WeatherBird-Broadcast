@@ -19,7 +19,7 @@ const TabNavigation = ({ currentTab, setTab }) => {
 
   return (
     <div
-      className="md:w-72 shrink-0 md:border-r-4 border-b-4 md:border-b-0 shadow-neon-md p-2"
+      className="hidden md:block md:w-72 shrink-0 md:border-r-4 shadow-neon-md p-2"
       style={{ backgroundColor: DARK_BLUE, borderColor: BRIGHT_CYAN }}
     >
       <div className="flex md:flex-col overflow-x-auto md:overflow-y-auto whitespace-nowrap md:whitespace-normal h-full gap-1.5 md:gap-2 snap-x snap-mandatory md:snap-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">

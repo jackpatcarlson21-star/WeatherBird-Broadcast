@@ -23,7 +23,7 @@ import { isNight, getSevereAlertLevel, getSevereAlerts, getTornadoWarnings, getE
 import useAutoLocation from './utils/useAutoLocation';
 
 // Components
-import { Header, Footer, Scanlines, TabNavigation, CRTPowerOn } from './components/layout';
+import { Header, Footer, Scanlines, TabNavigation, CRTPowerOn, MobileBottomNav } from './components/layout';
 import { AppStatus, LocationModal } from './components/common';
 import { WeatherBackground } from './components/weather';
 const IconTestPage = lazy(() => import('./components/weather/IconTestPage'));
@@ -613,15 +613,22 @@ const App = () => {
         })}
 
       {/* Main Content Area */}
-      <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col md:flex-row gap-6 overflow-hidden">
+      <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 pb-20 md:pb-6 flex flex-col md:flex-row gap-6 overflow-hidden">
         <TabNavigation currentTab={currentScreen} setTab={(tab) => { setAutoCycle(false); setCurrentScreen(tab); }} />
         <div ref={contentRef} key={currentScreen} className="tab-content-enter flex-grow overflow-auto">
           {renderTabContent()}
         </div>
       </main>
 
-      {/* Footer Ticker */}
+      {/* Footer Ticker (hidden on mobile) */}
       <Footer current={current} locationName={location.name} alerts={alerts} />
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav
+        currentTab={currentScreen}
+        setTab={(tab) => { setAutoCycle(false); setCurrentScreen(tab); }}
+        alertCount={alerts.filter(a => !dismissedAlertIds.has(a.properties?.id)).length}
+      />
 
       {/* Location Modal */}
       {isModalOpen && (

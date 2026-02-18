@@ -4,3 +4,4 @@ export { default as Scanlines } from './Scanlines';
 export { default as TabNavigation } from './TabNavigation';
 export { default as TabPanel } from './TabPanel';
 export { default as CRTPowerOn } from './CRTPowerOn';
+export { default as MobileBottomNav } from './MobileBottomNav';
