@@ -25,7 +25,6 @@ import useAutoLocation from './utils/useAutoLocation';
 // Components
 import { Header, Footer, Scanlines, TabNavigation, CRTPowerOn } from './components/layout';
 import { AppStatus, LocationModal } from './components/common';
-import { WidgetView } from './components/widgets';
 import { WeatherBackground } from './components/weather';
 const IconTestPage = lazy(() => import('./components/weather/IconTestPage'));
 import {
@@ -62,7 +61,6 @@ const App = () => {
   const [currentScreen, setCurrentScreen] = useState(SCREENS.CONDITIONS);
   const [autoCycle, setAutoCycle] = useState(false);
   const [cycleSpeed, setCycleSpeed] = useState(10);
-  const [isWidgetMode, setIsWidgetMode] = useState(false);
   const [dismissedAlertIds, setDismissedAlertIds] = useState(new Set());
   const [dismissedTornadoModals, setDismissedTornadoModals] = useState(new Set());
   const [showAlertFlash, setShowAlertFlash] = useState(false);
@@ -483,20 +481,6 @@ const App = () => {
     }
   };
 
-  // Show compact widget view if enabled
-  if (isWidgetMode) {
-    return (
-      <WidgetView
-        current={current}
-        daily={daily}
-        aqiData={aqiData}
-        locationName={location.name}
-        night={night}
-        onExpand={() => setIsWidgetMode(false)}
-      />
-    );
-  }
-
   return (
     <div className="h-screen text-white font-vt323 antialiased flex flex-col overflow-hidden" style={{ backgroundColor: NAVY_BLUE }}>
       <style>{`
@@ -592,8 +576,6 @@ const App = () => {
         setVolume={setVolume}
         autoCycle={autoCycle}
         setAutoCycle={setAutoCycle}
-        isWidgetMode={isWidgetMode}
-        setIsWidgetMode={setIsWidgetMode}
         night={night}
         weatherCode={current?.weather_code}
         sunrise={daily?.sunrise?.[0]}

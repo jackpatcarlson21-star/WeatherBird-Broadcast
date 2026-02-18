@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, MapPin, Volume2, VolumeX, Radio, Minimize } from 'lucide-react';
+import { Play, Pause, MapPin, Volume2, VolumeX, Radio } from 'lucide-react';
 import { DARK_BLUE, NAVY_BLUE, BRIGHT_CYAN } from '../../utils/constants';
 
 const getHeaderGradient = (weatherCode, night, sunrise, sunset, currentTime) => {
@@ -48,8 +48,6 @@ const Header = ({
   setVolume,
   autoCycle,
   setAutoCycle,
-  isWidgetMode,
-  setIsWidgetMode,
   night,
   weatherCode,
   sunrise,
@@ -117,16 +115,6 @@ const Header = ({
           title={autoCycle ? 'Stop Auto-Cycle' : 'Start Auto-Cycle'}
         >
           <Radio size={18} className={autoCycle ? 'text-white animate-pulse' : 'text-cyan-400'} />
-        </button>
-
-        {/* Widget Mode Button */}
-        <button
-          onClick={() => setIsWidgetMode(true)}
-          className="p-2 rounded-full transition shadow-md shrink-0 bg-white/10 hover:bg-white/20"
-          style={{ border: `1px solid ${BRIGHT_CYAN}` }}
-          title="Compact Widget View"
-        >
-          <Minimize size={18} className="text-cyan-400" />
         </button>
 
         {/* Music Controls */}
