@@ -110,7 +110,7 @@ const Header = ({
         {/* Auto-Cycle Button */}
         <button
           onClick={() => setAutoCycle(!autoCycle)}
-          className={`p-2 rounded-full transition shadow-md shrink-0 ${autoCycle ? 'bg-cyan-600' : 'bg-white/10 hover:bg-white/20'}`}
+          className={`hidden sm:block p-2 rounded-full transition shadow-md shrink-0 ${autoCycle ? 'bg-cyan-600' : 'bg-white/10 hover:bg-white/20'}`}
           style={{ border: `1px solid ${BRIGHT_CYAN}` }}
           title={autoCycle ? 'Stop Auto-Cycle' : 'Start Auto-Cycle'}
         >
@@ -118,7 +118,7 @@ const Header = ({
         </button>
 
         {/* Music Controls */}
-        <div className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-full bg-black/30 shrink-0" style={{ border: `1px solid ${BRIGHT_CYAN}` }}>
+        <div className="hidden sm:flex items-center gap-2 px-2 sm:px-3 py-2 rounded-full bg-black/30 shrink-0" style={{ border: `1px solid ${BRIGHT_CYAN}` }}>
           <button
             onClick={toggleMusic}
             className="text-cyan-400 hover:text-white transition"
