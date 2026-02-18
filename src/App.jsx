@@ -445,7 +445,7 @@ const App = () => {
   const hourly = weatherData?.hourly;
   const daily = weatherData?.daily;
   const night = isNight(time, daily?.sunrise?.[0], daily?.sunset?.[0]);
-  const isWeatherLoading = isLoading && !weatherData;
+  const isWeatherLoading = !weatherData;
 
   const renderTabContent = () => {
     switch (currentScreen) {
