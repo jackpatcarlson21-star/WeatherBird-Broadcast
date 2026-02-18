@@ -20,6 +20,7 @@ import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { SCREENS, INITIAL_LOCATION, MUSIC_URL, REFRESH_RATE_MS, NAVY_BLUE } from './utils/constants';
 import { getWeatherApiUrl, getAirQualityUrl, getNWSAlertsUrl, getNWSPointsUrl } from './utils/api';
 import { isNight, getSevereAlertLevel, getSevereAlerts, getTornadoWarnings, getExpirationCountdown } from './utils/helpers';
+import useAutoLocation from './utils/useAutoLocation';
 
 // Components
 import { Header, Footer, Scanlines, TabNavigation, CRTPowerOn } from './components/layout';
@@ -168,50 +169,8 @@ const App = () => {
     localStorage.setItem('weatherbird-saved-locations', JSON.stringify(newSaved));
   };
 
-  // --- First Visit Auto-Detection ---
+  // --- Auto-Location Detection ---
   const [isAutoDetecting, setIsAutoDetecting] = useState(false);
-  const hasVisitedBefore = useRef(localStorage.getItem('weatherbird-has-visited') === 'true');
-
-  useEffect(() => {
-    if (hasVisitedBefore.current || isAutoDetecting) return;
-
-    localStorage.setItem('weatherbird-has-visited', 'true');
-    hasVisitedBefore.current = true;
-
-    if (!navigator.geolocation) {
-      setIsModalOpen(true);
-      return;
-    }
-
-    setIsAutoDetecting(true);
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
-            { headers: { 'User-Agent': 'WeatherBird-App' } }
-          );
-          const data = await res.json();
-          const addr = data.address || {};
-          const cityName = addr.city || addr.town || addr.village || addr.county || 'My Location';
-          const stateName = addr.state || '';
-          const displayName = stateName ? `${cityName}, ${stateName}` : cityName;
-
-          setLocation({ name: displayName, lat: latitude, lon: longitude });
-        } catch {
-          setLocation({ name: 'My Location', lat: latitude, lon: longitude });
-        }
-        setIsAutoDetecting(false);
-      },
-      () => {
-        setIsAutoDetecting(false);
-        setIsModalOpen(true);
-      },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
-    );
-  }, []);
 
   // --- Refs ---
   const audioRef = useRef(null);
@@ -455,7 +414,7 @@ const App = () => {
   }, [location, isAuthReady, fetchWeather, fetchAQI]);
 
   // --- Location Save Handler ---
-  const handleLocationSave = async (newLoc) => {
+  const handleLocationSave = useCallback(async (newLoc) => {
     setIsModalOpen(false);
     if (db && userId) {
       const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -471,7 +430,13 @@ const App = () => {
       setLocation(newLoc);
       fetchWeather(newLoc);
     }
-  };
+  }, [db, userId, fetchWeather]);
+
+  // --- Auto-Location Hook ---
+  const { isTracking, trackingEnabled, setTrackingEnabled } = useAutoLocation(
+    setIsAutoDetecting,
+    handleLocationSave
+  );
 
   // Icon test page: append ?icontest to URL (lazy-loaded, not in production bundle)
   if (window.location.search.includes('icontest')) {
@@ -633,7 +598,7 @@ const App = () => {
         weatherCode={current?.weather_code}
         sunrise={daily?.sunrise?.[0]}
         sunset={daily?.sunset?.[0]}
-
+        isTracking={isTracking}
       />
 
       {/* Severe Weather Alert Banner */}
@@ -685,6 +650,8 @@ const App = () => {
           savedLocations={savedLocations}
           onSaveLocation={saveLocation}
           onDeleteLocation={deleteLocation}
+          trackingEnabled={trackingEnabled}
+          onTrackingToggle={setTrackingEnabled}
         />
       )}
 

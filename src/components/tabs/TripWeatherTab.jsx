@@ -7,7 +7,7 @@ import LoadingIndicator from '../common/LoadingIndicator';
 import { WindCompass, AnimatedWeatherIcon } from '../weather';
 import { DARK_BLUE, BRIGHT_CYAN } from '../../utils/constants';
 import { getWeatherApiUrl } from '../../utils/api';
-import { getWeatherDescription, degreeToCardinal } from '../../utils/helpers';
+import { getWeatherDescription, degreeToCardinal, haversineDistance } from '../../utils/helpers';
 
 // Component to fit map bounds to route
 const FitBounds = ({ coordinates }) => {
@@ -130,18 +130,6 @@ const RouteMap = ({ routeCoordinates, waypoints, startName, endName, alternative
       ))}
     </MapContainer>
   );
-};
-
-// Haversine distance formula (returns miles)
-const haversineDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 3959; // Earth radius in miles
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
 };
 
 const TripWeatherTab = ({ location }) => {

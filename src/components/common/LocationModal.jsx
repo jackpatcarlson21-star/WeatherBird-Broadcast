@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, X, AlertTriangle, Star } from 'lucide-react';
 import { DARK_BLUE, NAVY_BLUE, BRIGHT_CYAN, MID_BLUE } from '../../utils/constants';
 
-const LocationModal = ({ location, onSave, onClose, savedLocations = [], onSaveLocation, onDeleteLocation }) => {
+const LocationModal = ({ location, onSave, onClose, savedLocations = [], onSaveLocation, onDeleteLocation, trackingEnabled, onTrackingToggle }) => {
   const [temp, setTemp] = useState({ ...location, error: null });
   const [showSaved, setShowSaved] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -164,6 +164,33 @@ const LocationModal = ({ location, onSave, onClose, savedLocations = [], onSaveL
           <MapPin size={20} />
           {isLocating ? 'DETECTING...' : 'USE MY CURRENT LOCATION'}
         </button>
+
+        {/* Auto-Track Toggle */}
+        {onTrackingToggle && (
+          <button
+            onClick={() => onTrackingToggle(!trackingEnabled)}
+            className="w-full p-3 mb-4 text-lg font-bold rounded flex items-center justify-between transition-all"
+            style={{
+              backgroundColor: trackingEnabled ? 'rgba(34, 197, 94, 0.15)' : `${MID_BLUE}`,
+              border: `2px solid ${trackingEnabled ? 'rgba(34, 197, 94, 0.6)' : 'rgba(100, 116, 139, 0.5)'}`,
+              color: trackingEnabled ? '#86efac' : '#94a3b8',
+            }}
+          >
+            <span className="flex items-center gap-2">
+              <MapPin size={20} />
+              AUTO-TRACK LOCATION
+            </span>
+            <span
+              className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+              style={{ backgroundColor: trackingEnabled ? '#22c55e' : '#475569' }}
+            >
+              <span
+                className="inline-block h-4 w-4 rounded-full bg-white transition-transform"
+                style={{ transform: trackingEnabled ? 'translateX(24px)' : 'translateX(4px)' }}
+              />
+            </span>
+          </button>
+        )}
 
         {/* City search */}
         <div className="mb-4 relative">

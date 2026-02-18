@@ -54,6 +54,7 @@ const Header = ({
   weatherCode,
   sunrise,
   sunset,
+  isTracking,
 }) => {
   // Local clock state - ticks every second without re-rendering the parent tree
   const [localTime, setLocalTime] = useState(new Date());
@@ -88,6 +89,12 @@ const Header = ({
             <span className="live-dot w-2 h-2 rounded-full bg-red-500" />
             LIVE
           </span>
+          {isTracking && (
+            <span className="gps-badge flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold tracking-wider border border-green-500/60 bg-green-900/40 text-green-300 shrink-0">
+              <span className="gps-dot w-2 h-2 rounded-full bg-green-500" />
+              GPS
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 text-cyan-300 font-vt323 text-lg">
           <MapPin size={16} /> <span className="truncate max-w-56">{locationName}</span>
@@ -103,6 +110,16 @@ const Header = ({
         }
         .live-badge {
           text-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+        }
+        @keyframes gps-pulse {
+          0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+          50% { opacity: 0.4; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
+        }
+        .gps-dot {
+          animation: gps-pulse 1.5s ease-in-out infinite;
+        }
+        .gps-badge {
+          text-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
         }
       `}</style>
       <div className="flex items-center gap-2 sm:gap-5">
