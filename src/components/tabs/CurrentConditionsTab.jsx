@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Thermometer, Wind, Droplets, Zap, Sunrise, Sunset, Maximize, Radio, ChevronDown, ChevronUp } from 'lucide-react';
+import React from 'react';
+import { Thermometer, Wind, Droplets, Zap, Sunrise, Sunset, Maximize, Radio } from 'lucide-react';
 import TabPanel from '../layout/TabPanel';
 import LoadingIndicator from '../common/LoadingIndicator';
 import { WindCompass, PressureTrend, TemperatureTrend, WeatherBird, AnimatedWeatherIcon } from '../weather';
@@ -111,80 +111,7 @@ const generateWeatherSummary = (current, daily, night, alerts) => {
 };
 
 // Calculate feels-like breakdown details
-const calculateFeelsLikeBreakdown = (currentData) => {
-  const temp = currentData.temperature_2m;
-  const wind = currentData.wind_speed_10m || 0;
-  const humidity = currentData.relative_humidity_2m || 0;
-  const feelsLike = currentData.apparent_temperature;
-
-  if (temp === undefined || feelsLike === undefined) return null;
-
-  const tempR = Math.round(temp);
-  const feelsR = Math.round(feelsLike);
-  const diff = feelsR - tempR;
-
-  // Wind Chill applies when temp ≤ 50°F and wind > 3 mph
-  if (temp <= 50 && wind > 3) {
-    return {
-      type: 'WIND CHILL',
-      formula: '35.74 + 0.6215T - 35.75V^0.16 + 0.4275TV^0.16',
-      factors: [
-        { label: 'Air Temperature', value: `${tempR}°F` },
-        { label: 'Wind Speed', value: `${Math.round(wind)} mph` },
-        { label: 'Wind Contribution', value: `${diff > 0 ? '+' : ''}${diff}°F` },
-      ],
-      result: feelsR,
-      actual: tempR,
-      diff,
-      color: 'text-blue-400',
-      borderColor: 'border-blue-500',
-      bgColor: 'bg-blue-900/30',
-    };
-  }
-
-  // Heat Index applies when temp ≥ 80°F and humidity ≥ 40%
-  if (temp >= 80 && humidity >= 40) {
-    return {
-      type: 'HEAT INDEX',
-      formula: 'Rothfusz regression (NWS)',
-      factors: [
-        { label: 'Air Temperature', value: `${tempR}°F` },
-        { label: 'Humidity', value: `${Math.round(humidity)}%` },
-        { label: 'Heat Contribution', value: `+${Math.abs(diff)}°F` },
-      ],
-      result: feelsR,
-      actual: tempR,
-      diff,
-      color: 'text-orange-400',
-      borderColor: 'border-orange-500',
-      bgColor: 'bg-orange-900/30',
-    };
-  }
-
-  // No significant feels-like adjustment
-  if (Math.abs(diff) < 3) return null;
-
-  return {
-    type: diff < 0 ? 'WIND CHILL EFFECT' : 'HUMIDITY EFFECT',
-    formula: 'NWS apparent temperature',
-    factors: [
-      { label: 'Air Temperature', value: `${tempR}°F` },
-      { label: 'Wind Speed', value: `${Math.round(wind)} mph` },
-      { label: 'Humidity', value: `${Math.round(humidity)}%` },
-      { label: 'Net Effect', value: `${diff > 0 ? '+' : ''}${diff}°F` },
-    ],
-    result: feelsR,
-    actual: tempR,
-    diff,
-    color: diff < 0 ? 'text-blue-400' : 'text-orange-400',
-    borderColor: diff < 0 ? 'border-blue-500' : 'border-orange-500',
-    bgColor: diff < 0 ? 'bg-blue-900/30' : 'bg-orange-900/30',
-  };
-};
-
 const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading, alerts, aqiData }) => {
-  const [feelsLikeOpen, setFeelsLikeOpen] = useState(false);
-
   if (isWeatherLoading) return <LoadingIndicator />;
 
   const currentData = current || {};
@@ -301,85 +228,6 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
         </div>
       </div>
 
-      {/* Feels Like Breakdown - Collapsible */}
-      {(() => {
-        const breakdown = calculateFeelsLikeBreakdown(currentData);
-        if (!breakdown) return null;
-
-        const barWidth = Math.min(Math.abs(breakdown.diff) * 5, 100);
-
-        return (
-          <div className="mt-6 bg-black/20 border-2 border-cyan-700 rounded-lg">
-            <button
-              onClick={() => setFeelsLikeOpen(!feelsLikeOpen)}
-              className="w-full flex items-center justify-between p-3 sm:p-4 text-left hover:bg-white/5 transition rounded-lg"
-            >
-              <div className="flex items-center gap-2">
-                <Thermometer size={20} className={breakdown.color} />
-                <h4 className="text-lg sm:text-xl text-white font-bold">FEELS LIKE BREAKDOWN</h4>
-                <span className={`ml-2 px-2 py-0.5 text-xs rounded ${breakdown.bgColor} ${breakdown.borderColor} border ${breakdown.color}`}>
-                  {breakdown.type}
-                </span>
-              </div>
-              {feelsLikeOpen
-                ? <ChevronUp size={22} className="text-cyan-400 shrink-0" />
-                : <ChevronDown size={22} className="text-cyan-400 shrink-0" />
-              }
-            </button>
-
-            {feelsLikeOpen && (
-              <div className="px-3 sm:px-4 pb-3 sm:pb-4 space-y-4">
-                {/* Formula Badge */}
-                <div className="inline-block px-3 py-1 bg-black/40 rounded border border-cyan-600 text-xs text-cyan-300 font-mono">
-                  {breakdown.formula}
-                </div>
-
-                {/* Factor List */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {breakdown.factors.map((factor, idx) => (
-                    <div key={idx} className="flex justify-between items-center p-2 bg-black/30 rounded border border-cyan-800">
-                      <span className="text-sm text-cyan-300">{factor.label}</span>
-                      <span className="text-sm font-bold text-white">{factor.value}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Result */}
-                <div className={`p-3 rounded border-2 ${breakdown.borderColor} ${breakdown.bgColor}`}>
-                  <div className="flex justify-between items-center">
-                    <span className="text-cyan-300">RESULT</span>
-                    <span className={`text-2xl font-bold ${breakdown.color}`}>{breakdown.result}°F</span>
-                  </div>
-                </div>
-
-                {/* Visual Comparison Bar */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs text-gray-400">
-                    <span>ACTUAL: {breakdown.actual}°F</span>
-                    <span>FEELS LIKE: {breakdown.result}°F</span>
-                  </div>
-                  <div className="relative h-4 bg-black/40 rounded-full border border-cyan-800 overflow-hidden">
-                    <div className="absolute inset-y-0 left-0 bg-cyan-600/50 rounded-full" style={{ width: '50%' }} />
-                    <div
-                      className={`absolute inset-y-0 rounded-full transition-all duration-500 ${
-                        breakdown.diff < 0 ? 'bg-blue-500/70 right-1/2' : 'bg-orange-500/70 left-1/2'
-                      }`}
-                      style={{ width: `${barWidth / 2}%` }}
-                    />
-                    <div className="absolute inset-y-0 left-1/2 w-0.5 bg-white/60" />
-                  </div>
-                  <p className="text-xs text-center text-gray-400">
-                    {breakdown.diff < 0
-                      ? `Wind makes it feel ${Math.abs(breakdown.diff)}° colder`
-                      : `Humidity makes it feel ${Math.abs(breakdown.diff)}° warmer`
-                    }
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })()}
     </TabPanel>
   );
 };
