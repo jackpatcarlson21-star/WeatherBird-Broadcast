@@ -85,10 +85,6 @@ const Header = ({
       <div className="flex flex-col">
         <div className="flex items-center gap-3">
           <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-widest font-vt323">WEATHERBIRD</h1>
-          <span className="live-badge flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold tracking-wider border border-red-500/60 bg-red-900/40 text-red-300 shrink-0">
-            <span className="live-dot w-2 h-2 rounded-full bg-red-500" />
-            LIVE
-          </span>
           {isTracking && (
             <span className="gps-badge flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold tracking-wider border border-green-500/60 bg-green-900/40 text-green-300 shrink-0">
               <span className="gps-dot w-2 h-2 rounded-full bg-green-500" />
@@ -101,16 +97,6 @@ const Header = ({
         </div>
       </div>
       <style>{`
-        @keyframes live-pulse {
-          0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-          50% { opacity: 0.4; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
-        }
-        .live-dot {
-          animation: live-pulse 1.5s ease-in-out infinite;
-        }
-        .live-badge {
-          text-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
-        }
         @keyframes gps-pulse {
           0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
           50% { opacity: 0.4; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
