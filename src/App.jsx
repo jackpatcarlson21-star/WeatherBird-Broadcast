@@ -115,12 +115,22 @@ const App = () => {
 
     let animationId;
     let scrollPos = 0;
-    const pixelsPerFrame = 0.3;
+    let pixelsPerFrame = 0.3;
+    const pauseMs = 2000;
 
     const scroll = () => {
       if (contentRef.current) {
         const { scrollHeight, clientHeight } = contentRef.current;
-        if (scrollPos < scrollHeight - clientHeight) {
+        const scrollable = scrollHeight - clientHeight;
+
+        // Calculate speed based on content length and remaining time
+        if (scrollable > 0 && pixelsPerFrame === 0.3) {
+          const scrollTimeMs = (cycleSpeed * 1000) - pauseMs - 1000; // leave 1s buffer at bottom
+          const framesAvailable = (scrollTimeMs / 1000) * 60; // ~60fps
+          pixelsPerFrame = Math.max(0.3, scrollable / framesAvailable);
+        }
+
+        if (scrollPos < scrollable) {
           scrollPos += pixelsPerFrame;
           contentRef.current.scrollTop = scrollPos;
         }
@@ -131,13 +141,13 @@ const App = () => {
     // 2 second pause before scrolling starts
     const timeout = setTimeout(() => {
       animationId = requestAnimationFrame(scroll);
-    }, 2000);
+    }, pauseMs);
 
     return () => {
       clearTimeout(timeout);
       cancelAnimationFrame(animationId);
     };
-  }, [autoCycle, currentScreen]);
+  }, [autoCycle, currentScreen, cycleSpeed]);
 
 
   const [savedLocations, setSavedLocations] = useState(() => {
