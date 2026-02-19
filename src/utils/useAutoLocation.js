@@ -5,7 +5,7 @@ const GPS_KEY = 'weatherbird-last-gps';
 const TRACKING_KEY = 'weatherbird-auto-location';
 const MOVE_THRESHOLD_MILES = 3;
 
-const useAutoLocation = (setIsAutoDetecting, onLocationUpdate) => {
+const useAutoLocation = (_setIsAutoDetecting, onLocationUpdate) => {
   const [trackingEnabled, setTrackingEnabled] = useState(() => {
     const stored = localStorage.getItem(TRACKING_KEY);
     return stored === null ? true : stored === 'true';
@@ -24,7 +24,7 @@ const useAutoLocation = (setIsAutoDetecting, onLocationUpdate) => {
 
     inFlightRef.current = true;
     setIsTracking(true);
-    setIsAutoDetecting(true);
+    // GPS badge handled by isTracking state
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -58,18 +58,16 @@ const useAutoLocation = (setIsAutoDetecting, onLocationUpdate) => {
         } finally {
           inFlightRef.current = false;
           setIsTracking(false);
-          setIsAutoDetecting(false);
         }
       },
       () => {
         // Geolocation denied/unavailable — silently fail
         inFlightRef.current = false;
         setIsTracking(false);
-        setIsAutoDetecting(false);
       },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
     );
-  }, [trackingEnabled, setIsAutoDetecting, onLocationUpdate]);
+  }, [trackingEnabled, onLocationUpdate]);
 
   // On mount — run check
   useEffect(() => {

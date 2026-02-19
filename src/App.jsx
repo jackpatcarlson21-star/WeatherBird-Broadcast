@@ -445,7 +445,7 @@ const App = () => {
   const hourly = weatherData?.hourly;
   const daily = weatherData?.daily;
   const night = isNight(time, daily?.sunrise?.[0], daily?.sunset?.[0]);
-  const isWeatherLoading = !weatherData;
+  const isWeatherLoading = isLoading && !weatherData;
 
   const renderTabContent = () => {
     switch (currentScreen) {
@@ -519,7 +519,7 @@ const App = () => {
       )}
 
       {/* App Status Modal */}
-      <AppStatus isLoading={isWeatherLoading} error={appError} isReady={isAuthReady} />
+      <AppStatus isLoading={isWeatherLoading} error={appError} isReady={isAuthReady} isAutoDetecting={isAutoDetecting} />
 
       {/* TORNADO WARNING Full-Screen Takeover */}
       {getTornadoWarnings(alerts)
