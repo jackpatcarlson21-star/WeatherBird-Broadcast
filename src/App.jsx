@@ -609,7 +609,7 @@ const App = () => {
             >
               <AlertTriangle size={24} className="mr-2 flex-shrink-0" />
               <span className="text-center text-lg sm:text-xl md:text-2xl">
-                {alert.properties?.event?.toUpperCase()} IN EFFECT - {alert.properties?.areaDesc}
+                {alert.properties?.event?.toUpperCase()} IN EFFECT FOR YOUR AREA. TAP FOR DETAILS.
               </span>
               <button
                 onClick={(e) => { e.stopPropagation(); setDismissedAlertIds(prev => new Set([...prev, alert.properties?.id])); }}
