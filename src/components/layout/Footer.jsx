@@ -21,7 +21,7 @@ const Footer = ({ current, daily, locationName, alerts }) => {
   }
 
   // Ticker Text Construction
-  const baseText = `CURRENTLY IN ${locationName.toUpperCase()}: ${temp}°F ${cond} - FEELS LIKE: ${feelsLike}°F - WIND: ${wind} ::: HIGH: ${high}°F / LOW: ${low}°F ::: SUNRISE: ${sunrise} / SUNSET: ${sunset} ::: WE LOVE YOU SHANNON! ::: CAW CAW! ::: THANK YOU FOR USING WEATHERBIRD! ::: `;
+  const baseText = `CURRENTLY IN ${locationName.toUpperCase()}: ${temp}°F ${cond} - FEELS LIKE: ${feelsLike}°F - WIND: ${wind} ::: HIGH: ${high}°F / LOW: ${low}°F ::: SUNRISE: ${sunrise} / SUNSET: ${sunset} ::: WE LOVE YOU SHANNON! ::: CAW CAW! ::: 🐦 THANK YOU FOR USING WEATHERBIRD! 🐦 ::: `;
 
   // If alerts exist, put them FIRST
   const tickerText = alertText ? `${alertText} ${baseText}` : baseText;
