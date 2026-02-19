@@ -7,9 +7,6 @@ const Scanlines = () => (
       <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.15)_50%)] bg-[length:100%_3px]" />
     </div>
 
-    {/* Heavy vignette for CRT curve illusion */}
-    <div className="absolute inset-0 crt-vignette" />
-
     {/* RGB color separation on edges */}
     <div className="absolute inset-0 crt-rgb" />
 
@@ -21,17 +18,6 @@ const Scanlines = () => (
       .crt-container {
         border-radius: 20px;
         overflow: hidden;
-      }
-
-      /* Heavy vignette - dark edges, bright center */
-      .crt-vignette {
-        background: radial-gradient(
-          ellipse 70% 70% at 50% 50%,
-          transparent 0%,
-          transparent 50%,
-          rgba(0, 0, 0, 0.4) 80%,
-          rgba(0, 0, 0, 0.8) 100%
-        );
       }
 
       /* RGB color fringing on edges like real CRT */
