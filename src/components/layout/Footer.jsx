@@ -1,11 +1,16 @@
 import React from 'react';
 import { DARK_BLUE, NAVY_BLUE, BRIGHT_CYAN } from '../../utils/constants';
-import { getWeatherDescription } from '../../utils/helpers';
+import { getWeatherDescription, formatTime } from '../../utils/helpers';
 
-const Footer = ({ current, locationName, alerts }) => {
+const Footer = ({ current, daily, locationName, alerts }) => {
   const temp = current ? Math.round(current.temperature_2m) : '--';
   const cond = current ? getWeatherDescription(current.weather_code) : 'LOADING';
   const wind = current ? `${Math.round(current.wind_speed_10m)} MPH` : '--';
+  const feelsLike = current ? Math.round(current.apparent_temperature) : '--';
+  const high = daily?.temperature_2m_max?.[0] != null ? Math.round(daily.temperature_2m_max[0]) : '--';
+  const low = daily?.temperature_2m_min?.[0] != null ? Math.round(daily.temperature_2m_min[0]) : '--';
+  const sunrise = daily?.sunrise?.[0] ? formatTime(daily.sunrise[0]) : '--';
+  const sunset = daily?.sunset?.[0] ? formatTime(daily.sunset[0]) : '--';
   const hasAlerts = alerts && alerts.length > 0;
 
   // Construct Alerts Text
@@ -16,7 +21,7 @@ const Footer = ({ current, locationName, alerts }) => {
   }
 
   // Ticker Text Construction
-  const baseText = `CURRENTLY IN ${locationName.toUpperCase()}: ${temp}°F ${cond} - WIND: ${wind} ::: WE LOVE YOU SHANNON! ::: CAW CAW! ::: THANK YOU FOR USING WEATHERBIRD! ::: `;
+  const baseText = `CURRENTLY IN ${locationName.toUpperCase()}: ${temp}°F ${cond} - FEELS LIKE: ${feelsLike}°F - WIND: ${wind} ::: HIGH: ${high}°F / LOW: ${low}°F ::: SUNRISE: ${sunrise} / SUNSET: ${sunset} ::: WE LOVE YOU SHANNON! ::: CAW CAW! ::: THANK YOU FOR USING WEATHERBIRD! ::: `;
 
   // If alerts exist, put them FIRST
   const tickerText = alertText ? `${alertText} ${baseText}` : baseText;

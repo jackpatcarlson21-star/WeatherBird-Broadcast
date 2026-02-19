@@ -621,7 +621,7 @@ const App = () => {
       </main>
 
       {/* Footer Ticker */}
-      <Footer current={current} locationName={location.name} alerts={alerts} />
+      <Footer current={current} daily={daily} locationName={location.name} alerts={alerts} />
 
       {/* Location Modal */}
       {isModalOpen && (
