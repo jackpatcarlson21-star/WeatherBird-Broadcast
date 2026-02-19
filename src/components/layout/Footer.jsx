@@ -2,6 +2,15 @@ import React from 'react';
 import { DARK_BLUE, NAVY_BLUE, BRIGHT_CYAN } from '../../utils/constants';
 import { getWeatherDescription, formatTime } from '../../utils/helpers';
 
+const BirdIcon = () => (
+  <img
+    src="/icon-192.png"
+    alt="WeatherBird"
+    className="inline-block h-6 w-6 sm:h-7 sm:w-7 align-middle mx-1"
+    style={{ imageRendering: 'pixelated' }}
+  />
+);
+
 const Footer = ({ current, daily, locationName, alerts }) => {
   const temp = current ? Math.round(current.temperature_2m) : '--';
   const cond = current ? getWeatherDescription(current.weather_code) : 'LOADING';
@@ -17,14 +26,16 @@ const Footer = ({ current, daily, locationName, alerts }) => {
   let alertText = "";
   if (hasAlerts) {
     alertText = alerts.map(a => ` ${a.properties.headline.toUpperCase()} `).join(" ::: ");
-    alertText += " ::: "; // Spacer
+    alertText += " ::: ";
   }
 
-  // Ticker Text Construction
-  const baseText = `CURRENTLY IN ${locationName.toUpperCase()}: ${temp}°F ${cond} - FEELS LIKE: ${feelsLike}°F - WIND: ${wind} ::: HIGH: ${high}°F / LOW: ${low}°F ::: SUNRISE: ${sunrise} / SUNSET: ${sunset} ::: WE LOVE YOU SHANNON! ::: CAW CAW! ::: 🐦 THANK YOU FOR USING WEATHERBIRD! 🐦 ::: `;
+  const baseText = `CURRENTLY IN ${locationName.toUpperCase()}: ${temp}°F ${cond} - FEELS LIKE: ${feelsLike}°F - WIND: ${wind} ::: HIGH: ${high}°F / LOW: ${low}°F ::: SUNRISE: ${sunrise} / SUNSET: ${sunset} ::: WE LOVE YOU SHANNON! ::: CAW CAW! ::: `;
+  const prefix = alertText ? `${alertText} ${baseText}` : baseText;
 
-  // If alerts exist, put them FIRST
-  const tickerText = alertText ? `${alertText} ${baseText}` : baseText;
+  const tickerSegment = (key) => (
+    <span key={key}>
+      {prefix}<BirdIcon /> THANK YOU FOR USING WEATHERBIRD! <BirdIcon /> ::: </span>
+  );
 
   return (
     <footer
@@ -38,7 +49,7 @@ const Footer = ({ current, daily, locationName, alerts }) => {
       {/* Scrolling Ticker - Full Width */}
       <div className="w-full relative h-full flex items-center overflow-hidden bg-black/20">
         <div className={`whitespace-nowrap font-vt323 text-base sm:text-xl px-4 tracking-widest absolute ${alerts && alerts.length > 0 ? 'text-red-300 font-bold animate-marquee-slow' : 'text-cyan-300 animate-marquee'}`}>
-          {tickerText.repeat(3)}
+          {tickerSegment(0)}{tickerSegment(1)}{tickerSegment(2)}
         </div>
       </div>
 
