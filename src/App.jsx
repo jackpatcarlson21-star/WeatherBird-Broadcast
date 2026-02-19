@@ -519,7 +519,7 @@ const App = () => {
       )}
 
       {/* App Status Modal */}
-      <AppStatus isLoading={isWeatherLoading} error={appError} isReady={isAuthReady} isAutoDetecting={isAutoDetecting} />
+      <AppStatus isLoading={isWeatherLoading} error={appError} isReady={isAuthReady} isAutoDetecting={false} />
 
       {/* TORNADO WARNING Full-Screen Takeover */}
       {getTornadoWarnings(alerts)
