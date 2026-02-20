@@ -538,7 +538,7 @@ const App = () => {
         .map(alert => (
           <div
             key={alert.properties?.id}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-red-900 p-4"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-red-900/95 p-4"
           >
             <div className="bg-black border-4 border-red-500 rounded-xl p-6 md:p-8 max-w-2xl w-full shadow-2xl text-center">
               <div className="flex justify-center mb-4">
