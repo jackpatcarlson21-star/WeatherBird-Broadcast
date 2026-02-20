@@ -142,6 +142,7 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
           weatherCode={currentData.weather_code || 0}
           windSpeed={Math.round(currentData.wind_speed_10m || 0)}
           night={night}
+          alerts={alerts}
         />
       </div>
 

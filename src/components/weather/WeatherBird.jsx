@@ -48,58 +48,229 @@ const PixelBird = ({ bodyColor = '#00FFFF' }) => (
   </svg>
 );
 
-const WeatherBird = ({ temp, weatherCode, windSpeed, night }) => {
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+const getTimeOfDay = () => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 9) return 'early_morning';
+  if (hour >= 9 && hour < 12) return 'morning';
+  if (hour >= 12 && hour < 14) return 'midday';
+  if (hour >= 14 && hour < 17) return 'afternoon';
+  if (hour >= 17 && hour < 20) return 'evening';
+  return 'late_night';
+};
+
+const WeatherBird = ({ temp, weatherCode, windSpeed, night, alerts }) => {
   let message = "";
   let animation = "";
   let accessory = "";
-  let bodyColor = "#00FFFF"; // cyan default
+  let bodyColor = "#00FFFF";
 
-  // Determine bird state based on conditions
-  if (weatherCode >= 95) {
-    bodyColor = "#FACC15"; // yellow for storms
-    accessory = "\u26A1";
-    message = "YIKES! Stay safe inside!";
+  const time = getTimeOfDay();
+  const hasSevereAlerts = alerts && alerts.some(a => {
+    const event = a.properties?.event?.toLowerCase() || '';
+    return event.includes('warning') || event.includes('watch');
+  });
+  const hasTornado = alerts && alerts.some(a => {
+    const event = a.properties?.event?.toLowerCase() || '';
+    return event.includes('tornado');
+  });
+
+  // === SEVERE ALERTS (highest priority) ===
+  if (hasTornado) {
+    bodyColor = "#EF4444";
+    accessory = "\uD83C\uDF2A\uFE0F";
+    animation = "animate-shiver";
+    message = pick([
+      "TORNADO THREAT! Get to shelter NOW!",
+      "Take cover immediately! This is serious!",
+      "Find your safe room RIGHT NOW!",
+      "Not the time for birdwatching! TAKE SHELTER!",
+    ]);
+  } else if (hasSevereAlerts) {
+    bodyColor = "#FACC15";
+    accessory = "\u26A0\uFE0F";
     animation = "animate-bounce";
+    message = pick([
+      "Severe weather nearby! Stay alert!",
+      "Keep your eyes on the sky!",
+      "Stay weather aware today!",
+      "Active alerts in your area! Be ready!",
+      "This bird says stay inside!",
+    ]);
+
+  // === THUNDERSTORMS ===
+  } else if (weatherCode >= 95) {
+    bodyColor = "#FACC15";
+    accessory = "\u26A1";
+    animation = "animate-bounce";
+    message = pick([
+      "YIKES! Stay safe inside!",
+      "Thunder and lightning! Not ideal flying weather!",
+      "Even this bird is grounded right now!",
+      "Mother Nature is putting on a show!",
+      "Storms rolling through! Hunker down!",
+      night ? "Scary night out there! Stay cozy!" : "Wild weather! Maybe skip the picnic!",
+    ]);
+
+  // === SNOW ===
   } else if (weatherCode >= 71 && weatherCode <= 77) {
-    bodyColor = "#93C5FD"; // light blue for snow
+    bodyColor = "#93C5FD";
     accessory = "\u2744\uFE0F";
-    message = "Brrr! Bundle up out there!";
     animation = "animate-pulse";
-  } else if (weatherCode >= 51 && weatherCode <= 67) {
-    bodyColor = "#60A5FA"; // blue for rain
+    message = pick([
+      "Brrr! Bundle up out there!",
+      "Snow day vibes! Stay warm!",
+      "My feathers are frozen!",
+      "Hot cocoa weather for sure!",
+      "Winter wonderland mode activated!",
+      night ? "Snowy night! Cozy up by the fire!" : "The snow is beautiful but COLD!",
+    ]);
+
+  // === RAIN / DRIZZLE ===
+  } else if ((weatherCode >= 51 && weatherCode <= 67) || (weatherCode >= 80 && weatherCode <= 82)) {
+    bodyColor = "#60A5FA";
     accessory = "\u2614";
-    message = "Don't forget your umbrella!";
     animation = "";
+    message = pick([
+      "Don't forget your umbrella!",
+      "Rainy day! Perfect for staying in!",
+      "Splish splash! Wet feathers today!",
+      "The plants are loving this!",
+      "Rain rain go away... or don't, we need it!",
+      night ? "Rainy night... great sleeping weather!" : "Grab a jacket, it's wet out there!",
+    ]);
+
+  // === FOG ===
+  } else if (weatherCode >= 45 && weatherCode <= 48) {
+    bodyColor = "#94A3B8";
+    accessory = "\uD83C\uDF2B\uFE0F";
+    animation = "";
+    message = pick([
+      "Can barely see my own beak out here!",
+      "Foggy! Drive careful out there!",
+      "Spooky vibes with all this fog!",
+      "Low visibility! Take it slow!",
+    ]);
+
+  // === HIGH WIND ===
   } else if (windSpeed >= 25) {
     accessory = "\uD83D\uDCA8";
-    message = "Hold onto your feathers!";
     animation = "animate-wiggle";
-  } else if (temp <= 32) {
-    bodyColor = "#60A5FA"; // blue for cold
-    accessory = "\uD83E\uDDE3";
-    message = "It's freezing! Stay warm!";
+    message = pick([
+      "Hold onto your feathers!",
+      "It's BREEZY out here! Woo!",
+      "Wind is howling today!",
+      "Almost blew me off my perch!",
+      "Secure any loose items outside!",
+    ]);
+
+  // === FREEZING ===
+  } else if (temp <= 20) {
+    bodyColor = "#60A5FA";
+    accessory = "\uD83E\uDDCA";
     animation = "animate-shiver";
-  } else if (temp >= 90) {
-    bodyColor = "#FB923C"; // orange for hot
-    accessory = "\uD83D\uDE0E";
-    message = "Whew! It's a hot one!";
+    message = pick([
+      "DANGEROUSLY cold! Limit time outside!",
+      "My beak is an icicle right now!",
+      "Frostbite weather! Bundle up!",
+      night ? "Brutally cold night! Stay inside!" : "Bitter cold today! Layer up!",
+    ]);
+  } else if (temp <= 32) {
+    bodyColor = "#60A5FA";
+    accessory = "\uD83E\uDDE3";
+    animation = "animate-shiver";
+    message = pick([
+      "It's freezing! Stay warm!",
+      "Below freezing! Watch for ice!",
+      "Brrrr! This bird needs a sweater!",
+      "Jack Frost is nipping at your nose!",
+      night ? "Freezing night! Crank up the heat!" : "Cold one today! Dress warm!",
+    ]);
+
+  // === EXTREME HEAT ===
+  } else if (temp >= 100) {
+    bodyColor = "#EF4444";
+    accessory = "\uD83E\uDD75";
     animation = "animate-pulse";
-  } else if (weatherCode === 0 && !night) {
-    accessory = "\u2600\uFE0F";
-    message = "Beautiful day! Get outside!";
-    animation = "animate-happy";
-  } else if (night && weatherCode === 0) {
-    bodyColor = "#6366F1"; // indigo for night
-    accessory = "\uD83C\uDF19";
-    message = "What a lovely night!";
-    animation = "";
+    message = pick([
+      "EXTREME heat! Stay hydrated!",
+      "Triple digits! Limit outdoor time!",
+      "Even birds need shade in this heat!",
+      "Dangerously hot! Drink lots of water!",
+    ]);
+  } else if (temp >= 90) {
+    bodyColor = "#FB923C";
+    accessory = "\uD83D\uDE0E";
+    animation = "animate-pulse";
+    message = pick([
+      "Whew! It's a hot one!",
+      "Sunscreen and water, people!",
+      "This bird is melting!",
+      "Perfect pool weather if you ask me!",
+      "Hot hot hot! Stay cool out there!",
+    ]);
+
+  // === CLEAR SKY ===
+  } else if (weatherCode === 0) {
+    if (night) {
+      bodyColor = "#6366F1";
+      accessory = "\uD83C\uDF19";
+      animation = "";
+      message = pick([
+        time === 'late_night'
+          ? pick(["Up late? The stars are incredible tonight!", "Can't sleep? At least the sky is clear!", "Night owl mode! Clear skies above!"])
+          : pick(["What a lovely evening!", "Clear skies! Perfect for stargazing!", "Beautiful night out there!", "The moon is looking gorgeous tonight!"]),
+      ]);
+    } else {
+      accessory = "\u2600\uFE0F";
+      animation = "animate-happy";
+      message = pick([
+        time === 'early_morning'
+          ? pick(["Rise and shine! Beautiful morning!", "Early bird gets the worm! Clear skies!", "Good morning sunshine!"])
+          : time === 'morning'
+          ? pick(["Gorgeous morning! Get outside!", "What a perfect morning!", "Blue skies all around!"])
+          : time === 'midday'
+          ? pick(["Beautiful day at its peak!", "Lunchtime and the weather is perfect!", "Sunny and clear! Love it!"])
+          : time === 'afternoon'
+          ? pick(["Enjoy the rest of this beautiful day!", "Perfect afternoon! Soak it up!", "Clear skies all afternoon!"])
+          : pick(["What a beautiful evening ahead!", "Lovely evening coming up! Get outside!", "Golden hour with clear skies!"]),
+      ]);
+    }
+
+  // === PARTLY CLOUDY / OVERCAST ===
   } else if (weatherCode <= 3) {
-    accessory = "\u26C5";
-    message = "Looking pretty nice today!";
-    animation = "";
+    if (night) {
+      bodyColor = "#818CF8";
+      accessory = "\u2601\uFE0F";
+      animation = "";
+      message = pick([
+        "Cloudy night. Cozy up!",
+        "Overcast skies tonight. Rest easy!",
+        "Quiet night under the clouds!",
+        time === 'late_night' ? "Clouds and quiet. Perfect for sleep!" : "Calm evening with some clouds!",
+      ]);
+    } else {
+      accessory = "\u26C5";
+      animation = "";
+      message = pick([
+        "A few clouds, but not bad at all!",
+        "Partly cloudy! Still a good day!",
+        "Some clouds rolling in, no worries!",
+        "Not too shabby out there!",
+        time === 'morning' ? "Cloudy morning! Should clear up!" : "Clouds are hanging around, but it's fine!",
+        time === 'afternoon' ? "Partly cloudy afternoon! Still nice!" : "Looking decent out there!",
+      ]);
+    }
+
+  // === FALLBACK ===
   } else {
-    message = "CAW CAW!";
-    animation = "";
+    message = pick([
+      "CAW CAW!",
+      "Stay weather aware!",
+      "Check back soon for updates!",
+      night ? "Keeping an eye on things tonight!" : "Watching the skies for you!",
+    ]);
   }
 
   return (
