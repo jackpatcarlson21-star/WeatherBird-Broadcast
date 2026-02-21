@@ -97,11 +97,23 @@ const generateWeatherSummary = (current, daily, night, alerts) => {
     summary += `Moderate chance of precipitation (${pop}%). `;
   }
 
-  // Wind
-  if (windSpeed >= 25) {
-    summary += "Strong winds expected. ";
-  } else if (windSpeed >= 15) {
-    summary += "Breezy conditions. ";
+  // Wind forecast using daily max
+  const maxWind = Math.round(daily.wind_speed_10m_max?.[0] || 0);
+  const gustMax = Math.round(daily.wind_gusts_10m_max?.[0] || 0);
+  const windDir = degreeToCardinal(daily.wind_direction_10m_dominant?.[0] || 0);
+  if (maxWind > 0) {
+    let windDesc;
+    if (maxWind >= 25) {
+      windDesc = `Strong winds from the ${windDir} up to ${maxWind} mph`;
+    } else if (maxWind >= 15) {
+      windDesc = `Breezy with winds from the ${windDir} up to ${maxWind} mph`;
+    } else {
+      windDesc = `Light winds from the ${windDir} around ${maxWind} mph`;
+    }
+    if (gustMax > maxWind + 5) {
+      windDesc += `, gusting to ${gustMax} mph`;
+    }
+    summary += windDesc + '. ';
   }
 
   // High/Low
