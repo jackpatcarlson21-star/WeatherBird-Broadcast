@@ -169,7 +169,7 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
           <span className="font-bold">{Math.round(currentData.apparent_temperature || currentData.temperature_2m || 0)}°F</span>
         </div>
         <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 flex flex-col items-center hover:border-cyan-400 hover:bg-black/30 hover:shadow-neon-md hover:scale-105 transition-all duration-300 cursor-default">
-          <WindCompass degrees={currentData.wind_direction_10m || 0} size={40} />
+          <WindCompass degrees={currentData.wind_direction_10m || 0} windSpeed={Math.round(currentData.wind_speed_10m || 0)} size={40} />
           <span className="text-sm text-cyan-300 mt-1">WIND</span>
           <span className="font-bold">{Math.round(currentData.wind_speed_10m || 0)} mph {degreeToCardinal(currentData.wind_direction_10m || 0)}</span>
         </div>
