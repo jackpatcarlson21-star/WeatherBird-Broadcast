@@ -37,7 +37,6 @@ import {
   SPCOutlookTab,
   PrecipGraphTab,
   AlmanacTab,
-  DashboardTab,
   TripWeatherTab,
   HurricaneTab,
 } from './components/tabs';
@@ -88,7 +87,7 @@ const App = () => {
 
     const screenOrder = [
       SCREENS.CONDITIONS, SCREENS.HOURLY, SCREENS.DAILY, SCREENS.RADAR,
-      SCREENS.PRECIP, SCREENS.DASHBOARD, SCREENS.ALERTS, SCREENS.WWA,
+      SCREENS.PRECIP, SCREENS.ALERTS, SCREENS.WWA,
       SCREENS.SPC, SCREENS.TRIP_WEATHER, SCREENS.ALMANAC,
       SCREENS.HURRICANE,
     ];
@@ -459,11 +458,6 @@ const App = () => {
 
   const renderTabContent = () => {
     switch (currentScreen) {
-      case SCREENS.DASHBOARD:
-        return <DashboardTab currentLocation={location} savedLocations={savedLocations} onSelectLocation={(loc) => {
-          setLocation({ name: loc.name, lat: loc.lat, lon: loc.lon });
-          setCurrentScreen(SCREENS.CONDITIONS);
-        }} />;
       case SCREENS.CONDITIONS:
         return <CurrentConditionsTab current={current} daily={daily} hourly={hourly} night={night} isWeatherLoading={isWeatherLoading} alerts={alerts} aqiData={aqiData} />;
       case SCREENS.ALERTS:

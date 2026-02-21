@@ -8,7 +8,6 @@ const TabNavigation = ({ currentTab, setTab }) => {
     { id: SCREENS.DAILY, name: '7-DAY' },
     { id: SCREENS.RADAR, name: 'RADAR' },
     { id: SCREENS.PRECIP, name: 'PRECIP' },
-    { id: SCREENS.DASHBOARD, name: 'DASHBOARD' },
     { id: SCREENS.ALERTS, name: 'ALERTS' },
     { id: SCREENS.WWA, name: 'WWA MAP' },
     { id: SCREENS.SPC, name: 'SPC' },
