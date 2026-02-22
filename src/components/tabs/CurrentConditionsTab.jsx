@@ -1,5 +1,5 @@
 import React from 'react';
-import { Thermometer, Wind, Droplets, Zap, Sunrise, Sunset, Maximize, Radio } from 'lucide-react';
+import { Thermometer, Wind, Droplets, Zap, Sunrise, Sunset, Maximize, Radio, CloudRain } from 'lucide-react';
 import TabPanel from '../layout/TabPanel';
 import LoadingIndicator from '../common/LoadingIndicator';
 import { WindCompass, PressureTrend, TemperatureTrend, WeatherBird, AnimatedWeatherIcon } from '../weather';
@@ -122,7 +122,21 @@ const generateWeatherSummary = (current, daily, night, alerts) => {
   return summary;
 };
 
-// Calculate feels-like breakdown details
+// Sum hourly precipitation for today up to the current hour
+const getTodayPrecip = (hourly) => {
+  if (!hourly?.time || !hourly?.precipitation) return null;
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const currentHour = now.getHours();
+  let total = 0;
+  hourly.time.forEach((t, i) => {
+    if (t.startsWith(todayStr) && parseInt(t.slice(11, 13)) <= currentHour) {
+      total += hourly.precipitation[i] || 0;
+    }
+  });
+  return Math.round(total * 100) / 100;
+};
+
 const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading, alerts, aqiData }) => {
   if (isWeatherLoading) return <LoadingIndicator />;
 
@@ -217,6 +231,18 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
         </div>
         <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 flex flex-col items-center hover:border-cyan-400 hover:bg-black/30 hover:shadow-neon-md hover:scale-105 transition-all duration-300 cursor-default">
           <PressureTrend hourlyData={hourly} currentPressure={currentData.pressure_msl} />
+        </div>
+        <div className="p-3 bg-black/20 rounded-lg border border-cyan-700 flex flex-col items-center hover:border-cyan-400 hover:bg-black/30 hover:shadow-neon-md hover:scale-105 transition-all duration-300 cursor-default">
+          <CloudRain size={20} className="text-cyan-400" />
+          <span className="text-sm text-cyan-300">PRECIP TODAY</span>
+          <span className="font-bold">
+            {(() => {
+              const val = getTodayPrecip(hourly);
+              if (val === null) return '--';
+              if (val < 0.01) return 'TRACE';
+              return `${val.toFixed(2)} in`;
+            })()}
+          </span>
         </div>
         {/* Air Quality Index */}
         <div className={`p-3 rounded-lg border flex flex-col items-center col-span-2 hover:shadow-neon-md hover:scale-105 transition-all duration-300 cursor-default ${
