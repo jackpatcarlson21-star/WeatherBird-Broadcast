@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, MapPin, Volume2, VolumeX, Radio } from 'lucide-react';
+import { Play, Pause, MapPin, Volume2, VolumeX, Radio, Monitor } from 'lucide-react';
 import { DARK_BLUE, NAVY_BLUE, BRIGHT_CYAN } from '../../utils/constants';
 
 const getHeaderGradient = (weatherCode, night, sunrise, sunset, currentTime) => {
@@ -53,7 +53,11 @@ const Header = ({
   sunrise,
   sunset,
   isTracking,
+  crtTheme = 'cyan',
+  onCycleTheme,
 }) => {
+  const THEME_DOT_COLORS = { cyan: '#00FFFF', green: '#00FF41', amber: '#FFB000' };
+  const THEME_LABELS = { cyan: 'CYAN', green: 'GREEN', amber: 'AMBER' };
   // Local clock state - ticks every second without re-rendering the parent tree
   const [localTime, setLocalTime] = useState(new Date());
   useEffect(() => {
@@ -107,6 +111,17 @@ const Header = ({
         }
       `}</style>
       <div className="flex items-center gap-2 sm:gap-5">
+        {/* CRT Phosphor Theme Toggle */}
+        <button
+          onClick={onCycleTheme}
+          className="hidden sm:flex items-center gap-1.5 p-2 rounded-full bg-white/10 hover:bg-white/20 transition shadow-md shrink-0"
+          style={{ border: `1px solid ${BRIGHT_CYAN}` }}
+          title={`Phosphor: ${THEME_LABELS[crtTheme]}`}
+        >
+          <Monitor size={18} className="text-cyan-400" />
+          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: THEME_DOT_COLORS[crtTheme], boxShadow: `0 0 4px ${THEME_DOT_COLORS[crtTheme]}` }} />
+        </button>
+
         {/* Auto-Cycle Button */}
         <button
           onClick={() => setAutoCycle(!autoCycle)}

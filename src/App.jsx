@@ -65,7 +65,21 @@ const App = () => {
   const [showAlertFlash, setShowAlertFlash] = useState(false);
 
   const [crtDone, setCrtDone] = useState(false);
+  const [crtTheme, setCrtTheme] = useState(() => localStorage.getItem('weatherbird-crt-theme') || 'cyan');
   const lastAlertIdsRef = useRef('');
+
+  const cycleCrtTheme = () => {
+    const themes = ['cyan', 'green', 'amber'];
+    const next = themes[(themes.indexOf(crtTheme) + 1) % themes.length];
+    setCrtTheme(next);
+    localStorage.setItem('weatherbird-crt-theme', next);
+  };
+
+  const CRT_FILTERS = {
+    cyan:  'none',
+    green: 'hue-rotate(-55deg) saturate(1.2)',
+    amber: 'hue-rotate(-140deg) saturate(1.1)',
+  };
 
   // --- Alert Flash Timeout ---
   useEffect(() => {
@@ -486,7 +500,7 @@ const App = () => {
   };
 
   return (
-    <div className="h-screen text-white font-vt323 antialiased flex flex-col overflow-hidden" style={{ backgroundColor: NAVY_BLUE }}>
+    <div className="h-screen text-white font-vt323 antialiased flex flex-col overflow-hidden" style={{ backgroundColor: NAVY_BLUE, filter: CRT_FILTERS[crtTheme], transition: 'filter 0.5s ease' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
         .font-vt323 { font-family: 'VT323', monospace; }
@@ -585,6 +599,8 @@ const App = () => {
         sunrise={daily?.sunrise?.[0]}
         sunset={daily?.sunset?.[0]}
         isTracking={isTracking}
+        crtTheme={crtTheme}
+        onCycleTheme={cycleCrtTheme}
       />
 
       {/* Severe Weather Alert Banner */}
