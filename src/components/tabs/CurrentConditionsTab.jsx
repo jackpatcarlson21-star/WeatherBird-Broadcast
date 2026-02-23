@@ -1,5 +1,5 @@
 import React from 'react';
-import { Thermometer, Wind, Droplets, Zap, Sunrise, Sunset, Maximize, Radio, CloudRain } from 'lucide-react';
+import { Thermometer, Wind, Droplets, Zap, Sunrise, Sunset, Maximize, Radio, CloudRain, Sun } from 'lucide-react';
 import TabPanel from '../layout/TabPanel';
 import LoadingIndicator from '../common/LoadingIndicator';
 import { WindCompass, PressureTrend, TemperatureTrend, WeatherBird, AnimatedWeatherIcon } from '../weather';
@@ -122,6 +122,16 @@ const generateWeatherSummary = (current, daily, night, alerts) => {
   return summary;
 };
 
+// UV Index color info
+const getUVInfo = (uv) => {
+  if (uv == null) return { label: '--', color: 'text-gray-400', border: 'border-cyan-700', bg: 'bg-black/20' };
+  if (uv <= 2)  return { label: 'LOW',       color: 'text-green-400',  border: 'border-green-700',  bg: 'bg-green-900/20' };
+  if (uv <= 5)  return { label: 'MODERATE',  color: 'text-yellow-400', border: 'border-yellow-700', bg: 'bg-yellow-900/20' };
+  if (uv <= 7)  return { label: 'HIGH',      color: 'text-orange-400', border: 'border-orange-700', bg: 'bg-orange-900/20' };
+  if (uv <= 10) return { label: 'VERY HIGH', color: 'text-red-400',    border: 'border-red-700',    bg: 'bg-red-900/20' };
+  return             { label: 'EXTREME',   color: 'text-purple-400', border: 'border-purple-700', bg: 'bg-purple-900/20' };
+};
+
 // Sum hourly precipitation for today up to the current hour
 const getTodayPrecip = (hourly) => {
   if (!hourly?.time || !hourly?.precipitation) return null;
@@ -150,6 +160,9 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
 
   const aqi = aqiData?.current?.us_aqi;
   const aqiInfo = getAQIInfo(aqi);
+
+  const uvIndex = daily?.uv_index_max?.[0] ?? null;
+  const uvInfo = getUVInfo(uvIndex != null ? Math.round(uvIndex) : null);
 
   const weatherSummary = generateWeatherSummary(current, daily, night, alerts);
 
@@ -244,6 +257,14 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
             })()}
           </span>
         </div>
+        {/* UV Index */}
+        <div className={`p-3 rounded-lg border flex flex-col items-center hover:shadow-neon-md hover:scale-105 transition-all duration-300 cursor-default ${uvInfo.bg} ${uvInfo.border}`}>
+          <Sun size={20} className={uvInfo.color} />
+          <span className="text-sm text-cyan-300">UV INDEX</span>
+          <span className={`text-2xl font-bold ${uvInfo.color}`}>{uvIndex != null ? Math.round(uvIndex) : '--'}</span>
+          <span className={`text-xs font-bold ${uvInfo.color}`}>{uvInfo.label}</span>
+        </div>
+
         {/* Air Quality Index */}
         <div className={`p-3 rounded-lg border flex flex-col items-center col-span-2 hover:shadow-neon-md hover:scale-105 transition-all duration-300 cursor-default ${
           aqi <= 50 ? 'border-green-500 bg-green-900/20' :

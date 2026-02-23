@@ -31,20 +31,24 @@ const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading }) => {
     return {
       time: formatTime(time),
       temp: Math.round(hourly.temperature_2m[idx]),
-      feelsLike: Math.round(hourly.apparent_temperature?.[idx] || hourly.temperature_2m[idx]),
+      feelsLike: Math.round(hourly.apparent_temperature?.[idx] ?? hourly.temperature_2m[idx]),
       pop: Math.round(hourly.precipitation_probability[idx]),
       code: hourly.weather_code[idx],
       wind: Math.round(hourly.wind_speed_10m[idx]),
-      humidity: Math.round(hourly.relative_humidity_2m?.[idx] || 0),
+      humidity: Math.round(hourly.relative_humidity_2m?.[idx] ?? 0),
+      snowfall: hourly.snowfall?.[idx] ?? 0,
       night: isNight(hourDate, sunrise, sunset),
     };
   }) : [];
 
-  // Find min/max temps for the temperature bar visualization
+  // Min/max temps for temperature bar visualization
   const temps = data.map(h => h.temp);
   const minTemp = Math.min(...temps);
   const maxTemp = Math.max(...temps);
   const tempRange = maxTemp - minTemp || 1;
+
+  // Only show snow column if any hour has snowfall
+  const hasSomeSnow = data.some(h => h.snowfall > 0);
 
   return (
     <TabPanel title="12-HOUR FORECAST">
@@ -54,7 +58,9 @@ const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading }) => {
         <div className="w-10 sm:w-16 text-center"></div>
         <div className="flex-1 text-center">TEMP</div>
         <div className="w-12 sm:w-16 text-center">RAIN</div>
+        <div className="hidden sm:block w-16 text-center">HUMIDITY</div>
         <div className="hidden sm:block w-16 text-center">WIND</div>
+        {hasSomeSnow && <div className="hidden sm:block w-16 text-center">SNOW</div>}
       </div>
 
       <div className="space-y-0.5">
@@ -78,25 +84,47 @@ const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading }) => {
               <AnimatedWeatherIcon code={h.code} night={h.night} size={28} />
             </div>
 
-            {/* Temperature */}
+            {/* Temperature + bar */}
             <div className="flex-1 text-center">
               <span className="text-xl sm:text-2xl font-bold text-white">{h.temp}°F</span>
               {h.feelsLike !== h.temp && (
                 <span className="text-xs text-gray-400 ml-2">({h.feelsLike}°)</span>
               )}
+              <div className="hidden sm:flex mt-1 h-1 rounded-full bg-black/40 w-24 mx-auto overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-blue-400 via-cyan-300 to-orange-400"
+                  style={{ width: `${Math.max(5, ((h.temp - minTemp) / tempRange) * 100)}%` }}
+                />
+              </div>
             </div>
 
-            {/* Precip */}
+            {/* Precip probability */}
             <div className="w-12 sm:w-16 text-center">
               <span className={`text-sm sm:text-base font-bold ${h.pop >= 50 ? 'text-blue-400' : h.pop >= 20 ? 'text-blue-300' : 'text-gray-400'}`}>
                 {h.pop}%
               </span>
             </div>
 
+            {/* Humidity */}
+            <div className="hidden sm:block w-16 text-center">
+              <span className={`text-sm text-gray-300 ${h.humidity >= 80 ? 'text-blue-300' : ''}`}>
+                {h.humidity}%
+              </span>
+            </div>
+
             {/* Wind */}
             <div className="hidden sm:block w-16 text-center">
-              <span className="text-sm sm:text-base text-gray-300">{h.wind} mph</span>
+              <span className="text-sm text-gray-300">{h.wind} mph</span>
             </div>
+
+            {/* Snowfall */}
+            {hasSomeSnow && (
+              <div className="hidden sm:block w-16 text-center">
+                <span className={`text-sm font-bold ${h.snowfall > 0 ? 'text-purple-300' : 'text-gray-600'}`}>
+                  {h.snowfall > 0 ? `${h.snowfall.toFixed(1)}"` : '--'}
+                </span>
+              </div>
+            )}
           </div>
         ))}
       </div>
