@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigation } from 'lucide-react';
+import { Navigation2 } from 'lucide-react';
 
 const WindCompass = ({ degrees, windSpeed = 0, size = 48 }) => {
   const fontSize = Math.max(8, size * 0.18);
@@ -55,7 +55,7 @@ const WindCompass = ({ degrees, windSpeed = 0, size = 48 }) => {
             transition: 'transform 1.5s ease-in-out',
           }}
         >
-          <Navigation
+          <Navigation2
             size={size * 0.45}
             className="text-cyan-400 fill-cyan-400"
             style={{ filter: 'drop-shadow(0 0 3px cyan)' }}
