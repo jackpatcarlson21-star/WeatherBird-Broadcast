@@ -41,12 +41,6 @@ const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading }) => {
     };
   }) : [];
 
-  // Min/max temps for temperature bar visualization
-  const temps = data.map(h => h.temp);
-  const minTemp = Math.min(...temps);
-  const maxTemp = Math.max(...temps);
-  const tempRange = maxTemp - minTemp || 1;
-
   // Only show snow column if any hour has snowfall
   const hasSomeSnow = data.some(h => h.snowfall > 0);
 
@@ -84,18 +78,12 @@ const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading }) => {
               <AnimatedWeatherIcon code={h.code} night={h.night} size={28} />
             </div>
 
-            {/* Temperature + bar */}
+            {/* Temperature */}
             <div className="flex-1 text-center">
               <span className="text-xl sm:text-2xl font-bold text-white">{h.temp}°F</span>
               {h.feelsLike !== h.temp && (
                 <span className="text-xs text-gray-400 ml-2">({h.feelsLike}°)</span>
               )}
-              <div className="hidden sm:flex mt-1 h-1 rounded-full bg-black/40 w-24 mx-auto overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-blue-400 via-cyan-300 to-orange-400"
-                  style={{ width: `${Math.max(5, ((h.temp - minTemp) / tempRange) * 100)}%` }}
-                />
-              </div>
             </div>
 
             {/* Precip probability */}
