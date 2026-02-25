@@ -318,14 +318,21 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
   const visibleModels = MODELS.filter(m => !hiddenModels.has(m.id));
   const isToday = dayIndex === 0;
 
-  const VARS = [
-    { key: 'temperature_2m_max',            label: 'HI',   fmt: v => `${Math.round(v)}°`  },
-    { key: 'temperature_2m_min',            label: 'LO',   fmt: v => `${Math.round(v)}°`  },
-    { key: 'wind_speed_10m_max',            label: 'WIND', fmt: v => `${Math.round(v)}`   },
-    { key: 'precipitation_sum',             label: 'PRCP', fmt: v => `${v.toFixed(1)}"`  },
-    { key: 'precipitation_probability_max', label: 'RAIN', fmt: v => `${Math.round(v)}%` },
-    ...(hasSnow ? [{ key: 'snowfall_sum', label: 'SNOW', fmt: v => `${v.toFixed(1)}"` }] : []),
+  // Split into two groups so each mini-table only has 3 columns — much more readable
+  const VAR_GROUPS = [
+    [
+      { key: 'temperature_2m_max', label: 'HI',   fmt: v => `${Math.round(v)}°` },
+      { key: 'temperature_2m_min', label: 'LO',   fmt: v => `${Math.round(v)}°` },
+      { key: 'wind_speed_10m_max', label: 'WIND', fmt: v => `${Math.round(v)}`  },
+    ],
+    [
+      { key: 'precipitation_sum',             label: 'PRCP', fmt: v => `${v.toFixed(1)}"` },
+      { key: 'precipitation_probability_max', label: 'RAIN', fmt: v => `${Math.round(v)}%` },
+      ...(hasSnow ? [{ key: 'snowfall_sum', label: 'SNOW', fmt: v => `${v.toFixed(1)}"` }] : []),
+    ],
   ];
+  // Flat list still needed for outlier detection over all vars
+  const VARS = VAR_GROUPS.flat();
 
   const dayName = new Date(day + 'T12:00:00').toLocaleDateString([], { weekday: 'short' }).slice(0, 3).toUpperCase();
   const dateStr = new Date(day + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' });
@@ -375,51 +382,58 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
         </div>
       </div>
 
-      <div className="border-t border-cyan-900 pt-2">
-        <div className="flex text-xs text-cyan-600 tracking-wider mb-1">
-          <div className="w-14 shrink-0" />
-          {VARS.map(v => (
-            <div key={v.key} className="flex-1 text-center">{v.label}</div>
-          ))}
-        </div>
-
-        {visibleModels.map(model => (
-          <div key={model.id} className="flex items-center text-sm py-0.5">
-            <div className="w-14 shrink-0 font-bold truncate" style={{ color: MODEL_COLORS[model.id] }}>
-              {model.name}
+      <div className="flex flex-col gap-3 border-t border-cyan-900 pt-2">
+        {VAR_GROUPS.map((group, gi) => (
+          <div key={gi}>
+            {/* Column headers */}
+            <div className="flex text-xs text-cyan-600 tracking-wider mb-1">
+              <div className="w-14 shrink-0" />
+              {group.map(v => (
+                <div key={v.key} className="flex-1 text-center">{v.label}</div>
+              ))}
             </div>
-            {VARS.map(({ key, fmt }) => {
-              const v = modelData[model.id]?.daily?.[key]?.[dayIndex];
-              const outlier = varOutliers[key]?.has(model.id);
-              return (
-                <div key={key} className="flex-1 text-center"
-                  style={{
-                    color: MODEL_COLORS[model.id],
-                    textDecoration: outlier ? 'underline' : 'none',
-                    textDecorationStyle: outlier ? 'wavy' : undefined,
-                    textDecorationColor: outlier ? MODEL_COLORS[model.id] : undefined,
-                    fontWeight: outlier ? 'bold' : undefined,
-                  }}>
-                  {v != null ? fmt(v) : '—'}
+
+            {/* Model rows */}
+            {visibleModels.map(model => (
+              <div key={model.id} className="flex items-center text-sm py-0.5">
+                <div className="w-14 shrink-0 font-bold truncate" style={{ color: MODEL_COLORS[model.id] }}>
+                  {model.name}
                 </div>
-              );
-            })}
+                {group.map(({ key, fmt }) => {
+                  const v = modelData[model.id]?.daily?.[key]?.[dayIndex];
+                  const outlier = varOutliers[key]?.has(model.id);
+                  return (
+                    <div key={key} className="flex-1 text-center"
+                      style={{
+                        color: MODEL_COLORS[model.id],
+                        textDecoration: outlier ? 'underline' : 'none',
+                        textDecorationStyle: outlier ? 'wavy' : undefined,
+                        textDecorationColor: outlier ? MODEL_COLORS[model.id] : undefined,
+                        fontWeight: outlier ? 'bold' : undefined,
+                      }}>
+                      {v != null ? fmt(v) : '—'}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+
+            {/* AVG row */}
+            {visibleModels.length >= 2 && (
+              <div className="flex items-center text-sm pt-1.5 mt-1 border-t border-cyan-900 font-bold">
+                <div className="w-14 shrink-0 text-white">AVG</div>
+                {group.map(({ key, fmt }) => {
+                  const a = avg(key);
+                  return (
+                    <div key={key} className="flex-1 text-center text-white">
+                      {a != null ? fmt(a) : '—'}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ))}
-
-        {visibleModels.length >= 2 && (
-          <div className="flex items-center text-sm pt-1.5 mt-1 border-t border-cyan-900 font-bold">
-            <div className="w-14 shrink-0 text-white">AVG</div>
-            {VARS.map(({ key, fmt }) => {
-              const a = avg(key);
-              return (
-                <div key={key} className="flex-1 text-center text-white">
-                  {a != null ? fmt(a) : '—'}
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
     </div>
   );
