@@ -23,13 +23,14 @@ const MODEL_TEXT_COLORS = {
   gem_seamless:  'text-orange-400',
 };
 
+// Taller chart + larger padding so text stays readable when scaled down on mobile
 const W = 560;
-const H = 195;
-const PAD = { top: 22, right: 20, bottom: 52, left: 44 };
+const H = 250;
+const PAD = { top: 26, right: 20, bottom: 66, left: 50 };
 
 const getConfidenceColor = (spread, [low, mid]) => {
-  if (spread <= low)  return '#4ADE80';
-  if (spread <= mid)  return '#FACC15';
+  if (spread <= low) return '#4ADE80';
+  if (spread <= mid) return '#FACC15';
   return '#F87171';
 };
 
@@ -55,7 +56,7 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
   const yPos = (v) => PAD.top + innerH - ((v - minVal) / valRange) * innerH;
   const chartBottom = PAD.top + innerH;
 
-  // Spread fill (visible models only)
+  // Spread fill
   const spreadTopPts = days.map((_, i) => {
     const vals = visibleModels.map(m => modelData[m.id]?.daily?.[valueKey]?.[i]).filter(v => v != null);
     return vals.length ? `${xPos(i)},${yPos(Math.max(...vals))}` : null;
@@ -68,14 +69,14 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
     ? `M ${spreadTopPts.join(' L ')} L ${spreadBotPts.join(' L ')} Z`
     : '';
 
-  // Consensus line (visible models only)
+  // Consensus line
   const consensusPts = days.map((_, i) => {
     const vals = visibleModels.map(m => modelData[m.id]?.daily?.[valueKey]?.[i]).filter(v => v != null);
     if (!vals.length) return null;
     return `${xPos(i)},${yPos(vals.reduce((a, b) => a + b, 0) / vals.length)}`;
   }).filter(Boolean);
 
-  // Per-day spread for confidence badges (visible models only)
+  // Per-day spread for confidence badges
   const daySpreads = days.map((_, i) => {
     const vals = visibleModels.map(m => modelData[m.id]?.daily?.[valueKey]?.[i]).filter(v => v != null);
     return vals.length >= 2 ? Math.max(...vals) - Math.min(...vals) : 0;
@@ -86,17 +87,27 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
     return { v, y: yPos(v) };
   });
 
-  const dayLabelY = chartBottom + 14;
-  const badgeY    = chartBottom + 27;
-  const badgeSize = 9;
+  const dayLabelY = chartBottom + 18;
+  const badgeY    = chartBottom + 34;
+  const badgeSize = 12;
+
+  // Resolve the SVG x from a pointer/touch event
+  const getSvgDayIndex = useCallback((clientX, svgEl) => {
+    const rect = svgEl.getBoundingClientRect();
+    const svgX = (clientX - rect.left) * (W / rect.width);
+    const dayFloat = (svgX - PAD.left) / innerW * (days.length - 1);
+    return Math.max(0, Math.min(days.length - 1, Math.round(dayFloat)));
+  }, [days.length, innerW]);
 
   const handleMouseMove = useCallback((e) => {
-    const svg = e.currentTarget;
-    const rect = svg.getBoundingClientRect();
-    const svgX = (e.clientX - rect.left) * (W / rect.width);
-    const dayFloat = (svgX - PAD.left) / innerW * (days.length - 1);
-    onHoverDay(Math.max(0, Math.min(days.length - 1, Math.round(dayFloat))));
-  }, [days.length, innerW, onHoverDay]);
+    onHoverDay(getSvgDayIndex(e.clientX, e.currentTarget));
+  }, [getSvgDayIndex, onHoverDay]);
+
+  const handleTouchMove = useCallback((e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    if (touch) onHoverDay(getSvgDayIndex(touch.clientX, e.currentTarget));
+  }, [getSvgDayIndex, onHoverDay]);
 
   return (
     <div className="p-3 rounded-lg border border-cyan-800 bg-black/20">
@@ -104,9 +115,11 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
       <svg
         width="100%"
         viewBox={`0 0 ${W} ${H}`}
-        style={{ fontFamily: 'VT323, monospace', overflow: 'visible', cursor: 'crosshair' }}
+        style={{ fontFamily: 'VT323, monospace', overflow: 'visible', cursor: 'crosshair', touchAction: 'none' }}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => onHoverDay(null)}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={() => onHoverDay(null)}
       >
         <defs>
           <filter id={`glow-${valueKey}`}>
@@ -132,8 +145,8 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
           <g key={i}>
             <line x1={PAD.left} y1={tick.y} x2={W - PAD.right} y2={tick.y}
               stroke="rgba(0,255,255,0.1)" strokeWidth="1" strokeDasharray="4,4" />
-            <text x={PAD.left - 5} y={tick.y + 4} textAnchor="end"
-              fill="rgba(0,255,255,0.45)" fontSize="11">
+            <text x={PAD.left - 6} y={tick.y + 5} textAnchor="end"
+              fill="rgba(0,255,255,0.45)" fontSize="14">
               {formatTick ? formatTick(tick.v) : Math.round(tick.v)}
             </text>
           </g>
@@ -143,11 +156,11 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
         <rect x={PAD.left} y={PAD.top} width={innerW} height={innerH}
           fill="none" stroke="rgba(0,255,255,0.2)" strokeWidth="1" />
 
-        {/* TODAY vertical marker */}
-        <line x1={xPos(0)} y1={PAD.top - 4} x2={xPos(0)} y2={chartBottom}
+        {/* TODAY marker */}
+        <line x1={xPos(0)} y1={PAD.top - 5} x2={xPos(0)} y2={chartBottom}
           stroke="rgba(255,255,255,0.35)" strokeWidth="1" strokeDasharray="3,3" />
-        <text x={xPos(0)} y={PAD.top - 7} textAnchor="middle"
-          fill="rgba(255,255,255,0.55)" fontSize="10" letterSpacing="1">TODAY</text>
+        <text x={xPos(0)} y={PAD.top - 8} textAnchor="middle"
+          fill="rgba(255,255,255,0.55)" fontSize="12" letterSpacing="1">TODAY</text>
 
         {/* Model lines */}
         {visibleModels.map(model => {
@@ -161,7 +174,7 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
               d={`M ${pts.join(' L ')}`}
               fill="none"
               stroke={MODEL_COLORS[model.id]}
-              strokeWidth="1.5"
+              strokeWidth="2"
               strokeOpacity="0.75"
               strokeLinejoin="round"
               strokeLinecap="round"
@@ -185,7 +198,7 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
           />
         )}
 
-        {/* Dots with tooltips */}
+        {/* Dots — larger radius for touch */}
         {visibleModels.map(model =>
           days.map((_, i) => {
             const v = modelData[model.id]?.daily?.[valueKey]?.[i];
@@ -193,7 +206,7 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
             const spreadLabel = formatTooltip ? formatTooltip(daySpreads[i]) : `${daySpreads[i].toFixed(1)}`;
             return (
               <circle key={`${model.id}-${i}`}
-                cx={xPos(i)} cy={yPos(v)} r="3.5"
+                cx={xPos(i)} cy={yPos(v)} r="5"
                 fill={MODEL_COLORS[model.id]}
                 filter={`url(#glow-${valueKey})`}
               >
@@ -207,14 +220,14 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
         {days.map((day, i) => (
           <text key={i} x={xPos(i)} y={dayLabelY} textAnchor="middle"
             fill={i === 0 ? 'rgba(255,255,255,0.75)' : 'rgba(0,255,255,0.5)'}
-            fontSize="12">
+            fontSize="15">
             {new Date(day + 'T12:00:00').toLocaleDateString([], { weekday: 'short' }).slice(0, 3).toUpperCase()}
           </text>
         ))}
 
         {/* Confidence badge row */}
-        <text x={PAD.left - 5} y={badgeY + badgeSize - 1} textAnchor="end"
-          fill="rgba(0,255,255,0.3)" fontSize="9">CONF</text>
+        <text x={PAD.left - 6} y={badgeY + badgeSize - 2} textAnchor="end"
+          fill="rgba(0,255,255,0.3)" fontSize="11">CONF</text>
         {days.map((day, i) => {
           const color = getConfidenceColor(daySpreads[i], spreadThresholds);
           const conf = daySpreads[i] <= spreadThresholds[0] ? 'High confidence'
@@ -304,7 +317,7 @@ const ModelComparisonTab = ({ location }) => {
 
   const visibleModels = MODELS.filter(m => !hiddenModels.has(m.id));
 
-  // Weekly agreement banner — based on high temp spread across visible models
+  // Weekly agreement banner
   const tempSpreads = days.map((_, i) => {
     const vals = visibleModels.map(m => modelData[m.id]?.daily?.temperature_2m_max?.[i]).filter(v => v != null);
     return vals.length >= 2 ? Math.max(...vals) - Math.min(...vals) : 0;
@@ -343,41 +356,43 @@ const ModelComparisonTab = ({ location }) => {
     <TabPanel title="MODEL COMPARISON">
 
       {/* Weekly Agreement Banner */}
-      <div className={`flex items-center gap-3 mb-4 p-3 rounded-lg border ${bannerStyle}`}>
+      <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 mb-4 p-3 rounded-lg border ${bannerStyle}`}>
         <span className="font-bold tracking-widest text-xs whitespace-nowrap">{bannerLabel}</span>
         <span className="text-xs opacity-80">{bannerMsg}</span>
       </div>
 
-      {/* Legend / Model Toggle */}
-      <div className="flex flex-wrap gap-x-4 gap-y-2 mb-4 p-3 rounded-lg border border-cyan-800 bg-black/20 text-sm">
-        {MODELS.map(model => {
-          const hidden = hiddenModels.has(model.id);
-          return (
-            <button
-              key={model.id}
-              onClick={() => toggleModel(model.id)}
-              className={`flex items-center gap-2 transition-opacity ${hidden ? 'opacity-30' : 'opacity-100'}`}
-              title={hidden ? `Show ${model.name}` : `Hide ${model.name}`}
-            >
-              <span className="w-5 h-0.5 rounded-full inline-block"
-                style={{ backgroundColor: MODEL_COLORS[model.id], boxShadow: hidden ? 'none' : `0 0 4px ${MODEL_COLORS[model.id]}` }} />
-              <span className={`font-bold ${MODEL_TEXT_COLORS[model.id]} ${hidden ? 'line-through' : ''}`}>{model.name}</span>
-              <span className="text-cyan-600 text-xs">{model.label}</span>
-            </button>
-          );
-        })}
-        {/* Consensus entry */}
-        <div className="flex items-center gap-2">
-          <span className="w-5 h-0.5 rounded-full inline-block"
-            style={{ backgroundColor: '#FFFFFF', boxShadow: '0 0 5px rgba(255,255,255,0.8)' }} />
-          <span className="font-bold text-white">AVG</span>
-          <span className="text-cyan-600 text-xs">Model consensus</span>
+      {/* Legend / Model Toggle — 2-col grid on mobile, free-wrap on desktop */}
+      <div className="mb-4 p-3 rounded-lg border border-cyan-800 bg-black/20">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-x-4 sm:gap-y-2 mb-2">
+          {MODELS.map(model => {
+            const hidden = hiddenModels.has(model.id);
+            return (
+              <button
+                key={model.id}
+                onClick={() => toggleModel(model.id)}
+                className={`flex items-center gap-2 py-1.5 px-2 rounded transition-opacity text-sm ${hidden ? 'opacity-30' : 'opacity-100'}`}
+                title={hidden ? `Show ${model.name}` : `Hide ${model.name}`}
+              >
+                <span className="w-5 h-0.5 rounded-full shrink-0"
+                  style={{ backgroundColor: MODEL_COLORS[model.id], boxShadow: hidden ? 'none' : `0 0 4px ${MODEL_COLORS[model.id]}` }} />
+                <span className={`font-bold ${MODEL_TEXT_COLORS[model.id]} ${hidden ? 'line-through' : ''}`}>{model.name}</span>
+                <span className="text-cyan-600 text-xs hidden sm:inline">{model.label}</span>
+              </button>
+            );
+          })}
+          <div className="flex items-center gap-2 py-1.5 px-2 text-sm">
+            <span className="w-5 h-0.5 rounded-full shrink-0"
+              style={{ backgroundColor: '#FFFFFF', boxShadow: '0 0 5px rgba(255,255,255,0.8)' }} />
+            <span className="font-bold text-white">AVG</span>
+            <span className="text-cyan-600 text-xs hidden sm:inline">Model consensus</span>
+          </div>
         </div>
         {/* Confidence key */}
-        <div className="flex items-center gap-3 ml-auto text-xs">
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-green-400" /> High</span>
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-yellow-400" /> Med</span>
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-red-400" /> Low</span>
+        <div className="flex items-center gap-3 pt-2 border-t border-cyan-900 text-xs text-cyan-500">
+          <span className="mr-1 opacity-60">CONF:</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm inline-block bg-green-400" /> High</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm inline-block bg-yellow-400" /> Med</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm inline-block bg-red-400" /> Low</span>
         </div>
       </div>
 
@@ -417,7 +432,7 @@ const ModelComparisonTab = ({ location }) => {
       </div>
 
       <p className="text-xs text-cyan-700 mt-4 text-center">
-        White line = model consensus · Shaded area = spread · Click legend to toggle models · Hover to sync crosshair
+        White line = model consensus · Shaded area = spread · Tap legend to toggle models · Swipe charts to sync crosshair
       </p>
     </TabPanel>
   );
