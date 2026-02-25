@@ -236,7 +236,7 @@ const ModelComparisonTab = ({ location }) => {
       try {
         const results = await Promise.all(
           MODELS.map(async (model) => {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto&forecast_days=7&models=${model.id}`;
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,precipitation_probability_max&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto&forecast_days=7&models=${model.id}`;
             const res = await fetch(url, { signal: controller.signal });
             if (!res.ok) throw new Error(`${model.name} fetch failed`);
             return { id: model.id, data: await res.json() };
@@ -264,6 +264,10 @@ const ModelComparisonTab = ({ location }) => {
   const firstModel = Object.values(modelData)[0];
   if (!firstModel) return null;
   const days = firstModel.daily?.time || [];
+
+  const hasSnow = days.some((_, i) =>
+    MODELS.some(m => (modelData[m.id]?.daily?.snowfall_sum?.[i] ?? 0) > 0)
+  );
 
   return (
     <TabPanel title="MODEL COMPARISON">
@@ -318,6 +322,14 @@ const ModelComparisonTab = ({ location }) => {
           formatTooltip={v => `${Math.round(v)}%`}
           spreadThresholds={[10, 25]}
         />
+        {hasSnow && (
+          <ModelChart days={days} modelData={modelData}
+            valueKey="snowfall_sum" title="SNOWFALL (IN)"
+            formatTick={v => `${v.toFixed(1)}"`}
+            formatTooltip={v => `${v.toFixed(2)}"`}
+            spreadThresholds={[0.5, 1.5]}
+          />
+        )}
       </div>
 
       <p className="text-xs text-cyan-700 mt-4 text-center">
