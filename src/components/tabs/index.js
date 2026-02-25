@@ -9,3 +9,4 @@ export { default as PrecipGraphTab } from './PrecipGraphTab';
 export { default as AlmanacTab } from './AlmanacTab';
 export { default as TripWeatherTab } from './TripWeatherTab';
 export { default as HurricaneTab } from './HurricaneTab';
+export { default as ModelComparisonTab } from './ModelComparisonTab';

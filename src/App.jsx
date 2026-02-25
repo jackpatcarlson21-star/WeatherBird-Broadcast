@@ -39,6 +39,7 @@ import {
   AlmanacTab,
   TripWeatherTab,
   HurricaneTab,
+  ModelComparisonTab,
 } from './components/tabs';
 
 
@@ -89,7 +90,7 @@ const App = () => {
       SCREENS.CONDITIONS, SCREENS.HOURLY, SCREENS.DAILY, SCREENS.RADAR,
       SCREENS.PRECIP, SCREENS.ALERTS, SCREENS.WWA,
       SCREENS.SPC, SCREENS.TRIP_WEATHER, SCREENS.ALMANAC,
-      SCREENS.HURRICANE,
+      SCREENS.HURRICANE, SCREENS.MODELS,
     ];
 
     const interval = setInterval(() => {
@@ -480,6 +481,8 @@ const App = () => {
         return <TripWeatherTab location={location} />;
       case SCREENS.HURRICANE:
         return <HurricaneTab />;
+      case SCREENS.MODELS:
+        return <ModelComparisonTab location={location} />;
       default:
         return <div>Error: Tab Not Found</div>;
     }

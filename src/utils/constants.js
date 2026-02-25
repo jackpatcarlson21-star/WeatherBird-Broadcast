@@ -11,6 +11,7 @@ export const SCREENS = {
   ALMANAC: 'ALMANAC',
   TRIP_WEATHER: 'TRIP_WEATHER',
   HURRICANE: 'HURRICANE',
+  MODELS: 'MODELS',
 };
 
 // --- Config ---
