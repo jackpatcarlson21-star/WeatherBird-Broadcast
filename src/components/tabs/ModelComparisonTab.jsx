@@ -23,6 +23,37 @@ const MODEL_TEXT_COLORS = {
   gem_seamless:  'text-orange-400',
 };
 
+const MODEL_INFO = {
+  gfs_seamless: {
+    fullName:   'Global Forecast System',
+    agency:     'NOAA / NCEP (USA)',
+    updates:    '4× daily (00, 06, 12, 18 UTC)',
+    resolution: '~13 km',
+    notes:      'The primary US reference model. Good for near-term forecasts and general patterns. Sometimes struggles with precipitation timing and intensity.',
+  },
+  ecmwf_ifs025: {
+    fullName:   'Integrated Forecast System',
+    agency:     'ECMWF (Europe)',
+    updates:    '2× daily (00, 12 UTC)',
+    resolution: '~9 km',
+    notes:      'Widely regarded as the gold standard for medium-range forecasting (days 4–10). Consistently tops global verification studies, especially for temperature and large-scale patterns.',
+  },
+  jma_seamless: {
+    fullName:   'Global Spectral Model',
+    agency:     'Japan Meteorological Agency',
+    updates:    '2× daily (00, 12 UTC)',
+    resolution: '~20 km',
+    notes:      'Strong performer over the Pacific and Asia-Pacific region. Less commonly cited in the US but a reliable global model worth including for independent perspective.',
+  },
+  gem_seamless: {
+    fullName:   'Global Environmental Multiscale',
+    agency:     'Environment & Climate Change Canada',
+    updates:    '2× daily (00, 12 UTC)',
+    resolution: '~15 km',
+    notes:      'Solid performer for North America and Arctic regions. Often competitive with GFS for Canadian and northern US weather patterns.',
+  },
+};
+
 const W = 560;
 const H = 250;
 const PAD = { top: 26, right: 20, bottom: 66, left: 50 };
@@ -31,6 +62,20 @@ const getConfidenceColor = (spread, [low, mid]) => {
   if (spread <= low) return '#4ADE80';
   if (spread <= mid) return '#FACC15';
   return '#F87171';
+};
+
+// Returns a Set of model IDs that are running as outliers for a given day/variable.
+// A model is an outlier if its deviation from the consensus exceeds 50% of the total
+// spread AND the spread itself is significant (above the low-confidence threshold).
+const findOutliers = (visibleModels, modelData, valueKey, dayIndex, minSpread) => {
+  const entries = visibleModels
+    .map(m => ({ id: m.id, v: modelData[m.id]?.daily?.[valueKey]?.[dayIndex] }))
+    .filter(e => e.v != null);
+  if (entries.length < 3) return new Set();
+  const mean   = entries.reduce((s, e) => s + e.v, 0) / entries.length;
+  const spread = Math.max(...entries.map(e => e.v)) - Math.min(...entries.map(e => e.v));
+  if (spread <= minSpread) return new Set();
+  return new Set(entries.filter(e => Math.abs(e.v - mean) > spread * 0.5).map(e => e.id));
 };
 
 // ─── Line chart ────────────────────────────────────────────────────────────────
@@ -79,6 +124,11 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
     const vals = visibleModels.map(m => modelData[m.id]?.daily?.[valueKey]?.[i]).filter(v => v != null);
     return vals.length >= 2 ? Math.max(...vals) - Math.min(...vals) : 0;
   });
+
+  // Outlier sets per day — model is flagged when it accounts for >50% of spread
+  const dayOutliers = days.map((_, i) =>
+    findOutliers(visibleModels, modelData, valueKey, i, spreadThresholds[0])
+  );
 
   const yTicks = Array.from({ length: 5 }, (_, i) => {
     const v = rawMin + ((rawMax - rawMin) * i / 4);
@@ -194,14 +244,30 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
             const v = modelData[model.id]?.daily?.[valueKey]?.[i];
             if (v == null) return null;
             const spreadLabel = formatTooltip ? formatTooltip(daySpreads[i]) : `${daySpreads[i].toFixed(1)}`;
+            const outlier = dayOutliers[i].has(model.id);
             return (
-              <circle key={`${model.id}-${i}`}
-                cx={xPos(i)} cy={yPos(v)} r="5"
-                fill={MODEL_COLORS[model.id]}
-                filter={`url(#glow-${valueKey})`}
-              >
-                <title>{model.name}: {formatTooltip ? formatTooltip(v) : Math.round(v)}{'\n'}Spread this day: {spreadLabel}</title>
-              </circle>
+              <g key={`${model.id}-${i}`}>
+                {/* Dashed outlier ring */}
+                {outlier && (
+                  <circle
+                    cx={xPos(i)} cy={yPos(v)} r="10"
+                    fill="none"
+                    stroke={MODEL_COLORS[model.id]}
+                    strokeWidth="1.5"
+                    strokeDasharray="3,2"
+                    strokeOpacity="0.85"
+                    pointerEvents="none"
+                    filter={`url(#glow-${valueKey})`}
+                  />
+                )}
+                <circle
+                  cx={xPos(i)} cy={yPos(v)} r="5"
+                  fill={MODEL_COLORS[model.id]}
+                  filter={`url(#glow-${valueKey})`}
+                >
+                  <title>{model.name}: {formatTooltip ? formatTooltip(v) : Math.round(v)}{outlier ? ' ⚠ OUTLIER' : ''}{'\n'}Spread this day: {spreadLabel}</title>
+                </circle>
+              </g>
             );
           })
         )}
@@ -253,9 +319,10 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
   const isToday = dayIndex === 0;
 
   const VARS = [
-    { key: 'temperature_2m_max',        label: 'HI',   fmt: v => `${Math.round(v)}°`  },
-    { key: 'temperature_2m_min',        label: 'LO',   fmt: v => `${Math.round(v)}°`  },
-    { key: 'precipitation_sum',         label: 'PRCP', fmt: v => `${v.toFixed(1)}"` },
+    { key: 'temperature_2m_max',            label: 'HI',   fmt: v => `${Math.round(v)}°`  },
+    { key: 'temperature_2m_min',            label: 'LO',   fmt: v => `${Math.round(v)}°`  },
+    { key: 'wind_speed_10m_max',            label: 'WIND', fmt: v => `${Math.round(v)}`   },
+    { key: 'precipitation_sum',             label: 'PRCP', fmt: v => `${v.toFixed(1)}"`  },
     { key: 'precipitation_probability_max', label: 'RAIN', fmt: v => `${Math.round(v)}%` },
     ...(hasSnow ? [{ key: 'snowfall_sum', label: 'SNOW', fmt: v => `${v.toFixed(1)}"` }] : []),
   ];
@@ -275,15 +342,31 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
     return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   };
 
+  // Min spread per variable to qualify for outlier detection
+  const VAR_MIN_SPREAD = {
+    temperature_2m_max: 3, temperature_2m_min: 3,
+    wind_speed_10m_max: 5, precipitation_sum: 0.1,
+    precipitation_probability_max: 10, snowfall_sum: 0.5,
+  };
+  const varOutliers = {};
+  VARS.forEach(({ key }) => {
+    varOutliers[key] = findOutliers(visibleModels, modelData, key, dayIndex, VAR_MIN_SPREAD[key] ?? 0);
+  });
+  const outlierModelIds = new Set(Object.values(varOutliers).flatMap(s => [...s]));
+  const outlierNames = MODELS.filter(m => outlierModelIds.has(m.id)).map(m => m.name);
+
   return (
     <div className={`rounded-lg border p-3 bg-black/20 flex flex-col gap-2 ${isToday ? 'border-white/30' : 'border-cyan-800'}`}>
-
-      {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <span className={`font-bold text-xl tracking-wide ${isToday ? 'text-white' : 'text-cyan-300'}`}>{dayName}</span>
           {isToday && <span className="ml-2 text-xs text-white/50 tracking-widest">TODAY</span>}
           <div className="text-cyan-600 text-xs mt-0.5">{dateStr}</div>
+          {outlierNames.length > 0 && (
+            <div className="text-[10px] text-orange-400 mt-0.5 tracking-wide">
+              ⚠ {outlierNames.join(', ')} outlier
+            </div>
+          )}
         </div>
         <div className="flex flex-col items-center gap-0.5">
           <div className="w-3.5 h-3.5 rounded-sm"
@@ -292,9 +375,7 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
         </div>
       </div>
 
-      {/* Mini table */}
       <div className="border-t border-cyan-900 pt-2">
-        {/* Column headers */}
         <div className="flex text-[10px] text-cyan-600 tracking-wider mb-1">
           <div className="w-12 shrink-0" />
           {VARS.map(v => (
@@ -302,7 +383,6 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
           ))}
         </div>
 
-        {/* Model rows */}
         {visibleModels.map(model => (
           <div key={model.id} className="flex items-center text-xs py-0.5">
             <div className="w-12 shrink-0 font-bold truncate" style={{ color: MODEL_COLORS[model.id] }}>
@@ -310,8 +390,16 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
             </div>
             {VARS.map(({ key, fmt }) => {
               const v = modelData[model.id]?.daily?.[key]?.[dayIndex];
+              const outlier = varOutliers[key]?.has(model.id);
               return (
-                <div key={key} className="flex-1 text-center" style={{ color: MODEL_COLORS[model.id] }}>
+                <div key={key} className="flex-1 text-center"
+                  style={{
+                    color: MODEL_COLORS[model.id],
+                    textDecoration: outlier ? 'underline' : 'none',
+                    textDecorationStyle: outlier ? 'wavy' : undefined,
+                    textDecorationColor: outlier ? MODEL_COLORS[model.id] : undefined,
+                    fontWeight: outlier ? 'bold' : undefined,
+                  }}>
                   {v != null ? fmt(v) : '—'}
                 </div>
               );
@@ -319,7 +407,6 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
           </div>
         ))}
 
-        {/* AVG row */}
         {visibleModels.length >= 2 && (
           <div className="flex items-center text-xs pt-1.5 mt-1 border-t border-cyan-900 font-bold">
             <div className="w-12 shrink-0 text-white">AVG</div>
@@ -358,6 +445,32 @@ const ViewToggle = ({ viewMode, setViewMode }) => (
   </div>
 );
 
+// ─── Model info panel ──────────────────────────────────────────────────────────
+
+const ModelInfoPanel = ({ modelId, onClose }) => {
+  const info = MODEL_INFO[modelId];
+  const model = MODELS.find(m => m.id === modelId);
+  if (!info || !model) return null;
+  return (
+    <div className="mt-2 p-3 rounded-lg border bg-black/40 text-xs"
+      style={{ borderColor: MODEL_COLORS[modelId] }}>
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div>
+          <span className="font-bold" style={{ color: MODEL_COLORS[modelId] }}>{model.name}</span>
+          <span className="text-cyan-400 ml-2">{info.fullName}</span>
+        </div>
+        <button onClick={onClose} className="text-cyan-700 hover:text-cyan-400 text-base leading-none shrink-0">✕</button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-1 mb-2 text-cyan-500">
+        <div><span className="text-cyan-700">Agency: </span>{info.agency}</div>
+        <div><span className="text-cyan-700">Updates: </span>{info.updates}</div>
+        <div><span className="text-cyan-700">Resolution: </span>{info.resolution}</div>
+      </div>
+      <p className="text-cyan-400 opacity-80 leading-relaxed">{info.notes}</p>
+    </div>
+  );
+};
+
 // ─── Tab ───────────────────────────────────────────────────────────────────────
 
 const ModelComparisonTab = ({ location }) => {
@@ -367,6 +480,7 @@ const ModelComparisonTab = ({ location }) => {
   const [hiddenModels, setHiddenModels] = useState(new Set());
   const [hoverDay, setHoverDay] = useState(null);
   const [viewMode, setViewMode] = useState('lines');
+  const [infoModel, setInfoModel] = useState(null);
 
   const toggleModel = useCallback((modelId) => {
     setHiddenModels(prev => {
@@ -375,6 +489,10 @@ const ModelComparisonTab = ({ location }) => {
       else next.add(modelId);
       return next;
     });
+  }, []);
+
+  const toggleInfo = useCallback((modelId) => {
+    setInfoModel(prev => prev === modelId ? null : modelId);
   }, []);
 
   useEffect(() => {
@@ -387,7 +505,7 @@ const ModelComparisonTab = ({ location }) => {
       try {
         const results = await Promise.all(
           MODELS.map(async (model) => {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,precipitation_probability_max&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto&forecast_days=7&models=${model.id}`;
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&daily=temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_sum,snowfall_sum,precipitation_probability_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=14&models=${model.id}`;
             const res = await fetch(url, { signal: controller.signal });
             if (!res.ok) throw new Error(`${model.name} fetch failed`);
             return { id: model.id, data: await res.json() };
@@ -423,7 +541,7 @@ const ModelComparisonTab = ({ location }) => {
     const vals = visibleModels.map(m => modelData[m.id]?.daily?.temperature_2m_max?.[i]).filter(v => v != null);
     return vals.length >= 2 ? Math.max(...vals) - Math.min(...vals) : 0;
   });
-  const avgSpread  = tempSpreads.reduce((a, b) => a + b, 0) / (tempSpreads.length || 1);
+  const avgSpread   = tempSpreads.reduce((a, b) => a + b, 0) / (tempSpreads.length || 1);
   const firstBadDay = tempSpreads.findIndex(s => s > 6);
 
   let bannerStyle, bannerLabel, bannerMsg;
@@ -434,13 +552,13 @@ const ModelComparisonTab = ({ location }) => {
   } else if (avgSpread <= 3) {
     bannerStyle = 'border-green-700 bg-green-900/20 text-green-400';
     bannerLabel = '▲ HIGH AGREEMENT';
-    bannerMsg   = 'Models in strong agreement — high confidence forecast this week';
+    bannerMsg   = 'Models in strong agreement — high confidence forecast';
   } else if (avgSpread <= 6) {
     bannerStyle = 'border-yellow-700 bg-yellow-900/20 text-yellow-400';
     bannerLabel = '◆ MODERATE AGREEMENT';
     bannerMsg   = firstBadDay > 0
       ? `Models agree near-term · Uncertainty increases ${new Date(days[firstBadDay] + 'T12:00:00').toLocaleDateString([], { weekday: 'long' })} onward`
-      : 'Some spread between models — moderate confidence this week';
+      : 'Some spread between models — moderate confidence';
   } else {
     bannerStyle = 'border-red-700 bg-red-900/20 text-red-400';
     bannerLabel = '▼ LOW AGREEMENT';
@@ -471,17 +589,27 @@ const ModelComparisonTab = ({ location }) => {
           {MODELS.map(model => {
             const hidden = hiddenModels.has(model.id);
             return (
-              <button
-                key={model.id}
-                onClick={() => toggleModel(model.id)}
-                className={`flex items-center gap-2 py-1.5 px-2 rounded transition-opacity text-sm ${hidden ? 'opacity-30' : 'opacity-100'}`}
-                title={hidden ? `Show ${model.name}` : `Hide ${model.name}`}
-              >
-                <span className="w-5 h-0.5 rounded-full shrink-0"
-                  style={{ backgroundColor: MODEL_COLORS[model.id], boxShadow: hidden ? 'none' : `0 0 4px ${MODEL_COLORS[model.id]}` }} />
-                <span className={`font-bold ${MODEL_TEXT_COLORS[model.id]} ${hidden ? 'line-through' : ''}`}>{model.name}</span>
-                <span className="text-cyan-600 text-xs hidden sm:inline">{model.label}</span>
-              </button>
+              <div key={model.id} className="flex items-center gap-1">
+                <button
+                  onClick={() => toggleModel(model.id)}
+                  className={`flex items-center gap-2 py-1.5 px-2 rounded transition-opacity text-sm ${hidden ? 'opacity-30' : 'opacity-100'}`}
+                  title={hidden ? `Show ${model.name}` : `Hide ${model.name}`}
+                >
+                  <span className="w-5 h-0.5 rounded-full shrink-0"
+                    style={{ backgroundColor: MODEL_COLORS[model.id], boxShadow: hidden ? 'none' : `0 0 4px ${MODEL_COLORS[model.id]}` }} />
+                  <span className={`font-bold ${MODEL_TEXT_COLORS[model.id]} ${hidden ? 'line-through' : ''}`}>{model.name}</span>
+                  <span className="text-cyan-600 text-xs hidden sm:inline">{model.label}</span>
+                </button>
+                <button
+                  onClick={() => toggleInfo(model.id)}
+                  className={`text-xs w-5 h-5 rounded-full border flex items-center justify-center transition-colors shrink-0 ${
+                    infoModel === model.id
+                      ? 'border-cyan-400 text-cyan-300 bg-cyan-900/40'
+                      : 'border-cyan-800 text-cyan-700 hover:border-cyan-500 hover:text-cyan-400'
+                  }`}
+                  title={`About ${model.name}`}
+                >ⓘ</button>
+              </div>
             );
           })}
           <div className="flex items-center gap-2 py-1.5 px-2 text-sm">
@@ -491,6 +619,12 @@ const ModelComparisonTab = ({ location }) => {
             <span className="text-cyan-600 text-xs hidden sm:inline">Model consensus</span>
           </div>
         </div>
+
+        {/* Model info panel */}
+        {infoModel && (
+          <ModelInfoPanel modelId={infoModel} onClose={() => setInfoModel(null)} />
+        )}
+
         <div className="flex items-center gap-3 pt-2 border-t border-cyan-900 text-xs text-cyan-500">
           <span className="mr-1 opacity-60">CONF:</span>
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm inline-block bg-green-400" /> High</span>
@@ -515,6 +649,12 @@ const ModelComparisonTab = ({ location }) => {
             spreadThresholds={[3, 6]}
           />
           <ModelChart {...chartProps}
+            valueKey="wind_speed_10m_max" title="WIND SPEED (MPH)"
+            formatTick={v => `${Math.round(v)}`}
+            formatTooltip={v => `${Math.round(v)} mph`}
+            spreadThresholds={[5, 10]}
+          />
+          <ModelChart {...chartProps}
             valueKey="precipitation_sum" title="PRECIPITATION (IN)"
             formatTick={v => v.toFixed(1)}
             formatTooltip={v => `${v.toFixed(2)}"`}
@@ -535,14 +675,14 @@ const ModelComparisonTab = ({ location }) => {
             />
           )}
           <p className="text-xs text-cyan-700 text-center">
-            White line = model consensus · Shaded area = spread · Click legend to toggle models · Swipe charts to sync crosshair
+            White line = model consensus · Shaded area = spread · Click legend to toggle · Swipe charts to sync crosshair
           </p>
         </div>
       )}
 
       {/* Day cards view */}
       {viewMode === 'cards' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           {days.map((day, i) => (
             <DayCard
               key={day}
