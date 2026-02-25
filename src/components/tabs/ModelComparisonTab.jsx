@@ -361,9 +361,9 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
         <div>
           <span className={`font-bold text-xl tracking-wide ${isToday ? 'text-white' : 'text-cyan-300'}`}>{dayName}</span>
           {isToday && <span className="ml-2 text-xs text-white/50 tracking-widest">TODAY</span>}
-          <div className="text-cyan-600 text-xs mt-0.5">{dateStr}</div>
+          <div className="text-cyan-600 text-sm mt-0.5">{dateStr}</div>
           {outlierNames.length > 0 && (
-            <div className="text-[10px] text-orange-400 mt-0.5 tracking-wide">
+            <div className="text-xs text-orange-400 mt-0.5 tracking-wide">
               ⚠ {outlierNames.join(', ')} outlier
             </div>
           )}
@@ -371,21 +371,21 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
         <div className="flex flex-col items-center gap-0.5">
           <div className="w-3.5 h-3.5 rounded-sm"
             style={{ backgroundColor: confColor, boxShadow: `0 0 5px ${confColor}` }} />
-          <div className="text-[10px] font-bold tracking-wider" style={{ color: confColor }}>{confLabel}</div>
+          <div className="text-xs font-bold tracking-wider" style={{ color: confColor }}>{confLabel}</div>
         </div>
       </div>
 
       <div className="border-t border-cyan-900 pt-2">
-        <div className="flex text-[10px] text-cyan-600 tracking-wider mb-1">
-          <div className="w-12 shrink-0" />
+        <div className="flex text-xs text-cyan-600 tracking-wider mb-1">
+          <div className="w-14 shrink-0" />
           {VARS.map(v => (
             <div key={v.key} className="flex-1 text-center">{v.label}</div>
           ))}
         </div>
 
         {visibleModels.map(model => (
-          <div key={model.id} className="flex items-center text-xs py-0.5">
-            <div className="w-12 shrink-0 font-bold truncate" style={{ color: MODEL_COLORS[model.id] }}>
+          <div key={model.id} className="flex items-center text-sm py-0.5">
+            <div className="w-14 shrink-0 font-bold truncate" style={{ color: MODEL_COLORS[model.id] }}>
               {model.name}
             </div>
             {VARS.map(({ key, fmt }) => {
@@ -408,8 +408,8 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
         ))}
 
         {visibleModels.length >= 2 && (
-          <div className="flex items-center text-xs pt-1.5 mt-1 border-t border-cyan-900 font-bold">
-            <div className="w-12 shrink-0 text-white">AVG</div>
+          <div className="flex items-center text-sm pt-1.5 mt-1 border-t border-cyan-900 font-bold">
+            <div className="w-14 shrink-0 text-white">AVG</div>
             {VARS.map(({ key, fmt }) => {
               const a = avg(key);
               return (
