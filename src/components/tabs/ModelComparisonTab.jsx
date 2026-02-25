@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import TabPanel from '../layout/TabPanel';
 import LoadingIndicator from '../common/LoadingIndicator';
 
@@ -33,12 +33,14 @@ const getConfidenceColor = (spread, [low, mid]) => {
   return '#F87171';
 };
 
-const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatTooltip, spreadThresholds }) => {
+const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatTooltip, spreadThresholds, hiddenModels, hoverDay, onHoverDay }) => {
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
 
+  const visibleModels = MODELS.filter(m => !hiddenModels.has(m.id));
+
   const allValues = days.flatMap((_, i) =>
-    MODELS.map(m => modelData[m.id]?.daily?.[valueKey]?.[i]).filter(v => v != null)
+    visibleModels.map(m => modelData[m.id]?.daily?.[valueKey]?.[i]).filter(v => v != null)
   );
   if (!allValues.length) return null;
 
@@ -53,46 +55,59 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
   const yPos = (v) => PAD.top + innerH - ((v - minVal) / valRange) * innerH;
   const chartBottom = PAD.top + innerH;
 
-  // Spread fill path
+  // Spread fill (visible models only)
   const spreadTopPts = days.map((_, i) => {
-    const vals = MODELS.map(m => modelData[m.id]?.daily?.[valueKey]?.[i]).filter(v => v != null);
+    const vals = visibleModels.map(m => modelData[m.id]?.daily?.[valueKey]?.[i]).filter(v => v != null);
     return vals.length ? `${xPos(i)},${yPos(Math.max(...vals))}` : null;
   }).filter(Boolean);
   const spreadBotPts = days.map((_, i) => {
-    const vals = MODELS.map(m => modelData[m.id]?.daily?.[valueKey]?.[i]).filter(v => v != null);
+    const vals = visibleModels.map(m => modelData[m.id]?.daily?.[valueKey]?.[i]).filter(v => v != null);
     return vals.length ? `${xPos(i)},${yPos(Math.min(...vals))}` : null;
   }).filter(Boolean).reverse();
   const spreadPath = spreadTopPts.length
     ? `M ${spreadTopPts.join(' L ')} L ${spreadBotPts.join(' L ')} Z`
     : '';
 
-  // Consensus (average) line points
+  // Consensus line (visible models only)
   const consensusPts = days.map((_, i) => {
-    const vals = MODELS.map(m => modelData[m.id]?.daily?.[valueKey]?.[i]).filter(v => v != null);
+    const vals = visibleModels.map(m => modelData[m.id]?.daily?.[valueKey]?.[i]).filter(v => v != null);
     if (!vals.length) return null;
     return `${xPos(i)},${yPos(vals.reduce((a, b) => a + b, 0) / vals.length)}`;
   }).filter(Boolean);
 
-  // Per-day spread for confidence badges
+  // Per-day spread for confidence badges (visible models only)
   const daySpreads = days.map((_, i) => {
-    const vals = MODELS.map(m => modelData[m.id]?.daily?.[valueKey]?.[i]).filter(v => v != null);
+    const vals = visibleModels.map(m => modelData[m.id]?.daily?.[valueKey]?.[i]).filter(v => v != null);
     return vals.length >= 2 ? Math.max(...vals) - Math.min(...vals) : 0;
   });
 
-  // Y axis ticks
   const yTicks = Array.from({ length: 5 }, (_, i) => {
     const v = rawMin + ((rawMax - rawMin) * i / 4);
     return { v, y: yPos(v) };
   });
 
-  const dayLabelY  = chartBottom + 14;
-  const badgeY     = chartBottom + 27;
-  const badgeSize  = 9;
+  const dayLabelY = chartBottom + 14;
+  const badgeY    = chartBottom + 27;
+  const badgeSize = 9;
+
+  const handleMouseMove = useCallback((e) => {
+    const svg = e.currentTarget;
+    const rect = svg.getBoundingClientRect();
+    const svgX = (e.clientX - rect.left) * (W / rect.width);
+    const dayFloat = (svgX - PAD.left) / innerW * (days.length - 1);
+    onHoverDay(Math.max(0, Math.min(days.length - 1, Math.round(dayFloat))));
+  }, [days.length, innerW, onHoverDay]);
 
   return (
     <div className="p-3 rounded-lg border border-cyan-800 bg-black/20">
       <div className="text-cyan-300 text-sm tracking-widest mb-2 font-bold">{title}</div>
-      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ fontFamily: 'VT323, monospace', overflow: 'visible' }}>
+      <svg
+        width="100%"
+        viewBox={`0 0 ${W} ${H}`}
+        style={{ fontFamily: 'VT323, monospace', overflow: 'visible', cursor: 'crosshair' }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => onHoverDay(null)}
+      >
         <defs>
           <filter id={`glow-${valueKey}`}>
             <feGaussianBlur stdDeviation="2" result="blur" />
@@ -112,7 +127,7 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
           <path d={spreadPath} fill="rgba(0,255,255,0.13)" clipPath={`url(#clip-${valueKey})`} />
         )}
 
-        {/* Horizontal grid lines + Y labels */}
+        {/* Grid lines + Y labels */}
         {yTicks.map((tick, i) => (
           <g key={i}>
             <line x1={PAD.left} y1={tick.y} x2={W - PAD.right} y2={tick.y}
@@ -135,7 +150,7 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
           fill="rgba(255,255,255,0.55)" fontSize="10" letterSpacing="1">TODAY</text>
 
         {/* Model lines */}
-        {MODELS.map(model => {
+        {visibleModels.map(model => {
           const pts = days.map((_, i) => {
             const v = modelData[model.id]?.daily?.[valueKey]?.[i];
             return v != null ? `${xPos(i)},${yPos(v)}` : null;
@@ -156,8 +171,8 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
           );
         })}
 
-        {/* Consensus (average) line — bright white, thicker */}
-        {consensusPts.length >= 2 && (
+        {/* Consensus line */}
+        {visibleModels.length >= 2 && consensusPts.length >= 2 && (
           <path
             d={`M ${consensusPts.join(' L ')}`}
             fill="none"
@@ -170,8 +185,8 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
           />
         )}
 
-        {/* Dots on model lines with detailed tooltips */}
-        {MODELS.map(model =>
+        {/* Dots with tooltips */}
+        {visibleModels.map(model =>
           days.map((_, i) => {
             const v = modelData[model.id]?.daily?.[valueKey]?.[i];
             if (v == null) return null;
@@ -181,7 +196,6 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
                 cx={xPos(i)} cy={yPos(v)} r="3.5"
                 fill={MODEL_COLORS[model.id]}
                 filter={`url(#glow-${valueKey})`}
-                style={{ cursor: 'crosshair' }}
               >
                 <title>{model.name}: {formatTooltip ? formatTooltip(v) : Math.round(v)}{'\n'}Spread this day: {spreadLabel}</title>
               </circle>
@@ -216,6 +230,18 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
           );
         })}
 
+        {/* Synchronized crosshair */}
+        {hoverDay !== null && (
+          <line
+            x1={xPos(hoverDay)} y1={PAD.top}
+            x2={xPos(hoverDay)} y2={chartBottom}
+            stroke="rgba(255,255,255,0.55)"
+            strokeWidth="1"
+            strokeDasharray="4,3"
+            pointerEvents="none"
+          />
+        )}
+
       </svg>
     </div>
   );
@@ -225,6 +251,17 @@ const ModelComparisonTab = ({ location }) => {
   const [modelData, setModelData] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [hiddenModels, setHiddenModels] = useState(new Set());
+  const [hoverDay, setHoverDay] = useState(null);
+
+  const toggleModel = useCallback((modelId) => {
+    setHiddenModels(prev => {
+      const next = new Set(prev);
+      if (next.has(modelId)) next.delete(modelId);
+      else next.add(modelId);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!location?.lat || !location?.lon) return;
@@ -265,23 +302,70 @@ const ModelComparisonTab = ({ location }) => {
   if (!firstModel) return null;
   const days = firstModel.daily?.time || [];
 
+  const visibleModels = MODELS.filter(m => !hiddenModels.has(m.id));
+
+  // Weekly agreement banner — based on high temp spread across visible models
+  const tempSpreads = days.map((_, i) => {
+    const vals = visibleModels.map(m => modelData[m.id]?.daily?.temperature_2m_max?.[i]).filter(v => v != null);
+    return vals.length >= 2 ? Math.max(...vals) - Math.min(...vals) : 0;
+  });
+  const avgSpread = tempSpreads.reduce((a, b) => a + b, 0) / (tempSpreads.length || 1);
+  const firstBadDay = tempSpreads.findIndex(s => s > 6);
+
+  let bannerStyle, bannerLabel, bannerMsg;
+  if (visibleModels.length < 2) {
+    bannerStyle = 'border-cyan-800 bg-black/20 text-cyan-500';
+    bannerLabel = 'SINGLE MODEL';
+    bannerMsg = 'Enable more models to see agreement analysis';
+  } else if (avgSpread <= 3) {
+    bannerStyle = 'border-green-700 bg-green-900/20 text-green-400';
+    bannerLabel = '▲ HIGH AGREEMENT';
+    bannerMsg = 'Models in strong agreement — high confidence forecast this week';
+  } else if (avgSpread <= 6) {
+    bannerStyle = 'border-yellow-700 bg-yellow-900/20 text-yellow-400';
+    bannerLabel = '◆ MODERATE AGREEMENT';
+    bannerMsg = firstBadDay > 0
+      ? `Models agree near-term · Uncertainty increases ${new Date(days[firstBadDay] + 'T12:00:00').toLocaleDateString([], { weekday: 'long' })} onward`
+      : 'Some spread between models — moderate confidence this week';
+  } else {
+    bannerStyle = 'border-red-700 bg-red-900/20 text-red-400';
+    bannerLabel = '▼ LOW AGREEMENT';
+    bannerMsg = 'Models diverging significantly — use caution interpreting this forecast';
+  }
+
   const hasSnow = days.some((_, i) =>
     MODELS.some(m => (modelData[m.id]?.daily?.snowfall_sum?.[i] ?? 0) > 0)
   );
 
+  const chartProps = { days, modelData, hiddenModels, hoverDay, onHoverDay: setHoverDay };
+
   return (
     <TabPanel title="MODEL COMPARISON">
 
-      {/* Legend */}
+      {/* Weekly Agreement Banner */}
+      <div className={`flex items-center gap-3 mb-4 p-3 rounded-lg border ${bannerStyle}`}>
+        <span className="font-bold tracking-widest text-xs whitespace-nowrap">{bannerLabel}</span>
+        <span className="text-xs opacity-80">{bannerMsg}</span>
+      </div>
+
+      {/* Legend / Model Toggle */}
       <div className="flex flex-wrap gap-x-4 gap-y-2 mb-4 p-3 rounded-lg border border-cyan-800 bg-black/20 text-sm">
-        {MODELS.map(model => (
-          <div key={model.id} className="flex items-center gap-2">
-            <span className="w-5 h-0.5 rounded-full inline-block"
-              style={{ backgroundColor: MODEL_COLORS[model.id], boxShadow: `0 0 4px ${MODEL_COLORS[model.id]}` }} />
-            <span className={`font-bold ${MODEL_TEXT_COLORS[model.id]}`}>{model.name}</span>
-            <span className="text-cyan-600 text-xs">{model.label}</span>
-          </div>
-        ))}
+        {MODELS.map(model => {
+          const hidden = hiddenModels.has(model.id);
+          return (
+            <button
+              key={model.id}
+              onClick={() => toggleModel(model.id)}
+              className={`flex items-center gap-2 transition-opacity ${hidden ? 'opacity-30' : 'opacity-100'}`}
+              title={hidden ? `Show ${model.name}` : `Hide ${model.name}`}
+            >
+              <span className="w-5 h-0.5 rounded-full inline-block"
+                style={{ backgroundColor: MODEL_COLORS[model.id], boxShadow: hidden ? 'none' : `0 0 4px ${MODEL_COLORS[model.id]}` }} />
+              <span className={`font-bold ${MODEL_TEXT_COLORS[model.id]} ${hidden ? 'line-through' : ''}`}>{model.name}</span>
+              <span className="text-cyan-600 text-xs">{model.label}</span>
+            </button>
+          );
+        })}
         {/* Consensus entry */}
         <div className="flex items-center gap-2">
           <span className="w-5 h-0.5 rounded-full inline-block"
@@ -298,32 +382,32 @@ const ModelComparisonTab = ({ location }) => {
       </div>
 
       <div className="space-y-4">
-        <ModelChart days={days} modelData={modelData}
+        <ModelChart {...chartProps}
           valueKey="temperature_2m_max" title="HIGH TEMPERATURE (°F)"
           formatTick={v => `${Math.round(v)}°`}
           formatTooltip={v => `${Math.round(v)}°F`}
           spreadThresholds={[3, 6]}
         />
-        <ModelChart days={days} modelData={modelData}
+        <ModelChart {...chartProps}
           valueKey="temperature_2m_min" title="LOW TEMPERATURE (°F)"
           formatTick={v => `${Math.round(v)}°`}
           formatTooltip={v => `${Math.round(v)}°F`}
           spreadThresholds={[3, 6]}
         />
-        <ModelChart days={days} modelData={modelData}
+        <ModelChart {...chartProps}
           valueKey="precipitation_sum" title="PRECIPITATION (IN)"
           formatTick={v => v.toFixed(1)}
           formatTooltip={v => `${v.toFixed(2)}"`}
           spreadThresholds={[0.1, 0.3]}
         />
-        <ModelChart days={days} modelData={modelData}
+        <ModelChart {...chartProps}
           valueKey="precipitation_probability_max" title="RAIN CHANCE (%)"
           formatTick={v => `${Math.round(v)}%`}
           formatTooltip={v => `${Math.round(v)}%`}
           spreadThresholds={[10, 25]}
         />
         {hasSnow && (
-          <ModelChart days={days} modelData={modelData}
+          <ModelChart {...chartProps}
             valueKey="snowfall_sum" title="SNOWFALL (IN)"
             formatTick={v => `${v.toFixed(1)}"`}
             formatTooltip={v => `${v.toFixed(2)}"`}
@@ -333,7 +417,7 @@ const ModelComparisonTab = ({ location }) => {
       </div>
 
       <p className="text-xs text-cyan-700 mt-4 text-center">
-        White line = model consensus (average) · Shaded area = spread between models · Hover dots or badges for details
+        White line = model consensus · Shaded area = spread · Click legend to toggle models · Hover to sync crosshair
       </p>
     </TabPanel>
   );
