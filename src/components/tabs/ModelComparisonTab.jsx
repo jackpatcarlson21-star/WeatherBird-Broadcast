@@ -5,21 +5,21 @@ import LoadingIndicator from '../common/LoadingIndicator';
 const MODELS = [
   { id: 'gfs_seamless',  name: 'GFS',   label: 'American (NOAA)' },
   { id: 'ecmwf_ifs025', name: 'ECMWF', label: 'European' },
-  { id: 'icon_seamless', name: 'ICON',  label: 'German (DWD)' },
+  { id: 'jma_seamless',  name: 'JMA',   label: 'Japanese (JMA)' },
   { id: 'gem_seamless',  name: 'GEM',   label: 'Canadian' },
 ];
 
 const MODEL_COLORS = {
   gfs_seamless:  '#60A5FA',
   ecmwf_ifs025: '#4ADE80',
-  icon_seamless: '#FACC15',
+  jma_seamless:  '#FACC15',
   gem_seamless:  '#FB923C',
 };
 
 const MODEL_TEXT_COLORS = {
   gfs_seamless:  'text-blue-400',
   ecmwf_ifs025: 'text-green-400',
-  icon_seamless: 'text-yellow-400',
+  jma_seamless:  'text-yellow-400',
   gem_seamless:  'text-orange-400',
 };
 
