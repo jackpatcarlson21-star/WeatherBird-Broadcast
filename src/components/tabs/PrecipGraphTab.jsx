@@ -216,6 +216,75 @@ const PrecipChart = ({ data, title, lines, formatTick, threshold }) => {
   );
 };
 
+// ─── Natural language summary ──────────────────────────────────────────────────
+
+const buildSummary = (data) => {
+  if (!data.length) return null;
+
+  const totalRain  = data.reduce((s, d) => s + d.rain, 0);
+  const totalSnow  = data.reduce((s, d) => s + d.snow, 0);
+  const totalPrecip = totalRain + totalSnow;
+  const maxProb    = Math.max(...data.map(d => d.probability));
+  const peakAmount = data.reduce((m, d) => d.amount > m.amount ? d : m, data[0]);
+
+  const hasRainData = totalRain  > 0.01;
+  const hasSnowData = totalSnow  > 0.01;
+  const precipType  = hasSnowData && hasRainData ? 'mixed' : hasSnowData ? 'snow' : 'rain';
+
+  // Peak intensity label
+  const peakVal = precipType === 'snow' ? peakAmount.snow : peakAmount.rain;
+  const intensity = peakVal >= 0.5 ? 'heavy' : peakVal >= 0.25 ? 'moderate' : peakVal >= 0.1 ? 'light' : 'trace';
+
+  // Active window: hours where chance >= 30%
+  const firstActive = data.find(d => d.probability >= 30);
+  const lastActive  = [...data].reverse().find(d => d.probability >= 30);
+  const lastHour    = data[data.length - 1];
+
+  if (maxProb < 20 && totalPrecip < 0.01) {
+    return { precipType: 'none', text: 'Dry conditions expected for the next 12 hours.' };
+  }
+
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const parts = [];
+
+  if (maxProb < 30) {
+    const typeLabel = precipType === 'snow' ? 'snow showers' : 'showers';
+    parts.push(`Low chance of ${typeLabel} — no significant accumulation expected.`);
+    parts.push(`Best chance ${peakAmount.time} at ${Math.round(maxProb)}%.`);
+  } else {
+    const typeLabel = precipType === 'mixed' ? 'rain and snow' : precipType;
+
+    if (firstActive?.time === 'NOW') {
+      parts.push(`${cap(intensity)} ${typeLabel} ongoing now.`);
+    } else if (firstActive) {
+      parts.push(`${cap(typeLabel)} likely beginning around ${firstActive.time}.`);
+    }
+
+    if (totalPrecip >= 0.01) {
+      parts.push(`Peaking at ${peakVal.toFixed(2)}"/hr at ${peakAmount.time}.`);
+    }
+
+    if (totalPrecip >= 0.01) {
+      if (precipType === 'mixed') {
+        parts.push(`Total: ${totalRain.toFixed(2)}" rain + ${totalSnow.toFixed(2)}" snow.`);
+      } else {
+        const unit = precipType === 'snow' ? '" snow' : '"';
+        parts.push(`Total accumulation: ${totalPrecip.toFixed(2)}${unit}.`);
+      }
+    } else if (maxProb >= 50) {
+      parts.push('Little to no accumulation expected.');
+    }
+
+    if (lastActive && lastActive.time !== lastHour.time) {
+      parts.push(`Tapering off after ${lastActive.time}.`);
+    } else if (lastActive && maxProb >= 50) {
+      parts.push(`Conditions continuing through ${lastHour.time}.`);
+    }
+  }
+
+  return { precipType, text: parts.join(' ') };
+};
+
 // ─── Tab ───────────────────────────────────────────────────────────────────────
 
 const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
@@ -278,6 +347,25 @@ const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
           <p className="text-xs text-cyan-300">{peakAmount.time}{peakAmount.hasSnow ? ' ❄️' : ''}</p>
         </div>
       </div>
+
+      {/* Natural language summary */}
+      {(() => {
+        const summary = buildSummary(data);
+        if (!summary) return null;
+        const styles = {
+          snow:  { border: 'border-purple-700', bg: 'bg-purple-900/10', text: 'text-purple-300', label: 'SNOW',  labelColor: 'text-purple-400' },
+          rain:  { border: 'border-blue-700',   bg: 'bg-blue-900/10',   text: 'text-blue-200',   label: 'RAIN',  labelColor: 'text-blue-400'   },
+          mixed: { border: 'border-cyan-700',   bg: 'bg-cyan-900/10',   text: 'text-cyan-200',   label: 'MIXED', labelColor: 'text-cyan-400'   },
+          none:  { border: 'border-cyan-900',   bg: 'bg-black/10',      text: 'text-cyan-600',   label: 'DRY',   labelColor: 'text-cyan-700'   },
+        };
+        const s = styles[summary.precipType] ?? styles.none;
+        return (
+          <div className={`flex items-start gap-3 p-3 rounded-lg border mb-4 ${s.border} ${s.bg}`}>
+            <span className={`text-xs font-bold tracking-widest shrink-0 pt-0.5 ${s.labelColor}`}>{s.label}</span>
+            <p className={`text-sm leading-relaxed ${s.text}`}>{summary.text}</p>
+          </div>
+        );
+      })()}
 
       <div className="space-y-4">
         {/* Rain chance chart */}
