@@ -3,6 +3,7 @@ import TabPanel from '../layout/TabPanel';
 import LoadingIndicator from '../common/LoadingIndicator';
 import { formatTime, isNight } from '../../utils/helpers';
 import { AnimatedWeatherIcon } from '../weather';
+import PrecipGraphTab from './PrecipGraphTab';
 
 const W = 560;
 const H = 200;
@@ -169,7 +170,7 @@ const HourlyChart = ({ data, title, lines, formatTick, isArea }) => {
 
 const ViewToggle = ({ viewMode, setViewMode }) => (
   <div className="flex items-center gap-1 bg-black/30 border border-cyan-800 rounded-lg p-1">
-    {['TABLE', 'GRAPH'].map(mode => (
+    {['TABLE', 'GRAPH', 'PRECIP'].map(mode => (
       <button
         key={mode}
         onClick={() => setViewMode(mode.toLowerCase())}
@@ -331,6 +332,11 @@ const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading }) => {
             />
           )}
         </div>
+      )}
+
+      {/* ── Precip view ── */}
+      {viewMode === 'precip' && (
+        <PrecipGraphTab embedded hourly={hourly} isWeatherLoading={false} />
       )}
 
     </TabPanel>

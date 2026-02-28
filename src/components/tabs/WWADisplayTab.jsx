@@ -3,11 +3,11 @@ import { Map as MapIcon, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-re
 import TabPanel from '../layout/TabPanel';
 import { NWS_WWA_MAP_URL, PLACEHOLDER_IMG } from '../../utils/constants';
 
-const WWADisplayTab = () => {
+const WWADisplayTab = ({ embedded = false }) => {
   const [keyOpen, setKeyOpen] = useState(false);
 
-  return (
-  <TabPanel title="NATIONAL WATCH / WARNING MAP">
+  const content = (
+  <div>
     <div className="text-center space-y-4">
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-2xl text-cyan-300">NWS NATIONAL HAZARDS</h3>
@@ -320,8 +320,10 @@ const WWADisplayTab = () => {
         )}
       </div>
     </div>
-  </TabPanel>
+  </div>
   );
+  if (embedded) return content;
+  return <TabPanel title="NATIONAL WATCH / WARNING MAP">{content}</TabPanel>;
 };
 
 export default WWADisplayTab;

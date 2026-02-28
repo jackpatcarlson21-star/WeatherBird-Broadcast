@@ -287,7 +287,7 @@ const buildSummary = (data) => {
 
 // ─── Tab ───────────────────────────────────────────────────────────────────────
 
-const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
+const PrecipGraphTab = ({ hourly, isWeatherLoading, embedded = false }) => {
   if (isWeatherLoading) return <LoadingIndicator />;
 
   const now = new Date();
@@ -322,8 +322,8 @@ const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
   const peakProb    = data.reduce((m, d) => d.probability > m.probability ? d : m, { probability: 0, time: '--' });
   const peakAmount  = data.reduce((m, d) => d.amount > m.amount ? d : m, { amount: 0, time: '--', hasSnow: false });
 
-  return (
-    <TabPanel title="12-HOUR PRECIPITATION">
+  const content = (
+    <>
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
@@ -422,8 +422,10 @@ const PrecipGraphTab = ({ hourly, isWeatherLoading }) => {
         />
       </div>
 
-    </TabPanel>
+    </>
   );
+  if (embedded) return content;
+  return <TabPanel title="12-HOUR PRECIPITATION">{content}</TabPanel>;
 };
 
 export default PrecipGraphTab;

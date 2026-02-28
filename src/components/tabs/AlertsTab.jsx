@@ -3,10 +3,12 @@ import { Radio, MapPin, X, Clock, Volume2, VolumeX, ShieldAlert } from 'lucide-r
 import TabPanel from '../layout/TabPanel';
 import LoadingIndicator from '../common/LoadingIndicator';
 import { getExpirationCountdown } from '../../utils/helpers';
+import WWADisplayTab from './WWADisplayTab';
 
 const AlertsTab = ({ alerts, location }) => {
   const [showRadioModal, setShowRadioModal] = useState(false);
   const [speakingAlertId, setSpeakingAlertId] = useState(null);
+  const [viewMode, setViewMode] = useState('active');
 
   // Text-to-speech handler with toggle support
   const handleSpeak = (alert) => {
@@ -82,15 +84,36 @@ const AlertsTab = ({ alerts, location }) => {
 
   return (
     <TabPanel title="ACTIVE ALERTS">
-      {/* NOAA Radio Button */}
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={() => setShowRadioModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-red-900/50 text-red-300 rounded border border-red-500 hover:bg-red-800 hover:text-white transition font-vt323 text-lg"
-        >
-          <Radio size={20} /> NOAA WEATHER RADIO
-        </button>
+
+      {/* ACTIVE / MAP toggle */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-1 bg-black/30 border border-cyan-800 rounded-lg p-1">
+          {['ACTIVE', 'MAP'].map(mode => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode.toLowerCase())}
+              className={`px-3 py-1 rounded text-xs tracking-widest transition-all ${
+                viewMode === mode.toLowerCase()
+                  ? 'bg-cyan-800 text-cyan-200 shadow-inner'
+                  : 'text-cyan-700 hover:text-cyan-400'
+              }`}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
+        {viewMode === 'active' && (
+          <button
+            onClick={() => setShowRadioModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-red-900/50 text-red-300 rounded border border-red-500 hover:bg-red-800 hover:text-white transition font-vt323 text-lg"
+          >
+            <Radio size={20} /> NOAA WEATHER RADIO
+          </button>
+        )}
       </div>
+
+      {/* MAP view */}
+      {viewMode === 'map' && <WWADisplayTab embedded />}
 
       {/* NOAA Radio Modal */}
       {showRadioModal && (
@@ -142,15 +165,18 @@ const AlertsTab = ({ alerts, location }) => {
         </div>
       )}
 
-      {alerts.length === 0 && (
-        <div className="flex flex-col items-center justify-center h-64 text-center">
-          <ShieldAlert size={64} className="text-green-500 mb-4" />
-          <h3 className="text-2xl text-green-400 font-bold">NO ACTIVE ALERTS</h3>
-          <p className="text-cyan-300">There are currently no active watches, warnings, or advisories for this location.</p>
-        </div>
-      )}
-      <div className="space-y-4">
-        {alerts.map((alert, idx) => (
+      {/* ACTIVE view */}
+      {viewMode === 'active' && (
+        <>
+          {alerts.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+              <ShieldAlert size={64} className="text-green-500 mb-4" />
+              <h3 className="text-2xl text-green-400 font-bold">NO ACTIVE ALERTS</h3>
+              <p className="text-cyan-300">There are currently no active watches, warnings, or advisories for this location.</p>
+            </div>
+          )}
+          <div className="space-y-4">
+          {alerts.map((alert, idx) => (
           <div key={idx} className={`p-4 border-l-8 bg-black/30 rounded ${
             alert.properties.severity === 'Severe' ? 'border-red-500 bg-red-900/20' :
             alert.properties.severity === 'Moderate' ? 'border-orange-500 bg-orange-900/20' :
@@ -195,8 +221,10 @@ const AlertsTab = ({ alerts, location }) => {
               </div>
             )}
           </div>
-        ))}
-      </div>
+          ))}
+          </div>
+        </>
+      )}
     </TabPanel>
   );
 };
