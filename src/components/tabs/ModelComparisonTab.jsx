@@ -56,7 +56,8 @@ const MODEL_INFO = {
 
 const W = 560;
 const H = 250;
-const PAD = { top: 26, right: 20, bottom: 66, left: 50 };
+// bottom increased to 82 to fit two-row day labels (day abbreviation + date)
+const PAD = { top: 26, right: 20, bottom: 82, left: 50 };
 
 const getConfidenceColor = (spread, [low, mid]) => {
   if (spread <= low) return '#4ADE80';
@@ -64,9 +65,6 @@ const getConfidenceColor = (spread, [low, mid]) => {
   return '#F87171';
 };
 
-// Returns a Set of model IDs that are running as outliers for a given day/variable.
-// A model is an outlier if its deviation from the consensus exceeds 50% of the total
-// spread AND the spread itself is significant (above the low-confidence threshold).
 const findOutliers = (visibleModels, modelData, valueKey, dayIndex, minSpread) => {
   const entries = visibleModels
     .map(m => ({ id: m.id, v: modelData[m.id]?.daily?.[valueKey]?.[dayIndex] }))
@@ -80,7 +78,12 @@ const findOutliers = (visibleModels, modelData, valueKey, dayIndex, minSpread) =
 
 // ─── Line chart ────────────────────────────────────────────────────────────────
 
-const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatTooltip, spreadThresholds, hiddenModels, hoverDay, onHoverDay }) => {
+const ModelChart = ({
+  days, modelData, valueKey, title, formatTick, formatTooltip,
+  spreadThresholds, hiddenModels, hoverDay, onHoverDay, defaultExpanded = true,
+}) => {
+  const [collapsed, setCollapsed] = useState(!defaultExpanded);
+
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
 
@@ -101,6 +104,7 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
   const xPos = (i) => PAD.left + (i / Math.max(days.length - 1, 1)) * innerW;
   const yPos = (v) => PAD.top + innerH - ((v - minVal) / valRange) * innerH;
   const chartBottom = PAD.top + innerH;
+  const colW = innerW / Math.max(days.length - 1, 1);
 
   const spreadTopPts = days.map((_, i) => {
     const vals = visibleModels.map(m => modelData[m.id]?.daily?.[valueKey]?.[i]).filter(v => v != null);
@@ -125,7 +129,6 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
     return vals.length >= 2 ? Math.max(...vals) - Math.min(...vals) : 0;
   });
 
-  // Outlier sets per day — model is flagged when it accounts for >50% of spread
   const dayOutliers = days.map((_, i) =>
     findOutliers(visibleModels, modelData, valueKey, i, spreadThresholds[0])
   );
@@ -135,9 +138,11 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
     return { v, y: yPos(v) };
   });
 
-  const dayLabelY = chartBottom + 18;
-  const badgeY    = chartBottom + 34;
-  const badgeSize = 12;
+  // SVG coordinate rows below chart
+  const dayLabelY  = chartBottom + 18;  // weekday abbreviation
+  const dateLabelY = chartBottom + 34;  // date number (e.g. 3/3)
+  const badgeY     = chartBottom + 50;  // confidence squares
+  const badgeSize  = 12;
 
   const getSvgDayIndex = useCallback((clientX, svgEl) => {
     const rect = svgEl.getBoundingClientRect();
@@ -156,158 +161,250 @@ const ModelChart = ({ days, modelData, valueKey, title, formatTick, formatToolti
     if (touch) onHoverDay(getSvgDayIndex(touch.clientX, e.currentTarget));
   }, [getSvgDayIndex, onHoverDay]);
 
+  // Tooltip data for hovered day
+  const tooltipEntries = hoverDay !== null
+    ? visibleModels.map(m => ({ model: m, v: modelData[m.id]?.daily?.[valueKey]?.[hoverDay] }))
+    : [];
+  const tooltipNums = tooltipEntries.map(e => e.v).filter(v => v != null);
+  const tooltipConsensus = tooltipNums.length ? tooltipNums.reduce((a, b) => a + b, 0) / tooltipNums.length : null;
+  const tooltipSpread    = tooltipNums.length >= 2 ? Math.max(...tooltipNums) - Math.min(...tooltipNums) : 0;
+
   return (
-    <div className="p-3 rounded-lg border border-cyan-800 bg-black/20">
-      <div className="text-cyan-300 text-sm tracking-widest mb-2 font-bold">{title}</div>
-      <svg
-        width="100%"
-        viewBox={`0 0 ${W} ${H}`}
-        style={{ fontFamily: 'VT323, monospace', overflow: 'visible', cursor: 'crosshair', touchAction: 'none' }}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={() => onHoverDay(null)}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={() => onHoverDay(null)}
+    <div className="rounded-lg border border-cyan-800 bg-black/20">
+
+      {/* Collapsible header */}
+      <button
+        className="w-full flex items-center justify-between px-3 py-3"
+        onClick={() => setCollapsed(c => !c)}
       >
-        <defs>
-          <filter id={`glow-${valueKey}`}>
-            <feGaussianBlur stdDeviation="2" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-          <filter id={`glow-avg-${valueKey}`}>
-            <feGaussianBlur stdDeviation="3.5" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-          <clipPath id={`clip-${valueKey}`}>
-            <rect x={PAD.left} y={PAD.top} width={innerW} height={innerH} />
-          </clipPath>
-        </defs>
+        <div className="text-cyan-300 text-sm tracking-widest font-bold">{title}</div>
+        <span className="text-cyan-600 text-xs">{collapsed ? '▼ SHOW' : '▲ HIDE'}</span>
+      </button>
 
-        {spreadPath && (
-          <path d={spreadPath} fill="rgba(0,255,255,0.13)" clipPath={`url(#clip-${valueKey})`} />
-        )}
+      {!collapsed && (
+        <div className="px-3 pb-3">
 
-        {yTicks.map((tick, i) => (
-          <g key={i}>
-            <line x1={PAD.left} y1={tick.y} x2={W - PAD.right} y2={tick.y}
-              stroke="rgba(0,255,255,0.1)" strokeWidth="1" strokeDasharray="4,4" />
-            <text x={PAD.left - 6} y={tick.y + 5} textAnchor="end"
-              fill="rgba(0,255,255,0.45)" fontSize="14">
-              {formatTick ? formatTick(tick.v) : Math.round(tick.v)}
-            </text>
-          </g>
-        ))}
+          {/* SVG — horizontally scrollable on mobile */}
+          <div className="overflow-x-auto">
+            <div style={{ minWidth: '700px' }}>
+              <svg
+                width="100%"
+                viewBox={`0 0 ${W} ${H}`}
+                style={{ fontFamily: 'VT323, monospace', overflow: 'visible', cursor: 'crosshair', touchAction: 'none' }}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={() => onHoverDay(null)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={() => onHoverDay(null)}
+              >
+                <defs>
+                  <filter id={`glow-${valueKey}`}>
+                    <feGaussianBlur stdDeviation="2" result="blur" />
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                  </filter>
+                  <filter id={`glow-avg-${valueKey}`}>
+                    <feGaussianBlur stdDeviation="3.5" result="blur" />
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                  </filter>
+                  <clipPath id={`clip-${valueKey}`}>
+                    <rect x={PAD.left} y={PAD.top} width={innerW} height={innerH} />
+                  </clipPath>
+                </defs>
 
-        <rect x={PAD.left} y={PAD.top} width={innerW} height={innerH}
-          fill="none" stroke="rgba(0,255,255,0.2)" strokeWidth="1" />
+                {/* Weekend column shading */}
+                {days.map((day, i) => {
+                  const d = new Date(day + 'T12:00:00');
+                  if (d.getDay() !== 0 && d.getDay() !== 6) return null;
+                  return (
+                    <rect key={`wknd-${i}`}
+                      x={xPos(i) - colW / 2} y={PAD.top}
+                      width={colW} height={innerH}
+                      fill="rgba(255,255,255,0.035)"
+                      clipPath={`url(#clip-${valueKey})`}
+                    />
+                  );
+                })}
 
-        <line x1={xPos(0)} y1={PAD.top - 5} x2={xPos(0)} y2={chartBottom}
-          stroke="rgba(255,255,255,0.35)" strokeWidth="1" strokeDasharray="3,3" />
-        <text x={xPos(0)} y={PAD.top - 8} textAnchor="middle"
-          fill="rgba(255,255,255,0.55)" fontSize="12" letterSpacing="1">TODAY</text>
+                {/* Model spread fill */}
+                {spreadPath && (
+                  <path d={spreadPath} fill="rgba(0,255,255,0.13)" clipPath={`url(#clip-${valueKey})`} />
+                )}
 
-        {visibleModels.map(model => {
-          const pts = days.map((_, i) => {
-            const v = modelData[model.id]?.daily?.[valueKey]?.[i];
-            return v != null ? `${xPos(i)},${yPos(v)}` : null;
-          }).filter(Boolean);
-          if (pts.length < 2) return null;
-          return (
-            <path key={model.id}
-              d={`M ${pts.join(' L ')}`}
-              fill="none"
-              stroke={MODEL_COLORS[model.id]}
-              strokeWidth="2"
-              strokeOpacity="0.75"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              filter={`url(#glow-${valueKey})`}
-              clipPath={`url(#clip-${valueKey})`}
-            />
-          );
-        })}
+                {/* Grid lines + Y labels */}
+                {yTicks.map((tick, i) => (
+                  <g key={i}>
+                    <line x1={PAD.left} y1={tick.y} x2={W - PAD.right} y2={tick.y}
+                      stroke="rgba(0,255,255,0.1)" strokeWidth="1" strokeDasharray="4,4" />
+                    <text x={PAD.left - 6} y={tick.y + 5} textAnchor="end"
+                      fill="rgba(0,255,255,0.45)" fontSize="14">
+                      {formatTick ? formatTick(tick.v) : Math.round(tick.v)}
+                    </text>
+                  </g>
+                ))}
 
-        {visibleModels.length >= 2 && consensusPts.length >= 2 && (
-          <path
-            d={`M ${consensusPts.join(' L ')}`}
-            fill="none"
-            stroke="#FFFFFF"
-            strokeWidth="2.5"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            filter={`url(#glow-avg-${valueKey})`}
-            clipPath={`url(#clip-${valueKey})`}
-          />
-        )}
+                {/* Chart border */}
+                <rect x={PAD.left} y={PAD.top} width={innerW} height={innerH}
+                  fill="none" stroke="rgba(0,255,255,0.2)" strokeWidth="1" />
 
-        {visibleModels.map(model =>
-          days.map((_, i) => {
-            const v = modelData[model.id]?.daily?.[valueKey]?.[i];
-            if (v == null) return null;
-            const spreadLabel = formatTooltip ? formatTooltip(daySpreads[i]) : `${daySpreads[i].toFixed(1)}`;
-            const outlier = dayOutliers[i].has(model.id);
-            return (
-              <g key={`${model.id}-${i}`}>
-                {/* Dashed outlier ring */}
-                {outlier && (
-                  <circle
-                    cx={xPos(i)} cy={yPos(v)} r="10"
-                    fill="none"
-                    stroke={MODEL_COLORS[model.id]}
-                    strokeWidth="1.5"
-                    strokeDasharray="3,2"
-                    strokeOpacity="0.85"
-                    pointerEvents="none"
-                    filter={`url(#glow-${valueKey})`}
+                {/* TODAY marker */}
+                <line x1={xPos(0)} y1={PAD.top - 5} x2={xPos(0)} y2={chartBottom}
+                  stroke="rgba(255,255,255,0.35)" strokeWidth="1" strokeDasharray="3,3" />
+                <text x={xPos(0)} y={PAD.top - 8} textAnchor="middle"
+                  fill="rgba(255,255,255,0.55)" fontSize="12" letterSpacing="1">TODAY</text>
+
+                {/* Model lines */}
+                {visibleModels.map(model => {
+                  const pts = days.map((_, i) => {
+                    const v = modelData[model.id]?.daily?.[valueKey]?.[i];
+                    return v != null ? `${xPos(i)},${yPos(v)}` : null;
+                  }).filter(Boolean);
+                  if (pts.length < 2) return null;
+                  return (
+                    <path key={model.id}
+                      d={`M ${pts.join(' L ')}`}
+                      fill="none"
+                      stroke={MODEL_COLORS[model.id]}
+                      strokeWidth="2"
+                      strokeOpacity="0.75"
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                      filter={`url(#glow-${valueKey})`}
+                      clipPath={`url(#clip-${valueKey})`}
+                    />
+                  );
+                })}
+
+                {/* Consensus line */}
+                {visibleModels.length >= 2 && consensusPts.length >= 2 && (
+                  <path
+                    d={`M ${consensusPts.join(' L ')}`}
+                    fill="none" stroke="#FFFFFF" strokeWidth="2.5"
+                    strokeLinejoin="round" strokeLinecap="round"
+                    filter={`url(#glow-avg-${valueKey})`}
+                    clipPath={`url(#clip-${valueKey})`}
                   />
                 )}
-                <circle
-                  cx={xPos(i)} cy={yPos(v)} r="5"
-                  fill={MODEL_COLORS[model.id]}
-                  filter={`url(#glow-${valueKey})`}
-                >
-                  <title>{model.name}: {formatTooltip ? formatTooltip(v) : Math.round(v)}{outlier ? ' ⚠ OUTLIER' : ''}{'\n'}Spread this day: {spreadLabel}</title>
-                </circle>
-              </g>
-            );
-          })
-        )}
 
-        {days.map((day, i) => (
-          <text key={i} x={xPos(i)} y={dayLabelY} textAnchor="middle"
-            fill={i === 0 ? 'rgba(255,255,255,0.75)' : 'rgba(0,255,255,0.5)'}
-            fontSize="15">
-            {new Date(day + 'T12:00:00').toLocaleDateString([], { weekday: 'short' }).slice(0, 3).toUpperCase()}
-          </text>
-        ))}
+                {/* Dots with outlier rings */}
+                {visibleModels.map(model =>
+                  days.map((_, i) => {
+                    const v = modelData[model.id]?.daily?.[valueKey]?.[i];
+                    if (v == null) return null;
+                    const spreadLabel = formatTooltip ? formatTooltip(daySpreads[i]) : `${daySpreads[i].toFixed(1)}`;
+                    const outlier = dayOutliers[i].has(model.id);
+                    return (
+                      <g key={`${model.id}-${i}`}>
+                        {outlier && (
+                          <circle cx={xPos(i)} cy={yPos(v)} r="10"
+                            fill="none" stroke={MODEL_COLORS[model.id]}
+                            strokeWidth="1.5" strokeDasharray="3,2" strokeOpacity="0.85"
+                            pointerEvents="none" filter={`url(#glow-${valueKey})`}
+                          />
+                        )}
+                        <circle cx={xPos(i)} cy={yPos(v)} r="5"
+                          fill={MODEL_COLORS[model.id]} filter={`url(#glow-${valueKey})`}
+                        >
+                          <title>{model.name}: {formatTooltip ? formatTooltip(v) : Math.round(v)}{outlier ? ' ⚠ OUTLIER' : ''}{'\n'}Spread: {spreadLabel}</title>
+                        </circle>
+                      </g>
+                    );
+                  })
+                )}
 
-        <text x={PAD.left - 6} y={badgeY + badgeSize - 2} textAnchor="end"
-          fill="rgba(0,255,255,0.3)" fontSize="11">CONF</text>
-        {days.map((day, i) => {
-          const color = getConfidenceColor(daySpreads[i], spreadThresholds);
-          const conf = daySpreads[i] <= spreadThresholds[0] ? 'High confidence'
-            : daySpreads[i] <= spreadThresholds[1] ? 'Moderate confidence' : 'Low confidence';
-          return (
-            <rect key={i}
-              x={xPos(i) - badgeSize / 2} y={badgeY}
-              width={badgeSize} height={badgeSize} rx="2"
-              fill={color} opacity="0.9"
-            >
-              <title>{new Date(day + 'T12:00:00').toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}{'\n'}{conf}{'\n'}Spread: {formatTooltip ? formatTooltip(daySpreads[i]) : daySpreads[i].toFixed(1)}</title>
-            </rect>
-          );
-        })}
+                {/* Day labels — weekday abbreviation + date number */}
+                {days.map((day, i) => {
+                  const d = new Date(day + 'T12:00:00');
+                  const dayName = d.toLocaleDateString([], { weekday: 'short' }).slice(0, 3).toUpperCase();
+                  const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
+                  const isToday = i === 0;
+                  return (
+                    <g key={i}>
+                      <text x={xPos(i)} y={dayLabelY} textAnchor="middle"
+                        fill={isToday ? 'rgba(255,255,255,0.75)' : 'rgba(0,255,255,0.5)'}
+                        fontSize="15">
+                        {dayName}
+                      </text>
+                      <text x={xPos(i)} y={dateLabelY} textAnchor="middle"
+                        fill={isToday ? 'rgba(255,255,255,0.4)' : 'rgba(0,255,255,0.28)'}
+                        fontSize="12">
+                        {dateStr}
+                      </text>
+                    </g>
+                  );
+                })}
 
-        {hoverDay !== null && (
-          <line
-            x1={xPos(hoverDay)} y1={PAD.top}
-            x2={xPos(hoverDay)} y2={chartBottom}
-            stroke="rgba(255,255,255,0.55)"
-            strokeWidth="1"
-            strokeDasharray="4,3"
-            pointerEvents="none"
-          />
-        )}
-      </svg>
+                {/* Confidence badges */}
+                <text x={PAD.left - 6} y={badgeY + badgeSize - 2} textAnchor="end"
+                  fill="rgba(0,255,255,0.3)" fontSize="11">CONF</text>
+                {days.map((day, i) => {
+                  const color = getConfidenceColor(daySpreads[i], spreadThresholds);
+                  const conf = daySpreads[i] <= spreadThresholds[0] ? 'High confidence'
+                    : daySpreads[i] <= spreadThresholds[1] ? 'Moderate confidence' : 'Low confidence';
+                  return (
+                    <rect key={i}
+                      x={xPos(i) - badgeSize / 2} y={badgeY}
+                      width={badgeSize} height={badgeSize} rx="2"
+                      fill={color} opacity="0.9"
+                    >
+                      <title>{new Date(day + 'T12:00:00').toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}{'\n'}{conf}{'\n'}Spread: {formatTooltip ? formatTooltip(daySpreads[i]) : daySpreads[i].toFixed(1)}</title>
+                    </rect>
+                  );
+                })}
+
+                {/* Crosshair */}
+                {hoverDay !== null && (
+                  <line
+                    x1={xPos(hoverDay)} y1={PAD.top}
+                    x2={xPos(hoverDay)} y2={chartBottom}
+                    stroke="rgba(255,255,255,0.55)" strokeWidth="1"
+                    strokeDasharray="4,3" pointerEvents="none"
+                  />
+                )}
+              </svg>
+            </div>
+          </div>
+
+          {/* Hover tooltip panel */}
+          {hoverDay !== null && (
+            <div className="mt-2 p-2.5 rounded border border-cyan-800/50 bg-black/30 text-xs">
+              <div className="text-cyan-400 font-bold mb-2 tracking-wide">
+                {new Date(days[hoverDay] + 'T12:00:00').toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-1.5">
+                {tooltipEntries.map(({ model, v }) => {
+                  const outlier = dayOutliers[hoverDay]?.has(model.id);
+                  return (
+                    <div key={model.id} className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: MODEL_COLORS[model.id] }} />
+                      <span style={{ color: MODEL_COLORS[model.id] }} className="font-bold">{model.name}</span>
+                      {outlier && <span className="text-orange-400">⚠</span>}
+                      <span className="text-white ml-auto pl-1">
+                        {v != null ? (formatTooltip ? formatTooltip(v) : Math.round(v)) : '—'}
+                      </span>
+                    </div>
+                  );
+                })}
+                {tooltipConsensus != null && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full shrink-0 bg-white" />
+                    <span className="text-white font-bold">AVG</span>
+                    <span className="text-white ml-auto pl-1">
+                      {formatTooltip ? formatTooltip(tooltipConsensus) : Math.round(tooltipConsensus)}
+                    </span>
+                  </div>
+                )}
+              </div>
+              {tooltipNums.length >= 2 && (
+                <div className="flex items-center gap-2 mt-1.5 pt-1.5 border-t border-cyan-900 text-cyan-600">
+                  <span>Spread: {formatTooltip ? formatTooltip(tooltipSpread) : tooltipSpread.toFixed(1)}</span>
+                  <span className="w-2.5 h-2.5 rounded-sm inline-block"
+                    style={{ backgroundColor: getConfidenceColor(tooltipSpread, spreadThresholds) }} />
+                </div>
+              )}
+            </div>
+          )}
+
+        </div>
+      )}
     </div>
   );
 };
@@ -318,7 +415,6 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
   const visibleModels = MODELS.filter(m => !hiddenModels.has(m.id));
   const isToday = dayIndex === 0;
 
-  // Split into two groups so each mini-table only has 3 columns — much more readable
   const VAR_GROUPS = [
     [
       { key: 'temperature_2m_max', label: 'HI',   fmt: v => `${Math.round(v)}°` },
@@ -331,7 +427,6 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
       ...(hasSnow ? [{ key: 'snowfall_sum', label: 'SNOW', fmt: v => `${v.toFixed(1)}"` }] : []),
     ],
   ];
-  // Flat list still needed for outlier detection over all vars
   const VARS = VAR_GROUPS.flat();
 
   const dayName = new Date(day + 'T12:00:00').toLocaleDateString([], { weekday: 'short' }).slice(0, 3).toUpperCase();
@@ -349,7 +444,6 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
     return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   };
 
-  // Min spread per variable to qualify for outlier detection
   const VAR_MIN_SPREAD = {
     temperature_2m_max: 3, temperature_2m_min: 3,
     wind_speed_10m_max: 5, precipitation_sum: 0.1,
@@ -385,15 +479,12 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
       <div className="flex flex-col gap-3 border-t border-cyan-900 pt-2">
         {VAR_GROUPS.map((group, gi) => (
           <div key={gi}>
-            {/* Column headers */}
             <div className="flex text-xs text-cyan-600 tracking-wider mb-1">
               <div className="w-14 shrink-0" />
               {group.map(v => (
                 <div key={v.key} className="flex-1 text-center">{v.label}</div>
               ))}
             </div>
-
-            {/* Model rows */}
             {visibleModels.map(model => (
               <div key={model.id} className="flex items-center text-sm py-0.5">
                 <div className="w-14 shrink-0 font-bold truncate" style={{ color: MODEL_COLORS[model.id] }}>
@@ -417,8 +508,6 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
                 })}
               </div>
             ))}
-
-            {/* AVG row */}
             {visibleModels.length >= 2 && (
               <div className="flex items-center text-sm pt-1.5 mt-1 border-t border-cyan-900 font-bold">
                 <div className="w-14 shrink-0 text-white">AVG</div>
@@ -550,7 +639,6 @@ const ModelComparisonTab = ({ location }) => {
 
   const visibleModels = MODELS.filter(m => !hiddenModels.has(m.id));
 
-  // Weekly agreement banner
   const tempSpreads = days.map((_, i) => {
     const vals = visibleModels.map(m => modelData[m.id]?.daily?.temperature_2m_max?.[i]).filter(v => v != null);
     return vals.length >= 2 ? Math.max(...vals) - Math.min(...vals) : 0;
@@ -634,7 +722,6 @@ const ModelComparisonTab = ({ location }) => {
           </div>
         </div>
 
-        {/* Model info panel */}
         {infoModel && (
           <ModelInfoPanel modelId={infoModel} onClose={() => setInfoModel(null)} />
         )}
@@ -649,46 +736,46 @@ const ModelComparisonTab = ({ location }) => {
 
       {/* Line chart view */}
       {viewMode === 'lines' && (
-        <div className="space-y-4">
-          <ModelChart {...chartProps}
+        <div className="space-y-2">
+          <ModelChart {...chartProps} defaultExpanded
             valueKey="temperature_2m_max" title="HIGH TEMPERATURE (°F)"
             formatTick={v => `${Math.round(v)}°`}
             formatTooltip={v => `${Math.round(v)}°F`}
             spreadThresholds={[3, 6]}
           />
-          <ModelChart {...chartProps}
+          <ModelChart {...chartProps} defaultExpanded
             valueKey="temperature_2m_min" title="LOW TEMPERATURE (°F)"
             formatTick={v => `${Math.round(v)}°`}
             formatTooltip={v => `${Math.round(v)}°F`}
             spreadThresholds={[3, 6]}
           />
-          <ModelChart {...chartProps}
-            valueKey="wind_speed_10m_max" title="WIND SPEED (MPH)"
-            formatTick={v => `${Math.round(v)}`}
-            formatTooltip={v => `${Math.round(v)} mph`}
-            spreadThresholds={[5, 10]}
-          />
-          <ModelChart {...chartProps}
+          <ModelChart {...chartProps} defaultExpanded
             valueKey="precipitation_sum" title="PRECIPITATION (IN)"
             formatTick={v => v.toFixed(1)}
             formatTooltip={v => `${v.toFixed(2)}"`}
             spreadThresholds={[0.1, 0.3]}
           />
-          <ModelChart {...chartProps}
+          <ModelChart {...chartProps} defaultExpanded={false}
             valueKey="precipitation_probability_max" title="RAIN CHANCE (%)"
             formatTick={v => `${Math.round(v)}%`}
             formatTooltip={v => `${Math.round(v)}%`}
             spreadThresholds={[10, 25]}
           />
+          <ModelChart {...chartProps} defaultExpanded={false}
+            valueKey="wind_speed_10m_max" title="WIND SPEED (MPH)"
+            formatTick={v => `${Math.round(v)}`}
+            formatTooltip={v => `${Math.round(v)} mph`}
+            spreadThresholds={[5, 10]}
+          />
           {hasSnow && (
-            <ModelChart {...chartProps}
+            <ModelChart {...chartProps} defaultExpanded={false}
               valueKey="snowfall_sum" title="SNOWFALL (IN)"
               formatTick={v => `${v.toFixed(1)}"`}
               formatTooltip={v => `${v.toFixed(2)}"`}
               spreadThresholds={[0.5, 1.5]}
             />
           )}
-          <p className="text-xs text-cyan-700 text-center">
+          <p className="text-xs text-cyan-700 text-center pt-1">
             White line = model consensus · Shaded area = spread · Click legend to toggle · Swipe charts to sync crosshair
           </p>
         </div>
