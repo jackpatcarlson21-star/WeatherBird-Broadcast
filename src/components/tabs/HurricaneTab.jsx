@@ -15,8 +15,8 @@ import {
 // ── HURDAT2 ──────────────────────────────────────────────────────────────────────
 
 const HURDAT2_URLS = {
-  atlantic: 'https://www.nhc.noaa.gov/data/hurdat/hurdat2-1851-2023-051124.txt',
-  pacific:  'https://www.nhc.noaa.gov/data/hurdat/hurdat2-nepac-1949-2023-051124.txt',
+  atlantic: '/hurdat2-atlantic.txt',
+  pacific:  '/hurdat2-pacific.txt',
 };
 
 // Module-level cache — persists across renders without re-fetching
