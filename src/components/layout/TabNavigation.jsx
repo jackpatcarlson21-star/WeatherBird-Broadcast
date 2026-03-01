@@ -6,12 +6,12 @@ const TabNavigation = ({ currentTab, setTab, alerts = [] }) => {
 
   const primaryTabs = [
     { id: SCREENS.CONDITIONS,   name: 'CURRENT'  },
-    { id: SCREENS.HOURLY,       name: '12HR'     },
+    { id: SCREENS.HOURLY,       name: 'HOURLY'   },
     { id: SCREENS.DAILY,        name: '7-DAY'    },
     { id: SCREENS.RADAR,        name: 'RADAR'    },
     { id: SCREENS.ALERTS,       name: 'ALERTS'   },
     { id: SCREENS.TRIP_WEATHER, name: 'TRIP'     },
-    { id: SCREENS.ALMANAC,      name: 'ALMANAC'  },
+    { id: SCREENS.ALMANAC,      name: 'RECORDS'  },
     { id: SCREENS.MODELS,       name: 'MODELS'   },
   ];
 
