@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import TabPanel from '../layout/TabPanel';
 import LoadingIndicator from '../common/LoadingIndicator';
-import { formatTime, isNight } from '../../utils/helpers';
+import { formatTime, isNight, fToC, mphToKmh } from '../../utils/helpers';
 import { AnimatedWeatherIcon } from '../weather';
 import PrecipGraphTab from './PrecipGraphTab';
 
@@ -188,10 +188,17 @@ const ViewToggle = ({ viewMode, setViewMode }) => (
 
 // ─── Tab ───────────────────────────────────────────────────────────────────────
 
-const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading }) => {
+const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading, units }) => {
   const [viewMode, setViewMode] = useState('table');
 
   if (isWeatherLoading) return <LoadingIndicator />;
+
+  const useCelsius = units?.temp === 'C';
+  const useKmh    = units?.wind === 'kmh';
+  const tempUnit  = useCelsius ? '°C' : '°F';
+  const windUnit  = useKmh ? ' km/h' : ' mph';
+  const cvtTemp   = (f) => useCelsius ? fToC(f) : Math.round(f);
+  const cvtWind   = (mph) => useKmh ? mphToKmh(mph) : Math.round(mph);
 
   const now = new Date();
   let startIndex = 0;
@@ -208,11 +215,11 @@ const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading }) => {
     const hourDate = new Date(time);
     return {
       time:      i === 0 ? 'NOW' : formatTime(time),
-      temp:      Math.round(hourly.temperature_2m[idx]),
-      feelsLike: Math.round(hourly.apparent_temperature?.[idx] ?? hourly.temperature_2m[idx]),
+      temp:      cvtTemp(hourly.temperature_2m[idx]),
+      feelsLike: cvtTemp(hourly.apparent_temperature?.[idx] ?? hourly.temperature_2m[idx]),
       pop:       Math.round(hourly.precipitation_probability[idx]),
       code:      hourly.weather_code[idx],
-      wind:      Math.round(hourly.wind_speed_10m[idx]),
+      wind:      cvtWind(hourly.wind_speed_10m[idx]),
       humidity:  Math.round(hourly.relative_humidity_2m?.[idx] ?? 0),
       snowfall:  hourly.snowfall?.[idx] ?? 0,
       night:     isNight(hourDate, sunrise, sunset),
@@ -260,9 +267,9 @@ const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading }) => {
                   <AnimatedWeatherIcon code={h.code} night={h.night} size={28} />
                 </div>
                 <div className="flex-1 text-center">
-                  <span className="text-xl sm:text-2xl font-bold text-white">{h.temp}°F</span>
+                  <span className="text-xl sm:text-2xl font-bold text-white">{h.temp}{tempUnit}</span>
                   {h.feelsLike !== h.temp && (
-                    <span className="text-xs text-gray-400 ml-2">({h.feelsLike}°)</span>
+                    <span className="text-xs text-gray-400 ml-2">({h.feelsLike}{tempUnit})</span>
                   )}
                 </div>
                 <div className="w-12 sm:w-16 text-center">
@@ -276,7 +283,7 @@ const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading }) => {
                   </span>
                 </div>
                 <div className="hidden sm:block w-16 text-center">
-                  <span className="text-sm text-gray-300">{h.wind} mph</span>
+                  <span className="text-sm text-gray-300">{h.wind}{windUnit}</span>
                 </div>
                 {hasSomeSnow && (
                   <div className="hidden sm:block w-16 text-center">
@@ -296,8 +303,8 @@ const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading }) => {
         <div className="space-y-4">
           <HourlyChart
             data={data}
-            title="TEMPERATURE (°F)"
-            formatTick={v => `${Math.round(v)}°`}
+            title={`TEMPERATURE (${tempUnit})`}
+            formatTick={v => `${Math.round(v)}${tempUnit}`}
             lines={[
               { key: 'temp',      label: 'Temp',       getValue: h => h.temp,      color: '#67E8F9', width: 2.5 },
               { key: 'feelsLike', label: 'Feels Like', getValue: h => h.feelsLike, color: '#94A3B8', width: 1.5, dash: '5,3', opacity: 0.85 },
@@ -314,7 +321,7 @@ const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading }) => {
           />
           <HourlyChart
             data={data}
-            title="WIND SPEED (MPH)"
+            title={`WIND SPEED (${useKmh ? 'KM/H' : 'MPH'})`}
             formatTick={v => `${Math.round(v)}`}
             lines={[
               { key: 'wind', label: 'Wind', getValue: h => h.wind, color: '#A78BFA', width: 2 },

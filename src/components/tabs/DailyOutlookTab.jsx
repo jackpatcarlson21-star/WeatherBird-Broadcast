@@ -3,10 +3,10 @@ import { Droplets, Wind, ChevronRight } from 'lucide-react';
 import TabPanel from '../layout/TabPanel';
 import LoadingIndicator from '../common/LoadingIndicator';
 import { getNWSPointsUrl } from '../../utils/api';
-import { getWeatherDescription } from '../../utils/helpers';
+import { getWeatherDescription, fmtTemp } from '../../utils/helpers';
 import { AnimatedWeatherIcon } from '../weather';
 
-const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
+const DailyOutlookTab = ({ location, daily, isWeatherLoading, units }) => {
   const [nwsForecast, setNwsForecast] = useState(null);
   const [nwsLoading, setNwsLoading] = useState(true);
   const [nwsError, setNwsError] = useState(false);
@@ -118,6 +118,9 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
       nightForecast: d.nightForecast,
       isToday: idx === 0,
       isNightOnly: d.max === null,
+      precipAmount: daily?.precipitation_sum?.[idx] != null
+        ? parseFloat(daily.precipitation_sum[idx].toFixed(2))
+        : null,
     }));
   } else {
     // Fallback to Open-Meteo data
@@ -134,6 +137,7 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
       const condition = getWeatherDescription(code);
       const description = `${condition}. High of ${high}°F, low of ${low}°F. ${pop > 0 ? `${pop}% chance of precipitation. ` : ''}Winds up to ${windSpeed} mph.`;
 
+      const precipAmt = parseFloat((daily.precipitation_sum?.[idx] ?? 0).toFixed(2));
       return {
         day: idx === 0 ? 'Today' : date.toLocaleDateString([], { weekday: 'short' }),
         date: date.toLocaleDateString([], { month: 'short', day: 'numeric' }),
@@ -146,6 +150,7 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
         detailedForecast: description,
         isToday: idx === 0,
         isNightOnly: false,
+        precipAmount: precipAmt,
       };
     }) : [];
   }
@@ -207,11 +212,11 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
               </div>
               <div className="flex-1 sm:w-2/6 text-center">
                 {d.isNightOnly ? (
-                  <span className="text-lg sm:text-xl text-cyan-400">Low: {d.min}°</span>
+                  <span className="text-lg sm:text-xl text-cyan-400">Low: {fmtTemp(d.min, units)}</span>
                 ) : (
                   <>
-                    <span className="text-xl sm:text-2xl font-vt323 text-white">{d.max}°</span>
-                    <span className="text-lg sm:text-xl text-cyan-400"> / {d.min !== null ? `${d.min}°` : '--'}</span>
+                    <span className="text-xl sm:text-2xl font-vt323 text-white">{fmtTemp(d.max, units)}</span>
+                    <span className="text-lg sm:text-xl text-cyan-400"> / {d.min !== null ? fmtTemp(d.min, units) : '--'}</span>
                   </>
                 )}
                 {/* Temperature range bar */}
@@ -231,6 +236,9 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
               <div className="w-12 sm:w-1/6 shrink-0 text-sm text-center flex flex-col items-center">
                 <Droplets size={16} className="text-cyan-400" />
                 <span className="text-white">{d.pop}%</span>
+                {d.precipAmount > 0 && (
+                  <span className="text-xs text-blue-300">{d.precipAmount.toFixed(2)}"</span>
+                )}
               </div>
               <div className="hidden sm:flex sm:w-1/6 shrink-0 text-sm text-center flex-col items-center">
                 <Wind size={16} className="text-cyan-400" />

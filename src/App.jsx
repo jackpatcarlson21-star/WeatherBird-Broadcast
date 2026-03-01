@@ -24,7 +24,7 @@ import useAutoLocation from './utils/useAutoLocation';
 
 // Components
 import { Header, Footer, Scanlines, TabNavigation, CRTPowerOn } from './components/layout';
-import { AppStatus, LocationModal } from './components/common';
+import { AppStatus, LocationModal, SettingsModal } from './components/common';
 import { WeatherBackground } from './components/weather';
 const IconTestPage = lazy(() => import('./components/weather/IconTestPage'));
 import {
@@ -55,7 +55,14 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [appError, setAppError] = useState(null);
   const [time, setTime] = useState(new Date());
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(() => !localStorage.getItem('weatherbird-location-set'));
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [units, setUnits] = useState(() => {
+    try {
+      const saved = localStorage.getItem('weatherbird-units');
+      return saved ? JSON.parse(saved) : { temp: 'F', wind: 'mph' };
+    } catch { return { temp: 'F', wind: 'mph' }; }
+  });
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const [currentScreen, setCurrentScreen] = useState(SCREENS.CONDITIONS);
@@ -422,7 +429,13 @@ const App = () => {
   }, [location, isAuthReady, fetchWeather, fetchAQI]);
 
   // --- Location Save Handler ---
+  const handleUnitsChange = (newUnits) => {
+    setUnits(newUnits);
+    localStorage.setItem('weatherbird-units', JSON.stringify(newUnits));
+  };
+
   const handleLocationSave = useCallback(async (newLoc) => {
+    localStorage.setItem('weatherbird-location-set', '1');
     setIsModalOpen(false);
     if (db && userId) {
       const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -460,13 +473,13 @@ const App = () => {
   const renderTabContent = () => {
     switch (currentScreen) {
       case SCREENS.CONDITIONS:
-        return <CurrentConditionsTab current={current} daily={daily} hourly={hourly} night={night} isWeatherLoading={isWeatherLoading} alerts={alerts} aqiData={aqiData} />;
+        return <CurrentConditionsTab current={current} daily={daily} hourly={hourly} night={night} isWeatherLoading={isWeatherLoading} alerts={alerts} aqiData={aqiData} location={location} units={units} />;
       case SCREENS.ALERTS:
         return <AlertsTab alerts={alerts} location={location} />;
       case SCREENS.HOURLY:
-        return <HourlyForecastTab hourly={hourly} sunrise={daily?.sunrise?.[0]} sunset={daily?.sunset?.[0]} isWeatherLoading={isWeatherLoading} />;
+        return <HourlyForecastTab hourly={hourly} sunrise={daily?.sunrise?.[0]} sunset={daily?.sunset?.[0]} isWeatherLoading={isWeatherLoading} units={units} />;
       case SCREENS.DAILY:
-        return <DailyOutlookTab location={location} daily={daily} isWeatherLoading={isWeatherLoading} />;
+        return <DailyOutlookTab location={location} daily={daily} isWeatherLoading={isWeatherLoading} units={units} />;
       case SCREENS.RADAR:
         return <RadarTab location={location} />;
       case SCREENS.WWA:
@@ -528,25 +541,33 @@ const App = () => {
       {/* App Status Modal */}
       <AppStatus isLoading={isWeatherLoading} error={appError} isReady={isAuthReady} isAutoDetecting={false} />
 
-      {/* TORNADO WARNING Full-Screen Takeover */}
-      {getTornadoWarnings(alerts)
-        .filter(alert => !dismissedTornadoModals.has(alert.properties?.id))
-        .slice(0, 1)
-        .map(alert => (
-          <div
-            key={alert.properties?.id}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-red-900/95 p-4"
-          >
+      {/* TORNADO WARNING Full-Screen Takeover — shows ALL active tornado warnings */}
+      {(() => {
+        const tornadoWarnings = getTornadoWarnings(alerts)
+          .filter(alert => !dismissedTornadoModals.has(alert.properties?.id));
+        if (!tornadoWarnings.length) return null;
+        const dismissAll = () =>
+          setDismissedTornadoModals(prev => new Set([...prev, ...tornadoWarnings.map(a => a.properties?.id)]));
+        const soonestExpiry = tornadoWarnings
+          .map(a => a.properties?.expires)
+          .filter(Boolean)
+          .sort()[0];
+        return (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-red-900/95 p-4">
             <div className="bg-black border-4 border-red-500 rounded-xl p-6 md:p-8 max-w-2xl w-full shadow-2xl text-center">
               <div className="flex justify-center mb-4">
                 <AlertTriangle size={80} className="text-red-500 animate-bounce" />
               </div>
               <h1 className="text-4xl md:text-6xl font-bold text-red-500 mb-4 tracking-wider">
-                TORNADO WARNING
+                TORNADO WARNING{tornadoWarnings.length > 1 ? 'S' : ''}
               </h1>
-              <p className="text-2xl md:text-3xl text-white mb-4">
-                {alert.properties?.areaDesc}
-              </p>
+              <div className="space-y-1 mb-4">
+                {tornadoWarnings.map(alert => (
+                  <p key={alert.properties?.id} className="text-xl md:text-2xl text-white">
+                    {alert.properties?.areaDesc}
+                  </p>
+                ))}
+              </div>
               <div className="bg-red-900/50 rounded-lg p-4 mb-6 text-left">
                 <p className="text-lg text-red-200 font-bold mb-2">TAKE SHELTER IMMEDIATELY!</p>
                 <ul className="text-yellow-300 space-y-1 text-sm md:text-base">
@@ -556,26 +577,28 @@ const App = () => {
                   <li>If in a mobile home, evacuate to a sturdy building</li>
                 </ul>
               </div>
-              {alert.properties?.expires && (
+              {soonestExpiry && (
                 <p className="text-cyan-400 mb-4">
                   <Clock size={16} className="inline mr-1" />
-                  {getExpirationCountdown(alert.properties.expires)}
+                  {getExpirationCountdown(soonestExpiry)}
                 </p>
               )}
               <button
-                onClick={() => setDismissedTornadoModals(prev => new Set([...prev, alert.properties?.id]))}
+                onClick={dismissAll}
                 className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white text-xl font-bold rounded-lg transition-colors"
               >
                 I UNDERSTAND - DISMISS
               </button>
             </div>
           </div>
-        ))}
+        );
+      })()}
 
       {/* Main Header */}
       <Header
         locationName={location.name}
         onLocationClick={() => setIsModalOpen(true)}
+        onSettingsClick={() => setIsSettingsOpen(true)}
         timezone={weatherData?.timezone}
         isPlaying={isPlaying}
         toggleMusic={toggleMusic}
@@ -629,6 +652,15 @@ const App = () => {
 
       {/* Footer Ticker */}
       <Footer current={current} daily={daily} locationName={location.name} alerts={alerts} />
+
+      {/* Settings Modal */}
+      {isSettingsOpen && (
+        <SettingsModal
+          units={units}
+          onUnitsChange={handleUnitsChange}
+          onClose={() => setIsSettingsOpen(false)}
+        />
+      )}
 
       {/* Location Modal */}
       {isModalOpen && (

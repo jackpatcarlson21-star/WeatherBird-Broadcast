@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, MapPin, Volume2, VolumeX, Radio } from 'lucide-react';
+import { Play, Pause, MapPin, Volume2, VolumeX, Radio, Settings } from 'lucide-react';
 import { DARK_BLUE, NAVY_BLUE, BRIGHT_CYAN } from '../../utils/constants';
 
 const getHeaderGradient = (weatherCode, night, sunrise, sunset, currentTime) => {
@@ -53,6 +53,7 @@ const Header = ({
   sunrise,
   sunset,
   isTracking,
+  onSettingsClick,
 }) => {
   // Local clock state - ticks every second without re-rendering the parent tree
   const [localTime, setLocalTime] = useState(new Date());
@@ -141,6 +142,16 @@ const Header = ({
             <Volume2 size={14} className="text-cyan-400" />
           </div>
         </div>
+
+        {/* Settings Button */}
+        <button
+          onClick={onSettingsClick}
+          className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition shadow-md shrink-0"
+          style={{ border: `1px solid ${BRIGHT_CYAN}`, color: BRIGHT_CYAN }}
+          title="Settings"
+        >
+          <Settings size={18} style={{ color: BRIGHT_CYAN }} />
+        </button>
 
         {/* Location Button */}
         <button

@@ -126,6 +126,14 @@ export const getWeatherDescription = (code) => {
   return map[code] || "UNKNOWN";
 };
 
+// --- Unit Conversion Helpers ---
+export const fToC = (f) => Math.round((f - 32) * 5 / 9);
+export const mphToKmh = (mph) => Math.round(mph * 1.609);
+export const fmtTemp = (tempF, units) =>
+  units?.temp === 'C' ? `${fToC(tempF)}°C` : `${Math.round(tempF)}°F`;
+export const fmtWind = (mph, units) =>
+  units?.wind === 'kmh' ? `${mphToKmh(mph)} km/h` : `${Math.round(mph)} mph`;
+
 // --- Moon Phase ---
 export const getMoonPhase = (date = new Date()) => {
   // Calculate days since known new moon (Jan 6, 2000)
