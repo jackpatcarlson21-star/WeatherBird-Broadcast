@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { SCREENS, DARK_BLUE, BRIGHT_CYAN, MID_BLUE } from '../../utils/constants';
 
-const TabNavigation = ({ currentTab, setTab }) => {
+const TabNavigation = ({ currentTab, setTab, alerts = [] }) => {
   const [moreOpen, setMoreOpen] = useState(false);
 
   const primaryTabs = [
@@ -24,20 +24,28 @@ const TabNavigation = ({ currentTab, setTab }) => {
 
   const moreActive = moreTabs.some(t => t.id === currentTab);
 
-  const renderTab = (tab) => (
-    <button
-      key={tab.id}
-      onClick={() => setTab(tab.id)}
-      className={`inline-block md:block w-full py-2 md:py-4 px-3 md:px-4 text-xl md:text-3xl font-vt323 transition-all text-left rounded-lg border-2 text-white snap-start
-        ${currentTab === tab.id
-          ? 'font-bold shadow-inner-neon'
-          : 'border-cyan-800 hover:border-cyan-500 hover:bg-white/10'
-        }`}
-      style={currentTab === tab.id ? { borderColor: BRIGHT_CYAN, backgroundColor: MID_BLUE } : {}}
-    >
-      {tab.name}
-    </button>
-  );
+  const renderTab = (tab) => {
+    const hasAlertBadge = tab.id === SCREENS.ALERTS && alerts.length > 0;
+    return (
+      <button
+        key={tab.id}
+        onClick={() => setTab(tab.id)}
+        className={`relative inline-block md:block w-full py-2 md:py-4 px-3 md:px-4 text-xl md:text-3xl font-vt323 transition-all text-left rounded-lg border-2 text-white snap-start
+          ${currentTab === tab.id
+            ? 'font-bold shadow-inner-neon'
+            : 'border-cyan-800 hover:border-cyan-500 hover:bg-white/10'
+          }`}
+        style={currentTab === tab.id ? { borderColor: BRIGHT_CYAN, backgroundColor: MID_BLUE } : {}}
+      >
+        {tab.name}
+        {hasAlertBadge && (
+          <span className="absolute top-1 right-1 md:top-2 md:right-2 min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 animate-pulse">
+            {alerts.length}
+          </span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div

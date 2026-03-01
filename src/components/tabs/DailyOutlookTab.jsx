@@ -169,6 +169,12 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
 
   const isForecastNight = (nwsIcon) => !!(nwsIcon?.includes('night'));
 
+  // Week-wide temp range for scaling the bars
+  const weekTemps = data.flatMap(d => [d.max, d.min]).filter(v => v != null);
+  const weekMin = weekTemps.length ? Math.min(...weekTemps) : 0;
+  const weekMax = weekTemps.length ? Math.max(...weekTemps) : 1;
+  const weekRange = weekMax - weekMin || 1;
+
   return (
     <TabPanel title="7-DAY FORECAST">
       {nwsError && (
@@ -207,6 +213,19 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading }) => {
                     <span className="text-xl sm:text-2xl font-vt323 text-white">{d.max}°</span>
                     <span className="text-lg sm:text-xl text-cyan-400"> / {d.min !== null ? `${d.min}°` : '--'}</span>
                   </>
+                )}
+                {/* Temperature range bar */}
+                {d.max != null && d.min != null && (
+                  <div className="relative h-1.5 rounded-full bg-cyan-950 mt-1.5 mx-3">
+                    <div
+                      className="absolute h-full rounded-full"
+                      style={{
+                        left:  `${((d.min - weekMin) / weekRange) * 100}%`,
+                        width: `${((d.max - d.min) / weekRange) * 100}%`,
+                        background: 'linear-gradient(to right, #60A5FA, #00FFFF, #FB923C)',
+                      }}
+                    />
+                  </div>
                 )}
               </div>
               <div className="w-12 sm:w-1/6 shrink-0 text-sm text-center flex flex-col items-center">

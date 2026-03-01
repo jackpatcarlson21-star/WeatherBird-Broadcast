@@ -621,7 +621,7 @@ const App = () => {
 
       {/* Main Content Area */}
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col md:flex-row gap-6 overflow-hidden">
-        <TabNavigation currentTab={currentScreen} setTab={(tab) => { setAutoCycle(false); setCurrentScreen(tab); }} />
+        <TabNavigation currentTab={currentScreen} setTab={(tab) => { setAutoCycle(false); setCurrentScreen(tab); }} alerts={alerts} />
         <div ref={contentRef} key={currentScreen} className="tab-content-enter flex-grow overflow-auto">
           {renderTabContent()}
         </div>
