@@ -44,6 +44,82 @@ const AlmanacStat = ({ title, value, subtitle, icon: Icon }) => (
   </div>
 );
 
+// Sparkline for "On This Day" 10-year trend
+const OnThisDaySparkline = ({ data }) => {
+  if (!data || data.length < 2) return null;
+
+  const W = 500, H = 90;
+  const PAD = { top: 10, right: 10, bottom: 22, left: 32 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+
+  const allTemps = data.flatMap(d => [d.high, d.low]).filter(v => v != null);
+  if (!allTemps.length) return null;
+
+  const minT = Math.min(...allTemps) - 4;
+  const maxT = Math.max(...allTemps) + 4;
+  const range = maxT - minT || 1;
+
+  const xPos = (i) => PAD.left + (i / Math.max(data.length - 1, 1)) * innerW;
+  const yPos = (v) => PAD.top + innerH - ((v - minT) / range) * innerH;
+  const chartBottom = PAD.top + innerH;
+
+  const highPts = data.filter(d => d.high != null).map((d, i) => `${xPos(data.indexOf(d))},${yPos(d.high)}`);
+  const lowPts  = data.filter(d => d.low  != null).map((d, i) => `${xPos(data.indexOf(d))},${yPos(d.low)}`);
+
+  // Area between high and low
+  const areaTop = data.map((d, i) => `${xPos(i)},${d.high != null ? yPos(d.high) : yPos((minT + maxT) / 2)}`).join(' L ');
+  const areaBot = [...data].reverse().map((d, i) => `${xPos(data.length - 1 - i)},${d.low != null ? yPos(d.low) : yPos((minT + maxT) / 2)}`).join(' L ');
+  const areaPath = `M ${areaTop} L ${areaBot} Z`;
+
+  return (
+    <div className="mb-2">
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ fontFamily: 'VT323, monospace', overflow: 'visible' }}>
+        {/* Y-axis labels */}
+        <text x={PAD.left - 4} y={PAD.top + 5}      textAnchor="end" fill="rgba(0,255,255,0.45)" fontSize="13">{Math.round(maxT)}°</text>
+        <text x={PAD.left - 4} y={chartBottom}       textAnchor="end" fill="rgba(0,255,255,0.45)" fontSize="13">{Math.round(minT)}°</text>
+
+        {/* Area fill between high and low */}
+        <path d={areaPath} fill="rgba(96,165,250,0.12)" />
+
+        {/* High line */}
+        <path d={`M ${highPts.join(' L ')}`} fill="none" stroke="#F87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Low line */}
+        <path d={`M ${lowPts.join(' L ')}`}  fill="none" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+
+        {/* Dots on each point */}
+        {data.map((d, i) => (
+          <g key={i}>
+            {d.high != null && <circle cx={xPos(i)} cy={yPos(d.high)} r="3" fill="#F87171"><title>{d.year}: {Math.round(d.high)}°</title></circle>}
+            {d.low  != null && <circle cx={xPos(i)} cy={yPos(d.low)}  r="3" fill="#60A5FA"><title>{d.year}: {Math.round(d.low)}°</title></circle>}
+          </g>
+        ))}
+
+        {/* X-axis year labels (show every other year to avoid crowding) */}
+        {data.map((d, i) => (
+          (i % 2 === 0 || i === data.length - 1) && (
+            <text key={i} x={xPos(i)} y={H - 2} textAnchor="middle" fill="rgba(0,255,255,0.5)" fontSize="12">
+              {d.year}
+            </text>
+          )
+        ))}
+      </svg>
+
+      {/* Legend */}
+      <div className="flex gap-4 text-xs mt-0.5">
+        <div className="flex items-center gap-1">
+          <svg width="16" height="6"><line x1="0" y1="3" x2="16" y2="3" stroke="#F87171" strokeWidth="2" /></svg>
+          <span style={{ color: '#F87171' }}>High</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <svg width="16" height="6"><line x1="0" y1="3" x2="16" y2="3" stroke="#60A5FA" strokeWidth="2" /></svg>
+          <span style={{ color: '#60A5FA' }}>Low</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AlmanacTab = ({ location, userId }) => {
   const today = new Date();
   const [almanacData, setAlmanacData] = useState(null);
@@ -86,12 +162,24 @@ const AlmanacTab = ({ location, userId }) => {
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 
+        // Fetch historical YTD precip (Jan 1 through today's date across the past 10 years in one request)
+        const histYtdStart = `${currentYear - 10}-01-01`;
+        const histYtdEnd   = `${currentYear - 1}-${month}-${day}`;
+        const histYtdPromise = fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${histYtdStart}&end_date=${histYtdEnd}&daily=precipitation_sum&precipitation_unit=inch&timezone=auto`, { signal })
+          .then(res => res.ok ? res.json() : null)
+          .catch(() => null);
+
         // Fetch monthly averages (this month across years)
         const monthStart = `${currentYear - 10}-${month}-01`;
         // Use day 0 of next month to get the actual last day of the target month
         const lastDay = new Date(currentYear - 1, today.getMonth() + 1, 0).getDate();
         const monthEnd = `${currentYear - 1}-${month}-${String(lastDay).padStart(2, '0')}`;
         const monthlyPromise = fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${location.lat}&longitude=${location.lon}&start_date=${monthStart}&end_date=${monthEnd}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto`, { signal })
+          .then(res => res.ok ? res.json() : null)
+          .catch(() => null);
+
+        // Fetch today's forecast high/low for comparison against records
+        const forecastTodayPromise = fetch(`https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=1`, { signal })
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 
@@ -116,7 +204,15 @@ const AlmanacTab = ({ location, userId }) => {
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 
-        const [ytdData, monthlyData, sunData, springFrostData, fallFrostData, ...historicalResults] = await Promise.all([ytdPromise, monthlyPromise, sunPromise, springFrostPromise, fallFrostPromise, ...historicalPromises]);
+        const [
+          ytdData, monthlyData, sunData, springFrostData, fallFrostData,
+          forecastTodayData, histYtdData,
+          ...historicalResults
+        ] = await Promise.all([
+          ytdPromise, monthlyPromise, sunPromise, springFrostPromise, fallFrostPromise,
+          forecastTodayPromise, histYtdPromise,
+          ...historicalPromises,
+        ]);
 
         // Process historical data for this date
         let recordHigh = -999;
@@ -150,6 +246,21 @@ const AlmanacTab = ({ location, userId }) => {
           ytdPrecip = ytdData.daily.precipitation_sum.reduce((sum, p) => sum + (p || 0), 0);
         }
 
+        // Calculate historical average YTD precip from the 10-year single-request archive
+        let historicalAvgYtd = null;
+        if (histYtdData?.daily?.time && histYtdData?.daily?.precipitation_sum) {
+          const yearTotals = {};
+          histYtdData.daily.time.forEach((dateStr, i) => {
+            const yr = new Date(dateStr).getFullYear();
+            if (!yearTotals[yr]) yearTotals[yr] = 0;
+            yearTotals[yr] += histYtdData.daily.precipitation_sum[i] || 0;
+          });
+          const totals = Object.values(yearTotals);
+          if (totals.length > 0) {
+            historicalAvgYtd = (totals.reduce((a, b) => a + b, 0) / totals.length).toFixed(2);
+          }
+        }
+
         // Calculate monthly averages
         let avgHighMonth = 0;
         let avgLowMonth = 0;
@@ -159,6 +270,12 @@ const AlmanacTab = ({ location, userId }) => {
           if (highs.length > 0) avgHighMonth = highs.reduce((a, b) => a + b, 0) / highs.length;
           if (lows.length > 0) avgLowMonth = lows.reduce((a, b) => a + b, 0) / lows.length;
         }
+
+        // Extract today's forecast high/low
+        const forecastHigh = forecastTodayData?.daily?.temperature_2m_max?.[0] != null
+          ? Math.round(forecastTodayData.daily.temperature_2m_max[0]) : null;
+        const forecastLow = forecastTodayData?.daily?.temperature_2m_min?.[0] != null
+          ? Math.round(forecastTodayData.daily.temperature_2m_min[0]) : null;
 
         // Process sunrise/sunset data
         let sunrise = '--';
@@ -254,6 +371,9 @@ const AlmanacTab = ({ location, userId }) => {
           lastSpringFrost,
           firstFallFrost,
           historicalTemps: historicalTemps.slice(-10), // Last 10 years for "On This Day"
+          forecastHigh,
+          forecastLow,
+          historicalAvgYtd,
         });
       } catch (e) {
         if (e.name === 'AbortError') return;
@@ -273,7 +393,7 @@ const AlmanacTab = ({ location, userId }) => {
 
   if (isLoading) {
     return (
-      <TabPanel title="ALMANAC">
+      <TabPanel title="RECORDS">
         <LoadingIndicator />
       </TabPanel>
     );
@@ -297,10 +417,13 @@ const AlmanacTab = ({ location, userId }) => {
     lastSpringFrost: '--',
     firstFallFrost: '--',
     historicalTemps: [],
+    forecastHigh: null,
+    forecastLow: null,
+    historicalAvgYtd: null,
   };
 
   return (
-    <TabPanel title="ALMANAC">
+    <TabPanel title="RECORDS">
       <div className="space-y-4">
         {/* Weather Fact Banner */}
         <div className="p-4 rounded-lg text-center" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
@@ -369,15 +492,49 @@ const AlmanacTab = ({ location, userId }) => {
             </div>
           </div>
 
-          {/* Historical Data */}
+          {/* Historical Records + Today's Forecast Comparison */}
           <div className="lg:col-span-2 p-4 rounded-lg space-y-3" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
             <h3 className="text-lg text-white font-bold border-b border-cyan-700 pb-2 flex items-center gap-2"><Calendar size={18}/> RECORDS FOR {today.toLocaleDateString([], { month: 'long', day: 'numeric' }).toUpperCase()}</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-white">
               <AlmanacStat title="Record High" value={`${displayData.recordHigh}°F`} subtitle={displayData.recordHighYear} icon={Maximize} />
-              <AlmanacStat title="Record Low" value={`${displayData.recordLow}°F`} subtitle={displayData.recordLowYear} icon={Minimize} />
-              <AlmanacStat title="Avg High" value={`${displayData.avgHighMonth}°F`} subtitle="Monthly" icon={Thermometer} />
-              <AlmanacStat title="Avg Low" value={`${displayData.avgLowMonth}°F`} subtitle="Monthly" icon={Thermometer} />
+              <AlmanacStat title="Record Low"  value={`${displayData.recordLow}°F`}  subtitle={displayData.recordLowYear}  icon={Minimize} />
+              <AlmanacStat title="Avg High"    value={`${displayData.avgHighMonth}°F`} subtitle="Monthly" icon={Thermometer} />
+              <AlmanacStat title="Avg Low"     value={`${displayData.avgLowMonth}°F`}  subtitle="Monthly" icon={Thermometer} />
             </div>
+
+            {/* Today's forecast vs. averages */}
+            {(displayData.forecastHigh != null || displayData.forecastLow != null) && (
+              <div className="grid grid-cols-2 gap-3 pt-1 border-t border-cyan-800/40">
+                {displayData.forecastHigh != null && (
+                  <div className="bg-black/20 rounded p-2 text-center border border-cyan-900">
+                    <p className="text-xs text-cyan-400 mb-1">TODAY'S FORECAST HIGH</p>
+                    <p className="text-2xl font-bold text-white">{displayData.forecastHigh}°F</p>
+                    {typeof displayData.avgHighMonth === 'number' && (
+                      <p className={`text-sm mt-0.5 ${displayData.forecastHigh > displayData.avgHighMonth ? 'text-orange-300' : 'text-cyan-300'}`}>
+                        {displayData.forecastHigh > displayData.avgHighMonth ? '▲' : '▼'}{Math.abs(displayData.forecastHigh - displayData.avgHighMonth)}° vs avg
+                        {typeof displayData.recordHigh === 'number' && displayData.forecastHigh >= displayData.recordHigh && (
+                          <span className="text-red-400 font-bold ml-1">RECORD!</span>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {displayData.forecastLow != null && (
+                  <div className="bg-black/20 rounded p-2 text-center border border-cyan-900">
+                    <p className="text-xs text-cyan-400 mb-1">TODAY'S FORECAST LOW</p>
+                    <p className="text-2xl font-bold text-white">{displayData.forecastLow}°F</p>
+                    {typeof displayData.avgLowMonth === 'number' && (
+                      <p className={`text-sm mt-0.5 ${displayData.forecastLow < displayData.avgLowMonth ? 'text-blue-300' : 'text-cyan-300'}`}>
+                        {displayData.forecastLow > displayData.avgLowMonth ? '▲' : '▼'}{Math.abs(displayData.forecastLow - displayData.avgLowMonth)}° vs avg
+                        {typeof displayData.recordLow === 'number' && displayData.forecastLow <= displayData.recordLow && (
+                          <span className="text-blue-400 font-bold ml-1">RECORD!</span>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Moon Phase Box */}
@@ -395,31 +552,47 @@ const AlmanacTab = ({ location, userId }) => {
             );
           })()}
 
-          {/* On This Day - Historical Weather */}
+          {/* On This Day - Historical Weather with sparkline */}
           <div className="lg:col-span-2 p-4 rounded-lg space-y-3" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
             <h3 className="text-lg text-white font-bold border-b border-cyan-700 pb-2 flex items-center gap-2"><Clock size={18}/> ON THIS DAY - PAST 10 YEARS</h3>
             {displayData.historicalTemps.length > 0 ? (
-              <div className="grid grid-cols-5 sm:grid-cols-10 gap-1 text-center">
-                {displayData.historicalTemps.map((data, i) => (
-                  <div key={i} className="bg-black/20 rounded p-1">
-                    <p className="text-xs text-cyan-400">{data.year}</p>
-                    <p className="text-sm font-bold text-red-400">{Math.round(data.high)}°</p>
-                    <p className="text-sm font-bold text-blue-400">{Math.round(data.low)}°</p>
-                  </div>
-                ))}
-              </div>
+              <>
+                <OnThisDaySparkline data={displayData.historicalTemps} />
+                <div className="grid grid-cols-5 sm:grid-cols-10 gap-1 text-center">
+                  {displayData.historicalTemps.map((data, i) => (
+                    <div key={i} className="bg-black/20 rounded p-1">
+                      <p className="text-xs text-cyan-400">{data.year}</p>
+                      <p className="text-sm font-bold text-red-400">{Math.round(data.high)}°</p>
+                      <p className="text-sm font-bold text-blue-400">{Math.round(data.low)}°</p>
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
               <p className="text-cyan-400 text-sm">No historical data available</p>
             )}
             <p className="text-xs text-cyan-400">High/Low temperatures on this date in previous years</p>
           </div>
 
-          {/* Precipitation Stats */}
+          {/* Precipitation Stats with YTD vs historical avg */}
           <div className="lg:col-span-1 p-4 rounded-lg space-y-3" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
             <h3 className="text-lg text-white font-bold border-b border-cyan-700 pb-2 flex items-center gap-2"><Droplets size={18}/> PRECIPITATION</h3>
             <div className="text-center bg-black/20 rounded p-3">
               <p className="text-xs text-cyan-400">Year to Date</p>
               <p className="text-3xl font-bold text-white">{displayData.ytdPrecip}"</p>
+              {displayData.historicalAvgYtd && (
+                <div className="mt-1">
+                  <p className="text-xs text-cyan-500">10-yr avg: {displayData.historicalAvgYtd}"</p>
+                  <p className={`text-sm font-bold ${
+                    parseFloat(displayData.ytdPrecip) >= parseFloat(displayData.historicalAvgYtd)
+                      ? 'text-blue-400'
+                      : 'text-orange-400'
+                  }`}>
+                    {parseFloat(displayData.ytdPrecip) >= parseFloat(displayData.historicalAvgYtd) ? '+' : ''}
+                    {(parseFloat(displayData.ytdPrecip) - parseFloat(displayData.historicalAvgYtd)).toFixed(2)}" vs avg
+                  </p>
+                </div>
+              )}
             </div>
             <div className="text-center bg-black/20 rounded p-3">
               <p className="text-xs text-cyan-400">Record for Today</p>
