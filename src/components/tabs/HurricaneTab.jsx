@@ -156,8 +156,7 @@ const HurricaneTab = () => {
   const [histLoading, setHistLoading]     = useState(false);
   const [histError, setHistError]         = useState(null);
   const [selectedStorm, setSelectedStorm] = useState(null);
-  const [yearRange, setYearRange]         = useState(25);
-  const [monthOnly, setMonthOnly]         = useState(false);
+  const [selectedYear, setSelectedYear]   = useState(2023);
 
   // Fetch live active storms on mount
   useEffect(() => {
@@ -200,17 +199,21 @@ const HurricaneTab = () => {
   const totalActive  = (atlanticStorms?.length || 0) + (pacificStorms?.length || 0);
   const season       = getSeasonStatus();
 
-  // Filter HURDAT2 tracks for the map
-  const currentYear  = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
+  // Year bounds per basin
+  const minYear = basin === 'atlantic' ? 1851 : 1949;
+  const maxYear = 2023;
 
-  const filteredStorms = (hurdat2Storms ?? []).filter(s => {
+  // Filter HURDAT2 tracks to the selected season
+  const seasonStorms = (hurdat2Storms ?? []).filter(s => {
     if (basin === 'atlantic' && s.basin !== 'AL') return false;
     if (basin === 'pacific'  && !['EP', 'CP'].includes(s.basin)) return false;
-    if (yearRange !== 'all'  && s.year < currentYear - yearRange) return false;
-    if (monthOnly && !s.track.some(p => p.month === currentMonth)) return false;
-    return true;
+    return s.year === selectedYear;
   });
+
+  // Season summary stats (wind in knots)
+  const seasonNamed = seasonStorms.filter(s => s.peakWind >= 34).length;
+  const seasonHurr  = seasonStorms.filter(s => s.peakWind >= 64).length;
+  const seasonMajor = seasonStorms.filter(s => s.peakWind >= 96).length;
 
   const mapCenter = basin === 'atlantic' ? { lat: 25, lon: -60 } : { lat: 20, lon: -140 };
 
@@ -402,13 +405,12 @@ const HurricaneTab = () => {
       {/* ══════════════════════ HISTORY VIEW ══════════════════════ */}
       {view === 'history' && (
         <>
-          {/* Controls */}
-          <div className="flex flex-wrap gap-2 mb-4 items-center">
-            {/* Basin */}
+          {/* Basin toggle */}
+          <div className="flex gap-2 mb-4">
             {['atlantic', 'pacific'].map(b => (
               <button
                 key={b}
-                onClick={() => { setBasin(b); setSelectedStorm(null); }}
+                onClick={() => { setBasin(b); setSelectedStorm(null); setSelectedYear(2023); }}
                 className={`px-4 py-1.5 rounded border-2 font-bold text-sm transition-all ${
                   basin === b
                     ? 'border-cyan-400 bg-cyan-900/50 text-white'
@@ -418,42 +420,54 @@ const HurricaneTab = () => {
                 {b.toUpperCase()}
               </button>
             ))}
+          </div>
 
-            <div className="w-px h-6 bg-cyan-800 mx-1" />
-
-            {/* Year range */}
-            {[10, 25, 50, 'all'].map(yr => (
-              <button
-                key={yr}
-                onClick={() => setYearRange(yr)}
-                className={`px-3 py-1.5 rounded border text-xs font-bold transition-all ${
-                  yearRange === yr
-                    ? 'border-cyan-400 bg-cyan-900/50 text-cyan-200'
-                    : 'border-cyan-800 text-cyan-500 hover:border-cyan-600'
-                }`}
-              >
-                {yr === 'all' ? 'ALL' : `${yr}YR`}
-              </button>
-            ))}
-
-            <div className="w-px h-6 bg-cyan-800 mx-1" />
-
-            {/* Month filter */}
+          {/* Year navigator */}
+          <div className="flex items-center justify-between mb-4 p-3 bg-black/30 rounded-lg border border-cyan-800">
             <button
-              onClick={() => setMonthOnly(m => !m)}
-              className={`px-3 py-1.5 rounded border text-xs font-bold transition-all ${
-                monthOnly
-                  ? 'border-orange-400 bg-orange-900/50 text-orange-200'
-                  : 'border-cyan-800 text-cyan-500 hover:border-cyan-600'
-              }`}
+              onClick={() => { setSelectedYear(y => Math.max(minYear, y - 1)); setSelectedStorm(null); }}
+              disabled={selectedYear <= minYear}
+              className="px-4 py-1.5 rounded border border-cyan-700 text-cyan-300 font-bold hover:bg-cyan-900/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
             >
-              THIS MONTH ONLY
+              ◀ PREV
             </button>
 
-            <span className="ml-auto text-xs text-cyan-600 font-mono">
-              {filteredStorms.length} STORMS
-            </span>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-white font-vt323">{selectedYear}</p>
+              <p className="text-xs text-cyan-500 uppercase">
+                {basin === 'atlantic' ? 'Atlantic' : 'Eastern Pacific'} Season
+              </p>
+            </div>
+
+            <button
+              onClick={() => { setSelectedYear(y => Math.min(maxYear, y + 1)); setSelectedStorm(null); }}
+              disabled={selectedYear >= maxYear}
+              className="px-4 py-1.5 rounded border border-cyan-700 text-cyan-300 font-bold hover:bg-cyan-900/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              NEXT ▶
+            </button>
           </div>
+
+          {/* Season summary stats */}
+          {!histLoading && !histError && hurdat2Storms && (
+            <div className="grid grid-cols-3 gap-3 mb-4 text-center font-vt323">
+              <div className="bg-black/20 rounded p-2 border border-cyan-900">
+                <p className="text-xs text-cyan-500">NAMED STORMS</p>
+                <p className="text-2xl font-bold text-white">{seasonNamed}</p>
+                <p className="text-xs text-cyan-700">avg {AVG_SEASON.named}</p>
+              </div>
+              <div className="bg-black/20 rounded p-2 border border-cyan-900">
+                <p className="text-xs text-cyan-500">HURRICANES</p>
+                <p className="text-2xl font-bold text-white">{seasonHurr}</p>
+                <p className="text-xs text-cyan-700">avg {AVG_SEASON.hurricanes}</p>
+              </div>
+              <div className="bg-black/20 rounded p-2 border border-cyan-900">
+                <p className="text-xs text-cyan-500">MAJOR (CAT 3+)</p>
+                <p className="text-2xl font-bold text-white">{seasonMajor}</p>
+                <p className="text-xs text-cyan-700">avg {AVG_SEASON.major}</p>
+              </div>
+            </div>
+          )}
 
           {/* Category legend */}
           <div className="flex flex-wrap gap-3 mb-3 text-xs">
@@ -477,21 +491,17 @@ const HurricaneTab = () => {
           {histLoading && (
             <div className="flex items-center gap-2 text-cyan-400 py-10 justify-center">
               <RefreshCw size={16} className="animate-spin" />
-              <span>Loading HURDAT2 historical data (~3 MB)...</span>
+              <span>Loading HURDAT2 historical data...</span>
             </div>
           )}
 
-          {/* CORS / fetch error */}
+          {/* Error */}
           {histError && (
             <div className="p-4 bg-black/30 rounded-lg border border-yellow-700 text-yellow-400">
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle size={16} />
                 <span className="font-bold">Could not load historical track data</span>
               </div>
-              <p className="text-sm text-yellow-300 mb-3">
-                The NHC HURDAT2 file may be blocked by CORS in your browser. You can explore
-                historical tracks directly on the NHC website.
-              </p>
               <a
                 href="https://www.nhc.noaa.gov/data/#hurdat"
                 target="_blank"
@@ -505,7 +515,7 @@ const HurricaneTab = () => {
 
           {/* Map */}
           {!histLoading && !histError && hurdat2Storms && (
-            <div className="rounded-lg overflow-hidden border-2 border-cyan-700" style={{ height: 440 }}>
+            <div className="rounded-lg overflow-hidden border-2 border-cyan-700" style={{ height: 420 }}>
               <MapContainer
                 center={[mapCenter.lat, mapCenter.lon]}
                 zoom={3}
@@ -520,7 +530,7 @@ const HurricaneTab = () => {
                   subdomains="abcd"
                   maxZoom={19}
                 />
-                {filteredStorms.map((storm) => {
+                {seasonStorms.map((storm) => {
                   const isSelected = selectedStorm?.id === storm.id;
                   const cat = getCatFromKnots(storm.peakWind);
                   return (
@@ -529,8 +539,8 @@ const HurricaneTab = () => {
                       positions={storm.track.map(p => [p.lat, p.lon])}
                       pathOptions={{
                         color:   cat.color,
-                        weight:  isSelected ? 4 : 1.5,
-                        opacity: isSelected ? 1 : 0.5,
+                        weight:  isSelected ? 4 : 2,
+                        opacity: isSelected ? 1 : 0.75,
                       }}
                       eventHandlers={{
                         click: () => setSelectedStorm(isSelected ? null : storm),
@@ -538,7 +548,7 @@ const HurricaneTab = () => {
                     >
                       <Tooltip sticky>
                         <span style={{ fontFamily: 'monospace', fontSize: 12 }}>
-                          {storm.name} ({storm.year}) · {cat.label} · {Math.round(storm.peakWind * 1.15078)} mph peak
+                          {storm.name} · {cat.label} · {Math.round(storm.peakWind * 1.15078)} mph peak
                         </span>
                       </Tooltip>
                     </Polyline>
@@ -548,41 +558,42 @@ const HurricaneTab = () => {
             </div>
           )}
 
-          {/* Selected storm detail card */}
-          {selectedStorm && (() => {
-            const cat = getCatFromKnots(selectedStorm.peakWind);
-            return (
-              <div className="mt-3 p-3 bg-black/40 rounded-lg border-2 border-cyan-700">
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-lg font-bold text-white">{selectedStorm.name}</span>
-                    <span className="text-cyan-400 text-sm">({selectedStorm.year})</span>
+          {/* Storm list for the selected season */}
+          {!histLoading && !histError && hurdat2Storms && seasonStorms.length > 0 && (
+            <div className="mt-3 space-y-1">
+              {seasonStorms.map((storm) => {
+                const isSelected = selectedStorm?.id === storm.id;
+                const cat = getCatFromKnots(storm.peakWind);
+                return (
+                  <button
+                    key={storm.id}
+                    onClick={() => setSelectedStorm(isSelected ? null : storm)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded border text-sm transition-all ${
+                      isSelected
+                        ? 'border-cyan-400 bg-cyan-900/40 text-white'
+                        : 'border-cyan-900 bg-black/20 text-cyan-300 hover:border-cyan-600 hover:bg-black/40'
+                    }`}
+                  >
+                    <span className="font-bold">{storm.name}</span>
                     <span
                       className="px-2 py-0.5 text-xs rounded font-bold border"
                       style={{ color: cat.color, borderColor: cat.color }}
                     >
                       {cat.label}
                     </span>
-                  </div>
-                  <button
-                    onClick={() => setSelectedStorm(null)}
-                    className="text-cyan-600 hover:text-cyan-300 text-xs px-2 py-1 border border-cyan-800 rounded transition-colors"
-                  >
-                    ✕
+                    <span className="text-gray-400 text-xs">{Math.round(storm.peakWind * 1.15078)} mph peak</span>
                   </button>
-                </div>
-                <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-                  <span className="text-gray-300">Peak: <span className="text-white font-bold">{Math.round(selectedStorm.peakWind * 1.15078)} mph</span></span>
-                  <span className="text-gray-300">({selectedStorm.peakWind} kts)</span>
-                  <span className="text-gray-300">Observations: <span className="text-white font-bold">{selectedStorm.track.length}</span></span>
-                  <span className="text-gray-300">Basin: <span className="text-white font-bold">{selectedStorm.basin}</span></span>
-                </div>
-              </div>
-            );
-          })()}
+                );
+              })}
+            </div>
+          )}
+
+          {!histLoading && !histError && hurdat2Storms && seasonStorms.length === 0 && (
+            <p className="text-cyan-600 text-sm text-center py-4">No recorded storms for {selectedYear}.</p>
+          )}
 
           <p className="text-xs text-gray-500 mt-3 italic text-center">
-            NOAA HURDAT2 Best Track Database · Colored by peak intensity · Click a track to select
+            NOAA HURDAT2 Best Track Database · Click a track or storm name to highlight
           </p>
         </>
       )}
