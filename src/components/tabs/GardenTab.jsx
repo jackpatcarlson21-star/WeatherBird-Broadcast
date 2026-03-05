@@ -161,7 +161,7 @@ const GardenTab = ({ location, daily, units }) => {
         const hardinessUrl = [
           `https://archive-api.open-meteo.com/v1/archive`,
           `?latitude=${location.lat}&longitude=${location.lon}`,
-          `&start_date=${year - 10}-01-01&end_date=${year - 1}-12-31`,
+          `&start_date=1991-01-01&end_date=2020-12-31`,
           `&daily=temperature_2m_min&temperature_unit=fahrenheit&timezone=auto`,
         ].join('');
 
@@ -186,7 +186,7 @@ const GardenTab = ({ location, daily, units }) => {
           setGdd(Math.round(total));
         }
 
-        // Derive hardiness zone from 10-year annual minimums
+        // Derive hardiness zone using 1991–2020 baseline, matching USDA methodology
         if (hardinessData?.daily?.temperature_2m_min && hardinessData?.daily?.time) {
           const { time, temperature_2m_min: mins } = hardinessData.daily;
           const yearMins = {};
@@ -609,7 +609,7 @@ const GardenTab = ({ location, daily, units }) => {
               </div>
               <div className="text-sm text-cyan-300 space-y-1">
                 <p>Avg annual minimum: <span className="text-white font-bold">{hardinessZone.avgMin}°F</span></p>
-                <p className="text-sm text-cyan-500">Based on 10 years of historical data</p>
+                <p className="text-sm text-cyan-500">30-year average (1991–2020), matching USDA methodology</p>
                 {(() => {
                   const zoneNum = parseInt(hardinessZone.zone, 10);
                   const frostDOY = LAST_FROST_DOY[zoneNum] ?? 105;
