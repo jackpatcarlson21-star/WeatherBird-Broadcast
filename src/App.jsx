@@ -40,6 +40,7 @@ import {
   TripWeatherTab,
   HurricaneTab,
   ModelComparisonTab,
+  GardenTab,
 } from './components/tabs';
 
 
@@ -74,6 +75,7 @@ const App = () => {
 
   const [crtDone, setCrtDone] = useState(false);
   const lastAlertIdsRef = useRef('');
+  const pendingGpsLocationRef = useRef(null);
 
   // --- Alert Flash Timeout ---
   useEffect(() => {
@@ -270,6 +272,16 @@ const App = () => {
     const locationDocRef = doc(db, `artifacts/${appId}/users/${userId}/location_config`, 'current_location');
 
     const unsubscribe = onSnapshot(locationDocRef, (docSnap) => {
+      // If GPS fired before Firebase was ready, save that location now instead of
+      // restoring the old Firestore location (which would overwrite the GPS fix).
+      if (pendingGpsLocationRef.current) {
+        const gpsLoc = pendingGpsLocationRef.current;
+        pendingGpsLocationRef.current = null;
+        console.log("Saving pending GPS location to Firestore:", gpsLoc.name);
+        setDoc(locationDocRef, gpsLoc).catch(e => console.error("Failed to save GPS location:", e));
+        return; // Don't overwrite state; snapshot will re-fire with the GPS location
+      }
+
       if (docSnap.exists()) {
         const savedLoc = docSnap.data();
         setLocation({
@@ -448,6 +460,8 @@ const App = () => {
         setAppError("Failed to save location to the database.");
       }
     } else {
+      // Firebase not ready yet — set state immediately and store for when Firestore attaches
+      pendingGpsLocationRef.current = newLoc;
       setLocation(newLoc);
       fetchWeather(newLoc);
     }
@@ -496,6 +510,8 @@ const App = () => {
         return <HurricaneTab />;
       case SCREENS.MODELS:
         return <ModelComparisonTab location={location} />;
+      case SCREENS.GARDEN:
+        return <GardenTab location={location} current={current} daily={daily} hourly={hourly} units={units} />;
       default:
         return <div>Error: Tab Not Found</div>;
     }

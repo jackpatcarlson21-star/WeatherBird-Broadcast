@@ -67,7 +67,7 @@ const useAutoLocation = (setIsAutoDetecting, onLocationUpdate) => {
         setIsTracking(false);
         setIsAutoDetecting(false);
       },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
     );
   }, [trackingEnabled, setIsAutoDetecting, onLocationUpdate]);
 
