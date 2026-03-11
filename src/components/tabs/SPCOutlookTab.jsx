@@ -2,33 +2,43 @@ import React, { useState } from 'react';
 import TabPanel from '../layout/TabPanel';
 import { PLACEHOLDER_IMG } from '../../utils/constants';
 
-const cacheBust = `?v=${Math.floor(Date.now() / 3600000)}`; // refresh every hour
+const BASE = 'https://www.spc.noaa.gov/products/outlook/';
+const cb = `?v=${Math.floor(Date.now() / 3600000)}`; // hourly cache bust
+
+// Full-size images use timestamped filenames. Try each in order; fall back to _sm.
+const SPC_CANDIDATES = {
+  1: ['day1otlk_2000.png', 'day1otlk_1630.png', 'day1otlk_1300.png', 'day1otlk_1200.png', 'day1otlk_0100.png', 'day1otlk_sm.png'],
+  2: ['day2otlk_1730.png', 'day2otlk_0600.png', 'day2otlk_sm.png'],
+  3: ['day3otlk_1930.png', 'day3otlk_0730.png', 'day3otlk_sm.png'],
+};
+
+// Tries URLs in order until one loads successfully
+const CascadeImage = ({ candidates, alt, className }) => {
+  const [idx, setIdx] = useState(0);
+  const src = idx < candidates.length ? `${BASE}${candidates[idx]}${cb}` : PLACEHOLDER_IMG;
+
+  return (
+    <img
+      key={src}
+      src={src}
+      alt={alt}
+      referrerPolicy="no-referrer"
+      className={className}
+      onError={() => setIdx(i => i + 1)}
+    />
+  );
+};
 
 const SPC_OUTLOOKS = [
-  {
-    day: 1,
-    label: 'DAY 1',
-    url: `https://www.spc.noaa.gov/products/outlook/day1otlk_sm.png${cacheBust}`,
-    desc: 'Valid today through tomorrow morning',
-  },
-  {
-    day: 2,
-    label: 'DAY 2',
-    url: `https://www.spc.noaa.gov/products/outlook/day2otlk_sm.png${cacheBust}`,
-    desc: 'Valid tomorrow',
-  },
-  {
-    day: 3,
-    label: 'DAY 3',
-    url: `https://www.spc.noaa.gov/products/outlook/day3otlk_sm.png${cacheBust}`,
-    desc: 'Valid in 2 days',
-  },
+  { day: 1, label: 'DAY 1', desc: 'Valid today through tomorrow morning' },
+  { day: 2, label: 'DAY 2', desc: 'Valid tomorrow' },
+  { day: 3, label: 'DAY 3', desc: 'Valid in 2 days' },
 ];
 
 const WPC_FORECASTS = [
-  { day: 1, label: 'TODAY',    url: `https://www.wpc.ncep.noaa.gov/noaa/noaad1.gif${cacheBust}` },
-  { day: 2, label: 'TOMORROW', url: `https://www.wpc.ncep.noaa.gov/noaa/noaad2.gif${cacheBust}` },
-  { day: 3, label: 'DAY 3',   url: `https://www.wpc.ncep.noaa.gov/noaa/noaad3.gif${cacheBust}` },
+  { day: 1, label: 'TODAY',    url: `https://www.wpc.ncep.noaa.gov/noaa/noaad1.gif${cb}` },
+  { day: 2, label: 'TOMORROW', url: `https://www.wpc.ncep.noaa.gov/noaa/noaad2.gif${cb}` },
+  { day: 3, label: 'DAY 3',    url: `https://www.wpc.ncep.noaa.gov/noaa/noaad3.gif${cb}` },
 ];
 
 const RISK_LEVELS = [
@@ -69,12 +79,11 @@ const SPCOutlookTab = () => {
           </div>
 
           {showDay48 ? (
-            /* Day 4-8 Outlook */
             <div className="space-y-3">
               <p className="text-sm text-orange-300 text-center">Extended range probabilistic severe weather outlook</p>
               <div className="text-center">
                 <img
-                  src={`https://www.spc.noaa.gov/products/exper/day4-8/day48prob_small.gif${cacheBust}`}
+                  src={`https://www.spc.noaa.gov/products/exper/day4-8/day48prob_small.gif${cb}`}
                   alt="SPC Day 4-8 Outlook"
                   referrerPolicy="no-referrer"
                   className="w-full h-auto rounded-lg border-4 border-orange-500 mx-auto max-w-2xl bg-white"
@@ -84,7 +93,6 @@ const SPCOutlookTab = () => {
               <p className="text-xs text-cyan-400 text-center">Source: NOAA/NWS Storm Prediction Center — Day 4–8 Experimental</p>
             </div>
           ) : (
-            /* Day 1-3 Outlook */
             <div className="space-y-4">
               {/* Day Selector */}
               <div className="flex justify-center gap-2 sm:gap-4">
@@ -103,20 +111,17 @@ const SPCOutlookTab = () => {
                 ))}
               </div>
 
-              {/* Validity label */}
               {currentSPC && (
                 <p className="text-center text-sm text-red-300">{currentSPC.desc}</p>
               )}
 
-              {/* Map */}
+              {/* Map — tries full-size timestamped PNGs, falls back to _sm */}
               <div className="text-center">
-                <img
-                  key={`spc-${selectedSPCDay}`}
-                  src={currentSPC?.url}
+                <CascadeImage
+                  key={selectedSPCDay}
+                  candidates={SPC_CANDIDATES[selectedSPCDay]}
                   alt={`SPC ${currentSPC?.label} Outlook`}
-                  referrerPolicy="no-referrer"
                   className="w-full h-auto rounded-lg border-4 border-red-500 mx-auto max-w-2xl bg-white"
-                  onError={e => { e.target.onerror = null; e.target.src = PLACEHOLDER_IMG; }}
                 />
               </div>
 
@@ -142,7 +147,6 @@ const SPCOutlookTab = () => {
         <div className="space-y-4">
           <h3 className="text-2xl sm:text-3xl text-cyan-300 font-bold border-b-2 border-cyan-700 pb-2">WPC NATIONAL FORECAST</h3>
 
-          {/* Day Selector */}
           <div className="flex justify-center gap-2 sm:gap-4">
             {WPC_FORECASTS.map(f => (
               <button
@@ -159,7 +163,6 @@ const SPCOutlookTab = () => {
             ))}
           </div>
 
-          {/* Map */}
           <div className="text-center">
             <img
               key={`wpc-${selectedWPCDay}`}
