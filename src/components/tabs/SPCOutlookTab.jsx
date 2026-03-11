@@ -76,6 +76,7 @@ const SPCOutlookTab = () => {
                 <img
                   src={`https://www.spc.noaa.gov/products/exper/day4-8/day48prob_small.gif${cacheBust}`}
                   alt="SPC Day 4-8 Outlook"
+                  referrerPolicy="no-referrer"
                   className="w-full h-auto rounded-lg border-4 border-orange-500 mx-auto max-w-2xl bg-white"
                   onError={e => { e.target.onerror = null; e.target.src = PLACEHOLDER_IMG; }}
                 />
@@ -113,6 +114,7 @@ const SPCOutlookTab = () => {
                   key={`spc-${selectedSPCDay}`}
                   src={currentSPC?.url}
                   alt={`SPC ${currentSPC?.label} Outlook`}
+                  referrerPolicy="no-referrer"
                   className="w-full h-auto rounded-lg border-4 border-red-500 mx-auto max-w-2xl bg-white"
                   onError={e => { e.target.onerror = null; e.target.src = PLACEHOLDER_IMG; }}
                 />
@@ -163,6 +165,7 @@ const SPCOutlookTab = () => {
               key={`wpc-${selectedWPCDay}`}
               src={currentWPC?.url}
               alt={`WPC National Forecast ${currentWPC?.label}`}
+              referrerPolicy="no-referrer"
               className="w-full h-auto rounded-lg border-4 border-cyan-500 mx-auto max-w-4xl bg-white"
               onError={e => { e.target.onerror = null; e.target.src = PLACEHOLDER_IMG; }}
             />
