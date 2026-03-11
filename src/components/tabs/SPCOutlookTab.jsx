@@ -3,19 +3,43 @@ import TabPanel from '../layout/TabPanel';
 import { PLACEHOLDER_IMG } from '../../utils/constants';
 
 const BASE = 'https://www.spc.noaa.gov/products/outlook/';
-const cb = `?v=${Math.floor(Date.now() / 3600000)}`; // hourly cache bust
+const cb = `?v=${Math.floor(Date.now() / 3600000)}`;
 
-// Full-size images use timestamped filenames. Try each in order; fall back to _sm.
+// Full-size image candidates per day and product type, tried in order
 const SPC_CANDIDATES = {
-  1: ['day1otlk_2000.png', 'day1otlk_1630.png', 'day1otlk_1300.png', 'day1otlk_1200.png', 'day1otlk_0100.png', 'day1otlk_sm.png'],
-  2: ['day2otlk_1730.png', 'day2otlk_0600.png', 'day2otlk_sm.png'],
-  3: ['day3otlk_1930.png', 'day3otlk_0730.png', 'day3otlk_sm.png'],
+  categorical: {
+    1: ['day1otlk_2000.png', 'day1otlk_1630.png', 'day1otlk_1300.png', 'day1otlk_1200.png', 'day1otlk_0100.png', 'day1otlk_sm.png'],
+    2: ['day2otlk_1730.png', 'day2otlk_0600.png', 'day2otlk_sm.png'],
+    3: ['day3otlk_1930.png', 'day3otlk_0730.png', 'day3otlk_sm.png'],
+  },
+  tornado: {
+    1: ['day1probotlk_2000_torn.png', 'day1probotlk_1630_torn.png', 'day1probotlk_1300_torn.png', 'day1probotlk_1200_torn.png'],
+    2: ['day2probotlk_1730_torn.png', 'day2probotlk_0600_torn.png'],
+    3: ['day3prob_1930.png', 'day3prob_0730.png'], // Day 3 has combined prob only
+  },
+  wind: {
+    1: ['day1probotlk_2000_wind.png', 'day1probotlk_1630_wind.png', 'day1probotlk_1300_wind.png', 'day1probotlk_1200_wind.png'],
+    2: ['day2probotlk_1730_wind.png', 'day2probotlk_0600_wind.png'],
+    3: ['day3prob_1930.png', 'day3prob_0730.png'],
+  },
+  hail: {
+    1: ['day1probotlk_2000_hail.png', 'day1probotlk_1630_hail.png', 'day1probotlk_1300_hail.png', 'day1probotlk_1200_hail.png'],
+    2: ['day2probotlk_1730_hail.png', 'day2probotlk_0600_hail.png'],
+    3: ['day3prob_1930.png', 'day3prob_0730.png'],
+  },
 };
 
-// Tries URLs in order until one loads successfully
+const PRODUCTS = [
+  { id: 'categorical', label: 'CATEGORICAL', color: 'red' },
+  { id: 'tornado',     label: 'TORNADO',     color: 'rose' },
+  { id: 'wind',        label: 'WIND',         color: 'amber' },
+  { id: 'hail',        label: 'HAIL',         color: 'green' },
+];
+
 const CascadeImage = ({ candidates, alt, className }) => {
   const [idx, setIdx] = useState(0);
-  const src = idx < candidates.length ? `${BASE}${candidates[idx]}${cb}` : PLACEHOLDER_IMG;
+  const urls = candidates.map(f => `${BASE}${f}${cb}`);
+  const src = idx < urls.length ? urls[idx] : PLACEHOLDER_IMG;
 
   return (
     <img
@@ -29,7 +53,7 @@ const CascadeImage = ({ candidates, alt, className }) => {
   );
 };
 
-const SPC_OUTLOOKS = [
+const SPC_DAYS = [
   { day: 1, label: 'DAY 1', desc: 'Valid today through tomorrow morning' },
   { day: 2, label: 'DAY 2', desc: 'Valid tomorrow' },
   { day: 3, label: 'DAY 3', desc: 'Valid in 2 days' },
@@ -50,13 +74,29 @@ const RISK_LEVELS = [
   { color: '#FF00FF', label: 'High (5)' },
 ];
 
+const btnBase = 'px-3 py-1.5 rounded font-vt323 text-base sm:text-lg transition-all border-2';
+
+const productBtn = (active, colorKey) => {
+  const styles = {
+    red:   { on: 'bg-red-600 text-white border-white',   off: 'bg-black/30 text-red-300 border-red-700 hover:border-red-400' },
+    rose:  { on: 'bg-rose-600 text-white border-white',  off: 'bg-black/30 text-rose-300 border-rose-700 hover:border-rose-400' },
+    amber: { on: 'bg-amber-600 text-white border-white', off: 'bg-black/30 text-amber-300 border-amber-700 hover:border-amber-400' },
+    green: { on: 'bg-green-600 text-white border-white', off: 'bg-black/30 text-green-300 border-green-700 hover:border-green-400' },
+  };
+  return `${btnBase} ${active ? styles[colorKey].on : styles[colorKey].off}`;
+};
+
 const SPCOutlookTab = () => {
-  const [selectedSPCDay, setSelectedSPCDay] = useState(1);
+  const [selectedDay, setSelectedDay] = useState(1);
+  const [selectedProduct, setSelectedProduct] = useState('categorical');
   const [selectedWPCDay, setSelectedWPCDay] = useState(1);
   const [showDay48, setShowDay48] = useState(false);
 
-  const currentSPC = SPC_OUTLOOKS.find(m => m.day === selectedSPCDay);
-  const currentWPC = WPC_FORECASTS.find(m => m.day === selectedWPCDay);
+  const currentDay = SPC_DAYS.find(d => d.day === selectedDay);
+  const currentWPC = WPC_FORECASTS.find(f => f.day === selectedWPCDay);
+  const candidates = SPC_CANDIDATES[selectedProduct]?.[selectedDay] ?? [];
+
+  const isDay3Prob = selectedDay === 3 && selectedProduct !== 'categorical';
 
   return (
     <TabPanel title="SPC OUTLOOK / NATIONAL FORECAST">
@@ -68,11 +108,7 @@ const SPCOutlookTab = () => {
             <h3 className="text-2xl sm:text-3xl text-red-400 font-bold">SPC SEVERE WEATHER OUTLOOK</h3>
             <button
               onClick={() => setShowDay48(v => !v)}
-              className={`px-3 py-1 rounded font-vt323 text-base transition-all ${
-                showDay48
-                  ? 'bg-orange-600 text-white border-2 border-white'
-                  : 'bg-black/30 text-orange-300 border-2 border-orange-700 hover:border-orange-500'
-              }`}
+              className={`${btnBase} ${showDay48 ? 'bg-orange-600 text-white border-white' : 'bg-black/30 text-orange-300 border-orange-700 hover:border-orange-400'}`}
             >
               DAY 4–8
             </button>
@@ -94,49 +130,68 @@ const SPCOutlookTab = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Day Selector */}
-              <div className="flex justify-center gap-2 sm:gap-4">
-                {SPC_OUTLOOKS.map(o => (
+
+              {/* Day selector */}
+              <div className="flex justify-center gap-2 sm:gap-3">
+                {SPC_DAYS.map(d => (
                   <button
-                    key={o.day}
-                    onClick={() => setSelectedSPCDay(o.day)}
-                    className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-vt323 text-lg sm:text-xl transition-all ${
-                      selectedSPCDay === o.day
-                        ? 'bg-red-600 text-white border-2 border-white shadow-lg'
-                        : 'bg-black/30 text-red-300 border-2 border-red-700 hover:border-red-500 hover:bg-red-900/30'
+                    key={d.day}
+                    onClick={() => setSelectedDay(d.day)}
+                    className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-vt323 text-lg sm:text-xl transition-all border-2 ${
+                      selectedDay === d.day
+                        ? 'bg-red-600 text-white border-white shadow-lg'
+                        : 'bg-black/30 text-red-300 border-red-700 hover:border-red-500 hover:bg-red-900/30'
                     }`}
                   >
-                    {o.label}
+                    {d.label}
                   </button>
                 ))}
               </div>
 
-              {currentSPC && (
-                <p className="text-center text-sm text-red-300">{currentSPC.desc}</p>
+              {/* Product type selector */}
+              <div className="flex flex-wrap justify-center gap-2">
+                {PRODUCTS.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelectedProduct(p.id)}
+                    className={productBtn(selectedProduct === p.id, p.color)}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              {currentDay && (
+                <p className="text-center text-sm text-red-300">
+                  {currentDay.desc}
+                  {isDay3Prob && ' — Day 3 shows combined severe probability'}
+                </p>
               )}
 
-              {/* Map — tries full-size timestamped PNGs, falls back to _sm */}
+              {/* Map */}
               <div className="text-center">
                 <CascadeImage
-                  key={selectedSPCDay}
-                  candidates={SPC_CANDIDATES[selectedSPCDay]}
-                  alt={`SPC ${currentSPC?.label} Outlook`}
+                  key={`${selectedDay}-${selectedProduct}`}
+                  candidates={candidates}
+                  alt={`SPC Day ${selectedDay} ${selectedProduct} outlook`}
                   className="w-full h-auto rounded-lg border-4 border-red-500 mx-auto max-w-2xl bg-white"
                 />
               </div>
 
-              {/* Risk Legend */}
-              <div className="p-3 sm:p-4 bg-black/20 border-2 border-red-700 rounded-lg">
-                <h4 className="text-lg text-white font-bold mb-2 border-b border-red-800 pb-1">RISK LEVELS</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs sm:text-sm">
-                  {RISK_LEVELS.map(r => (
-                    <div key={r.label} className="flex items-center gap-2">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded flex-shrink-0" style={{ backgroundColor: r.color }} />
-                      <span className="text-cyan-100">{r.label}</span>
-                    </div>
-                  ))}
+              {/* Risk legend (categorical only) */}
+              {selectedProduct === 'categorical' && (
+                <div className="p-3 sm:p-4 bg-black/20 border-2 border-red-700 rounded-lg">
+                  <h4 className="text-lg text-white font-bold mb-2 border-b border-red-800 pb-1">RISK LEVELS</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs sm:text-sm">
+                    {RISK_LEVELS.map(r => (
+                      <div key={r.label} className="flex items-center gap-2">
+                        <div className="w-4 h-4 sm:w-5 sm:h-5 rounded flex-shrink-0" style={{ backgroundColor: r.color }} />
+                        <span className="text-cyan-100">{r.label}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <p className="text-xs text-cyan-400 text-center">Source: NOAA/NWS Storm Prediction Center — Updated each issuance</p>
             </div>
@@ -152,10 +207,10 @@ const SPCOutlookTab = () => {
               <button
                 key={f.day}
                 onClick={() => setSelectedWPCDay(f.day)}
-                className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-vt323 text-lg sm:text-xl transition-all ${
+                className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-vt323 text-lg sm:text-xl transition-all border-2 ${
                   selectedWPCDay === f.day
-                    ? 'bg-cyan-600 text-white border-2 border-white shadow-lg'
-                    : 'bg-black/30 text-cyan-300 border-2 border-cyan-700 hover:border-cyan-500 hover:bg-cyan-900/30'
+                    ? 'bg-cyan-600 text-white border-white shadow-lg'
+                    : 'bg-black/30 text-cyan-300 border-cyan-700 hover:border-cyan-500 hover:bg-cyan-900/30'
                 }`}
               >
                 {f.label}
