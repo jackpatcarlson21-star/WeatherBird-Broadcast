@@ -3,7 +3,17 @@ import TabPanel from '../layout/TabPanel';
 import { PLACEHOLDER_IMG } from '../../utils/constants';
 
 const BASE = 'https://www.spc.noaa.gov/products/outlook/';
+const BASE48 = 'https://www.spc.noaa.gov/products/exper/day4-8/';
 const cb = `?v=${Math.floor(Date.now() / 3600000)}`;
+
+const DAY48_MAPS = [
+  { id: 'all', label: 'D4–8', url: `${BASE48}day48prob.gif${cb}`, desc: 'Combined Day 4–8 severe probability' },
+  { id: 'd4',  label: 'DAY 4', url: `${BASE48}day4prob.gif${cb}`,  desc: 'Day 4 severe probability' },
+  { id: 'd5',  label: 'DAY 5', url: `${BASE48}day5prob.gif${cb}`,  desc: 'Day 5 severe probability' },
+  { id: 'd6',  label: 'DAY 6', url: `${BASE48}day6prob.gif${cb}`,  desc: 'Day 6 severe probability' },
+  { id: 'd7',  label: 'DAY 7', url: `${BASE48}day7prob.gif${cb}`,  desc: 'Day 7 severe probability' },
+  { id: 'd8',  label: 'DAY 8', url: `${BASE48}day8prob.gif${cb}`,  desc: 'Day 8 severe probability' },
+];
 
 // Full-size image candidates per day and product type, tried in order
 const SPC_CANDIDATES = {
@@ -91,6 +101,7 @@ const SPCOutlookTab = () => {
   const [selectedProduct, setSelectedProduct] = useState('categorical');
   const [selectedWPCDay, setSelectedWPCDay] = useState(1);
   const [showDay48, setShowDay48] = useState(false);
+  const [selected48, setSelected48] = useState('all');
 
   const currentDay = SPC_DAYS.find(d => d.day === selectedDay);
   const currentWPC = WPC_FORECASTS.find(f => f.day === selectedWPCDay);
@@ -115,17 +126,39 @@ const SPCOutlookTab = () => {
           </div>
 
           {showDay48 ? (
-            <div className="space-y-3">
-              <p className="text-sm text-orange-300 text-center">Extended range probabilistic severe weather outlook</p>
+            <div className="space-y-4">
+              {/* Day 4-8 selector */}
+              <div className="flex flex-wrap justify-center gap-2">
+                {DAY48_MAPS.map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => setSelected48(m.id)}
+                    className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-vt323 text-base sm:text-lg transition-all border-2 ${
+                      selected48 === m.id
+                        ? 'bg-orange-600 text-white border-white shadow-lg'
+                        : 'bg-black/30 text-orange-300 border-orange-700 hover:border-orange-400 hover:bg-orange-900/30'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+
+              <p className="text-sm text-orange-300 text-center">
+                {DAY48_MAPS.find(m => m.id === selected48)?.desc} — 15%+ probability of severe within 25 mi
+              </p>
+
               <div className="text-center">
                 <img
-                  src={`https://www.spc.noaa.gov/products/exper/day4-8/day48prob_small.gif${cb}`}
-                  alt="SPC Day 4-8 Outlook"
+                  key={selected48}
+                  src={DAY48_MAPS.find(m => m.id === selected48)?.url}
+                  alt={`SPC ${selected48} Outlook`}
                   referrerPolicy="no-referrer"
                   className="w-full h-auto rounded-lg border-4 border-orange-500 mx-auto max-w-2xl bg-white"
                   onError={e => { e.target.onerror = null; e.target.src = PLACEHOLDER_IMG; }}
                 />
               </div>
+
               <p className="text-xs text-cyan-400 text-center">Source: NOAA/NWS Storm Prediction Center — Day 4–8 Experimental</p>
             </div>
           ) : (
