@@ -84,8 +84,8 @@ const RISK_LEVELS = [
   { color: '#FF00FF', label: 'High (5)' },
 ];
 
-// Standard SPC probability contour colors (tornado / wind / hail)
-const PROB_LEVELS = [
+// Tornado: 2%, 5%, 10%, 15%, 30%, 45%, 60%
+const PROB_LEVELS_TORNADO = [
   { color: '#008B00', label: '2%' },
   { color: '#8B4513', label: '5%' },
   { color: '#FFFF00', label: '10%' },
@@ -93,6 +93,15 @@ const PROB_LEVELS = [
   { color: '#FF0000', label: '30%' },
   { color: '#FF00FF', label: '45%' },
   { color: '#C896C8', label: '60%' },
+];
+
+// Wind & Hail: 5%, 15%, 30%, 45%, 60% (no 2% or 10% levels)
+const PROB_LEVELS_WIND_HAIL = [
+  { color: '#8B4513', label: '5%' },
+  { color: '#FFFF00', label: '15%' },
+  { color: '#FFA500', label: '30%' },
+  { color: '#FF0000', label: '45%' },
+  { color: '#FF00FF', label: '60%' },
 ];
 
 // Day 4-8 only uses 15% and 30% contours
@@ -248,12 +257,14 @@ const SPCOutlookTab = () => {
               {selectedProduct === 'categorical' && (
                 <Legend title="RISK LEVELS" levels={RISK_LEVELS} borderColor="#b91c1c" />
               )}
-              {selectedProduct !== 'categorical' && (
-                <Legend
-                  title={`${selectedProduct.toUpperCase()} PROBABILITY WITHIN 25 MI`}
-                  levels={PROB_LEVELS}
-                  borderColor={selectedProduct === 'tornado' ? '#be123c' : selectedProduct === 'wind' ? '#b45309' : '#15803d'}
-                />
+              {selectedProduct === 'tornado' && (
+                <Legend title="TORNADO PROBABILITY WITHIN 25 MI" levels={PROB_LEVELS_TORNADO} borderColor="#be123c" />
+              )}
+              {selectedProduct === 'wind' && (
+                <Legend title="WIND PROBABILITY WITHIN 25 MI" levels={PROB_LEVELS_WIND_HAIL} borderColor="#b45309" />
+              )}
+              {selectedProduct === 'hail' && (
+                <Legend title="HAIL PROBABILITY WITHIN 25 MI" levels={PROB_LEVELS_WIND_HAIL} borderColor="#15803d" />
               )}
 
               <p className="text-xs text-cyan-400 text-center">Source: NOAA/NWS Storm Prediction Center — Updated each issuance</p>
