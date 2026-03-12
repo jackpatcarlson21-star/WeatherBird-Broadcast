@@ -84,6 +84,37 @@ const RISK_LEVELS = [
   { color: '#FF00FF', label: 'High (5)' },
 ];
 
+// Standard SPC probability contour colors (tornado / wind / hail)
+const PROB_LEVELS = [
+  { color: '#008B00', label: '2%' },
+  { color: '#8B4513', label: '5%' },
+  { color: '#FFFF00', label: '10%' },
+  { color: '#FFA500', label: '15%' },
+  { color: '#FF0000', label: '30%' },
+  { color: '#FF00FF', label: '45%' },
+  { color: '#C896C8', label: '60%' },
+];
+
+// Day 4-8 only uses 15% and 30% contours
+const PROB_LEVELS_48 = [
+  { color: '#FFFF00', label: '15%' },
+  { color: '#FF0000', label: '30%+' },
+];
+
+const Legend = ({ title, levels, borderColor }) => (
+  <div className={`p-3 sm:p-4 bg-black/20 border-2 rounded-lg`} style={{ borderColor }}>
+    <h4 className="text-lg text-white font-bold mb-2 border-b pb-1" style={{ borderColor }}>{title}</h4>
+    <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs sm:text-sm">
+      {levels.map(l => (
+        <div key={l.label} className="flex items-center gap-2">
+          <div className="w-4 h-4 sm:w-5 sm:h-5 rounded flex-shrink-0 border border-white/20" style={{ backgroundColor: l.color }} />
+          <span className="text-cyan-100">{l.label}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
 const btnBase = 'px-3 py-1.5 rounded font-vt323 text-base sm:text-lg transition-all border-2';
 
 const productBtn = (active, colorKey) => {
@@ -159,6 +190,8 @@ const SPCOutlookTab = () => {
                 />
               </div>
 
+              <Legend title="PROBABILITY WITHIN 25 MI OF A POINT" levels={PROB_LEVELS_48} borderColor="#c2410c" />
+
               <p className="text-xs text-cyan-400 text-center">Source: NOAA/NWS Storm Prediction Center — Day 4–8 Experimental</p>
             </div>
           ) : (
@@ -211,19 +244,16 @@ const SPCOutlookTab = () => {
                 />
               </div>
 
-              {/* Risk legend (categorical only) */}
+              {/* Legend */}
               {selectedProduct === 'categorical' && (
-                <div className="p-3 sm:p-4 bg-black/20 border-2 border-red-700 rounded-lg">
-                  <h4 className="text-lg text-white font-bold mb-2 border-b border-red-800 pb-1">RISK LEVELS</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs sm:text-sm">
-                    {RISK_LEVELS.map(r => (
-                      <div key={r.label} className="flex items-center gap-2">
-                        <div className="w-4 h-4 sm:w-5 sm:h-5 rounded flex-shrink-0" style={{ backgroundColor: r.color }} />
-                        <span className="text-cyan-100">{r.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <Legend title="RISK LEVELS" levels={RISK_LEVELS} borderColor="#b91c1c" />
+              )}
+              {selectedProduct !== 'categorical' && (
+                <Legend
+                  title={`${selectedProduct.toUpperCase()} PROBABILITY WITHIN 25 MI`}
+                  levels={PROB_LEVELS}
+                  borderColor={selectedProduct === 'tornado' ? '#be123c' : selectedProduct === 'wind' ? '#b45309' : '#15803d'}
+                />
               )}
 
               <p className="text-xs text-cyan-400 text-center">Source: NOAA/NWS Storm Prediction Center — Updated each issuance</p>
