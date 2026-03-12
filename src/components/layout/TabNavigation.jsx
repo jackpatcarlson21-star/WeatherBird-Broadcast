@@ -8,11 +8,11 @@ const TabNavigation = ({ currentTab, setTab, alerts = [] }) => {
     { id: SCREENS.HOURLY,       name: 'HOURLY'    },
     { id: SCREENS.DAILY,        name: '7-DAY'     },
     { id: SCREENS.RADAR,        name: 'RADAR'     },
+    { id: SCREENS.SPC,          name: 'SEVERE'    },
     { id: SCREENS.ALERTS,       name: 'ALERTS'    },
     { id: SCREENS.TRIP_WEATHER, name: 'TRIP'      },
     { id: SCREENS.ALMANAC,      name: 'ALMANAC'   },
     { id: SCREENS.MODELS,       name: 'MODELS'    },
-    { id: SCREENS.SPC,          name: 'SEVERE'    },
     { id: SCREENS.HURRICANE,    name: 'HURRICANE' },
   ];
 
