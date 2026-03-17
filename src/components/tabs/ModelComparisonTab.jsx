@@ -532,21 +532,57 @@ const DayCard = ({ day, dayIndex, modelData, hiddenModels, hasSnow }) => {
 
 const ViewToggle = ({ viewMode, setViewMode }) => (
   <div className="flex items-center gap-1 bg-black/30 border border-cyan-800 rounded-lg p-1 self-start">
-    {['LINES', 'CARDS'].map(mode => (
+    {[
+      { id: 'lines', label: 'CHART', title: 'Line chart view' },
+      { id: 'cards', label: 'CARDS', title: 'Day-by-day comparison cards' },
+    ].map(({ id, label, title }) => (
       <button
-        key={mode}
-        onClick={() => setViewMode(mode.toLowerCase())}
+        key={id}
+        onClick={() => setViewMode(id)}
+        title={title}
         className={`px-3 py-1 rounded text-xs tracking-widest transition-all ${
-          viewMode === mode.toLowerCase()
+          viewMode === id
             ? 'bg-cyan-800 text-cyan-200 shadow-inner'
             : 'text-cyan-700 hover:text-cyan-400'
         }`}
       >
-        {mode}
+        {label}
       </button>
     ))}
   </div>
 );
+
+// ─── Variable selector ─────────────────────────────────────────────────────────
+
+const VAR_OPTIONS = [
+  { key: 'temperature_2m_max',           label: 'HIGH °F',  short: 'HI TEMP' },
+  { key: 'temperature_2m_min',           label: 'LOW °F',   short: 'LO TEMP' },
+  { key: 'precipitation_sum',            label: 'PRECIP',   short: 'PRECIP'  },
+  { key: 'precipitation_probability_max',label: 'RAIN %',   short: 'RAIN %'  },
+  { key: 'wind_speed_10m_max',           label: 'WIND MPH', short: 'WIND'    },
+  { key: 'snowfall_sum',                 label: 'SNOW IN',  short: 'SNOW',  snowOnly: true },
+];
+
+const VarSelector = ({ selected, onSelect, hasSnow }) => {
+  const opts = VAR_OPTIONS.filter(v => !v.snowOnly || hasSnow);
+  return (
+    <div className="flex flex-wrap gap-1.5 mb-3">
+      {opts.map(v => (
+        <button
+          key={v.key}
+          onClick={() => onSelect(v.key)}
+          className={`px-3 py-1.5 rounded-lg text-xs tracking-widest font-bold border transition-all ${
+            selected === v.key
+              ? 'bg-cyan-700 text-white border-cyan-400 shadow-lg shadow-cyan-900/50'
+              : 'bg-black/30 text-cyan-500 border-cyan-800 hover:border-cyan-600 hover:text-cyan-300'
+          }`}
+        >
+          {v.short}
+        </button>
+      ))}
+    </div>
+  );
+};
 
 // ─── Model info panel ──────────────────────────────────────────────────────────
 
@@ -584,6 +620,8 @@ const ModelComparisonTab = ({ location }) => {
   const [hoverDay, setHoverDay] = useState(null);
   const [viewMode, setViewMode] = useState('lines');
   const [infoModel, setInfoModel] = useState(null);
+  const [selectedVar, setSelectedVar] = useState('temperature_2m_max');
+  const [showAllDays, setShowAllDays] = useState(false);
 
   const toggleModel = useCallback((modelId) => {
     setHiddenModels(prev => {
@@ -735,65 +773,50 @@ const ModelComparisonTab = ({ location }) => {
       </div>
 
       {/* Line chart view */}
-      {viewMode === 'lines' && (
-        <div className="space-y-2">
-          <ModelChart {...chartProps} defaultExpanded
-            valueKey="temperature_2m_max" title="HIGH TEMPERATURE (°F)"
-            formatTick={v => `${Math.round(v)}°`}
-            formatTooltip={v => `${Math.round(v)}°F`}
-            spreadThresholds={[3, 6]}
-          />
-          <ModelChart {...chartProps} defaultExpanded
-            valueKey="temperature_2m_min" title="LOW TEMPERATURE (°F)"
-            formatTick={v => `${Math.round(v)}°`}
-            formatTooltip={v => `${Math.round(v)}°F`}
-            spreadThresholds={[3, 6]}
-          />
-          <ModelChart {...chartProps} defaultExpanded
-            valueKey="precipitation_sum" title="PRECIPITATION (IN)"
-            formatTick={v => v.toFixed(1)}
-            formatTooltip={v => `${v.toFixed(2)}"`}
-            spreadThresholds={[0.1, 0.3]}
-          />
-          <ModelChart {...chartProps} defaultExpanded={false}
-            valueKey="precipitation_probability_max" title="RAIN CHANCE (%)"
-            formatTick={v => `${Math.round(v)}%`}
-            formatTooltip={v => `${Math.round(v)}%`}
-            spreadThresholds={[10, 25]}
-          />
-          <ModelChart {...chartProps} defaultExpanded={false}
-            valueKey="wind_speed_10m_max" title="WIND SPEED (MPH)"
-            formatTick={v => `${Math.round(v)}`}
-            formatTooltip={v => `${Math.round(v)} mph`}
-            spreadThresholds={[5, 10]}
-          />
-          {hasSnow && (
-            <ModelChart {...chartProps} defaultExpanded={false}
-              valueKey="snowfall_sum" title="SNOWFALL (IN)"
-              formatTick={v => `${v.toFixed(1)}"`}
-              formatTooltip={v => `${v.toFixed(2)}"`}
-              spreadThresholds={[0.5, 1.5]}
-            />
-          )}
-          <p className="text-xs text-cyan-700 text-center pt-1">
-            White line = model consensus · Shaded area = spread · Click legend to toggle · Swipe charts to sync crosshair
-          </p>
-        </div>
-      )}
+      {viewMode === 'lines' && (() => {
+        const VAR_CHART_CONFIG = {
+          temperature_2m_max:            { title: 'HIGH TEMPERATURE (°F)', formatTick: v => `${Math.round(v)}°`,   formatTooltip: v => `${Math.round(v)}°F`,    spreadThresholds: [3, 6]      },
+          temperature_2m_min:            { title: 'LOW TEMPERATURE (°F)',  formatTick: v => `${Math.round(v)}°`,   formatTooltip: v => `${Math.round(v)}°F`,    spreadThresholds: [3, 6]      },
+          precipitation_sum:             { title: 'PRECIPITATION (IN)',     formatTick: v => v.toFixed(1),          formatTooltip: v => `${v.toFixed(2)}"`,      spreadThresholds: [0.1, 0.3]  },
+          precipitation_probability_max: { title: 'RAIN CHANCE (%)',        formatTick: v => `${Math.round(v)}%`,  formatTooltip: v => `${Math.round(v)}%`,     spreadThresholds: [10, 25]    },
+          wind_speed_10m_max:            { title: 'WIND SPEED (MPH)',       formatTick: v => `${Math.round(v)}`,   formatTooltip: v => `${Math.round(v)} mph`,  spreadThresholds: [5, 10]     },
+          snowfall_sum:                  { title: 'SNOWFALL (IN)',           formatTick: v => `${v.toFixed(1)}"`,   formatTooltip: v => `${v.toFixed(2)}"`,      spreadThresholds: [0.5, 1.5]  },
+        };
+        const cfg = VAR_CHART_CONFIG[selectedVar] ?? VAR_CHART_CONFIG['temperature_2m_max'];
+        return (
+          <div className="space-y-3">
+            <VarSelector selected={selectedVar} onSelect={setSelectedVar} hasSnow={hasSnow} />
+            <ModelChart {...chartProps} {...cfg} valueKey={selectedVar} defaultExpanded />
+            <p className="text-xs text-cyan-700 text-center pt-1">
+              White line = model consensus &middot; Shaded area = model spread &middot; Colored squares = forecast confidence &middot; ⚠ = outlier model
+            </p>
+          </div>
+        );
+      })()}
 
       {/* Day cards view */}
       {viewMode === 'cards' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {days.map((day, i) => (
-            <DayCard
-              key={day}
-              day={day}
-              dayIndex={i}
-              modelData={modelData}
-              hiddenModels={hiddenModels}
-              hasSnow={hasSnow}
-            />
-          ))}
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {(showAllDays ? days : days.slice(0, 7)).map((day, i) => (
+              <DayCard
+                key={day}
+                day={day}
+                dayIndex={i}
+                modelData={modelData}
+                hiddenModels={hiddenModels}
+                hasSnow={hasSnow}
+              />
+            ))}
+          </div>
+          {days.length > 7 && (
+            <button
+              onClick={() => setShowAllDays(v => !v)}
+              className="w-full py-2 rounded-lg border border-cyan-800 text-cyan-500 text-xs tracking-widest hover:border-cyan-600 hover:text-cyan-300 transition-all bg-black/20"
+            >
+              {showAllDays ? `▲ SHOW 7 DAYS` : `▼ SHOW ALL ${days.length} DAYS`}
+            </button>
+          )}
         </div>
       )}
 
