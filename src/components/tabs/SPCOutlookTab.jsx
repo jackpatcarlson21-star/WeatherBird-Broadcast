@@ -63,11 +63,21 @@ const CascadeImage = ({ candidates, alt, className }) => {
   );
 };
 
-const SPC_DAYS = [
-  { day: 1, label: 'DAY 1', desc: 'Valid today through tomorrow morning' },
-  { day: 2, label: 'DAY 2', desc: 'Valid tomorrow' },
-  { day: 3, label: 'DAY 3', desc: 'Valid in 2 days' },
-];
+const getSPCDays = () => {
+  const now = new Date();
+  return [1, 2, 3].map(offset => {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + (offset - 1)));
+    const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    return {
+      day: offset,
+      label: `DAY ${offset}`,
+      date,
+      desc: offset === 1
+        ? `Valid ${date} through tomorrow morning (UTC)`
+        : `Valid ${date} (UTC)`,
+    };
+  });
+};
 
 const WPC_FORECASTS = [
   { day: 1, label: 'TODAY',    url: `https://www.wpc.ncep.noaa.gov/noaa/noaad1.gif${cb}` },
@@ -152,6 +162,7 @@ const SPCOutlookTab = () => {
   const [showDay48, setShowDay48] = useState(false);
   const [selected48, setSelected48] = useState('all');
 
+  const SPC_DAYS = getSPCDays();
   const currentDay = SPC_DAYS.find(d => d.day === selectedDay);
   const currentWPC = WPC_FORECASTS.find(f => f.day === selectedWPCDay);
   const candidates = SPC_CANDIDATES[selectedProduct]?.[selectedDay] ?? [];
@@ -227,7 +238,7 @@ const SPCOutlookTab = () => {
                         : 'bg-black/30 text-red-300 border-red-700 hover:border-red-500 hover:bg-red-900/30'
                     }`}
                   >
-                    {d.label}
+                    {d.label}<br/><span className="text-xs sm:text-sm opacity-80">{d.date}</span>
                   </button>
                 ))}
               </div>
