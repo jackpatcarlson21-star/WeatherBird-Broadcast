@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 import TabPanel from '../layout/TabPanel';
 
@@ -154,8 +154,18 @@ const RadarTab = ({ location }) => {
   const [showNational, setShowNational] = useState(false);
   const [imgLoading, setImgLoading] = useState(true);
   const [imgError, setImgError] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(() => Date.now());
 
-  const localRadarUrl = `https://radar.weather.gov/ridge/standard/${nearestRadar.id}_loop.gif`;
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshKey(Date.now());
+      setImgLoading(true);
+      setImgError(false);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const localRadarUrl = `https://radar.weather.gov/ridge/standard/${nearestRadar.id}_loop.gif?t=${refreshKey}`;
 
   const handleToggle = (national) => {
     setShowNational(national);
@@ -217,8 +227,8 @@ const RadarTab = ({ location }) => {
             </div>
           )}
           <img
-            key={showNational ? 'national' : nearestRadar.id}
-            src={showNational ? "https://radar.weather.gov/ridge/standard/CONUS-LARGE_loop.gif" : localRadarUrl}
+            key={`${showNational ? 'national' : nearestRadar.id}-${refreshKey}`}
+            src={showNational ? `https://radar.weather.gov/ridge/standard/CONUS-LARGE_loop.gif?t=${refreshKey}` : localRadarUrl}
             alt={showNational ? "National CONUS Radar" : `NEXRAD Radar ${nearestRadar.id}`}
             className={`max-w-full max-h-full ${imgLoading || imgError ? 'opacity-0' : 'opacity-100'} transition-opacity`}
             style={showNational ? {} : { imageRendering: 'pixelated' }}
@@ -228,7 +238,7 @@ const RadarTab = ({ location }) => {
         </div>
 
         <p className="text-xs text-cyan-400">
-          Source: NOAA/NWS RIDGE Radar
+          Source: NOAA/NWS RIDGE Radar &mdash; auto-refreshes every 60s
         </p>
       </div>
     </TabPanel>
