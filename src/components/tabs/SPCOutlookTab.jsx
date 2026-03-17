@@ -1,18 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import TabPanel from '../layout/TabPanel';
 import { PLACEHOLDER_IMG } from '../../utils/constants';
 
 const BASE = 'https://www.spc.noaa.gov/products/outlook/';
 const BASE48 = 'https://www.spc.noaa.gov/products/exper/day4-8/';
-const cb = `?v=${Math.floor(Date.now() / 3600000)}`;
 
-const DAY48_MAPS = [
-  { id: 'all', label: 'D4–8', url: `${BASE48}day48prob.gif${cb}`, desc: 'Combined Day 4–8 severe probability' },
-  { id: 'd4',  label: 'DAY 4', url: `${BASE48}day4prob.gif${cb}`,  desc: 'Day 4 severe probability' },
-  { id: 'd5',  label: 'DAY 5', url: `${BASE48}day5prob.gif${cb}`,  desc: 'Day 5 severe probability' },
-  { id: 'd6',  label: 'DAY 6', url: `${BASE48}day6prob.gif${cb}`,  desc: 'Day 6 severe probability' },
-  { id: 'd7',  label: 'DAY 7', url: `${BASE48}day7prob.gif${cb}`,  desc: 'Day 7 severe probability' },
-  { id: 'd8',  label: 'DAY 8', url: `${BASE48}day8prob.gif${cb}`,  desc: 'Day 8 severe probability' },
+const getDay48Maps = (key) => [
+  { id: 'all', label: 'D4–8', url: `${BASE48}day48prob.gif?v=${key}`, desc: 'Combined Day 4–8 severe probability' },
+  { id: 'd4',  label: 'DAY 4', url: `${BASE48}day4prob.gif?v=${key}`,  desc: 'Day 4 severe probability' },
+  { id: 'd5',  label: 'DAY 5', url: `${BASE48}day5prob.gif?v=${key}`,  desc: 'Day 5 severe probability' },
+  { id: 'd6',  label: 'DAY 6', url: `${BASE48}day6prob.gif?v=${key}`,  desc: 'Day 6 severe probability' },
+  { id: 'd7',  label: 'DAY 7', url: `${BASE48}day7prob.gif?v=${key}`,  desc: 'Day 7 severe probability' },
+  { id: 'd8',  label: 'DAY 8', url: `${BASE48}day8prob.gif?v=${key}`,  desc: 'Day 8 severe probability' },
 ];
 
 // Full-size image candidates per day and product type, tried in order
@@ -46,9 +45,9 @@ const PRODUCTS = [
   { id: 'hail',        label: 'HAIL',         color: 'green' },
 ];
 
-const CascadeImage = ({ candidates, alt, className }) => {
+const CascadeImage = ({ candidates, cacheKey, alt, className }) => {
   const [idx, setIdx] = useState(0);
-  const urls = candidates.map(f => `${BASE}${f}${cb}`);
+  const urls = candidates.map(f => `${BASE}${f}?v=${cacheKey}`);
   const src = idx < urls.length ? urls[idx] : PLACEHOLDER_IMG;
 
   return (
@@ -79,10 +78,10 @@ const getSPCDays = () => {
   });
 };
 
-const WPC_FORECASTS = [
-  { day: 1, label: 'TODAY',    url: `https://www.wpc.ncep.noaa.gov/noaa/noaad1.gif${cb}` },
-  { day: 2, label: 'TOMORROW', url: `https://www.wpc.ncep.noaa.gov/noaa/noaad2.gif${cb}` },
-  { day: 3, label: 'DAY 3',    url: `https://www.wpc.ncep.noaa.gov/noaa/noaad3.gif${cb}` },
+const WPC_BASE_URLS = [
+  { day: 1, label: 'TODAY',    base: 'https://www.wpc.ncep.noaa.gov/noaa/noaad1.gif' },
+  { day: 2, label: 'TOMORROW', base: 'https://www.wpc.ncep.noaa.gov/noaa/noaad2.gif' },
+  { day: 3, label: 'DAY 3',    base: 'https://www.wpc.ncep.noaa.gov/noaa/noaad3.gif' },
 ];
 
 const RISK_LEVELS = [
@@ -162,8 +161,11 @@ const SPCOutlookTab = () => {
   const [showDay48, setShowDay48] = useState(false);
   const [selected48, setSelected48] = useState('all');
 
+  const refreshKey = useMemo(() => Date.now(), []);
+  const DAY48_MAPS = useMemo(() => getDay48Maps(refreshKey), [refreshKey]);
   const SPC_DAYS = getSPCDays();
   const currentDay = SPC_DAYS.find(d => d.day === selectedDay);
+  const WPC_FORECASTS = useMemo(() => WPC_BASE_URLS.map(f => ({ ...f, url: `${f.base}?v=${refreshKey}` })), [refreshKey]);
   const currentWPC = WPC_FORECASTS.find(f => f.day === selectedWPCDay);
   const candidates = SPC_CANDIDATES[selectedProduct]?.[selectedDay] ?? [];
 
@@ -268,6 +270,7 @@ const SPCOutlookTab = () => {
                 <CascadeImage
                   key={`${selectedDay}-${selectedProduct}`}
                   candidates={candidates}
+                  cacheKey={refreshKey}
                   alt={`SPC Day ${selectedDay} ${selectedProduct} outlook`}
                   className="w-full h-auto rounded-lg border-4 border-red-500 mx-auto max-w-2xl bg-white"
                 />
