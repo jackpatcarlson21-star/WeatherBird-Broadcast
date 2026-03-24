@@ -20,7 +20,7 @@ const getTemperatureColorClass = (tempF) => {
 };
 
 // Generate a brief weather description based on conditions
-const generateWeatherSummary = (current, daily, hourly, night, alerts, units) => {
+const generateWeatherSummary = (current, daily, night, alerts, units) => {
   if (!current || !daily) return "Weather data loading...";
 
   const temp = Math.round(current.temperature_2m || 0);
@@ -28,18 +28,7 @@ const generateWeatherSummary = (current, daily, hourly, night, alerts, units) =>
   const windSpeed = Math.round(current.wind_speed_10m || 0);
   const weatherCode = current.weather_code || 0;
 
-  // Derive high from the next 12 hours of hourly data (matches 12-hr forecast tab)
-  let high = Math.round(daily.temperature_2m_max?.[0] || 0);
-  if (hourly?.time && hourly?.temperature_2m) {
-    const now = new Date();
-    let startIdx = 0;
-    for (let i = 0; i < hourly.time.length; i++) {
-      if (new Date(hourly.time[i]) >= now) { startIdx = i; break; }
-    }
-    const next12 = hourly.temperature_2m.slice(startIdx, startIdx + 12);
-    if (next12.length > 0) high = Math.round(Math.max(...next12));
-  }
-
+  const high = Math.round(daily.temperature_2m_max?.[0] || 0);
   const low = Math.round(daily.temperature_2m_min?.[0] || 0);
   const pop = Math.round(daily.precipitation_probability_max?.[0] || 0);
 
@@ -181,7 +170,7 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
   const aqiInfo = getAQIInfo(aqi);
   const uvIndex = daily?.uv_index_max?.[0] ?? null;
   const uvInfo = getUVInfo(uvIndex != null ? Math.round(uvIndex) : null);
-  const weatherSummary = generateWeatherSummary(current, daily, hourly, night, alerts, units);
+  const weatherSummary = generateWeatherSummary(current, daily, night, alerts, units);
 
   const handleNarration = () => {
     if (isSpeaking) {
