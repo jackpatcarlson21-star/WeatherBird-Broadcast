@@ -159,11 +159,11 @@ const getSatelliteInfo = (lat, lon) => {
   if (lon <= -95) return lat > 41
     ? { sat: 'GOES16', sector: 'np', label: 'Northern Plains' }
     : { sat: 'GOES16', sector: 'sp', label: 'Southern Plains' };
-  if (lon <= -85) return lat > 40
+  if (lon <= -85) return lat > 36
     ? { sat: 'GOES16', sector: 'mw', label: 'Upper Midwest' }
     : { sat: 'GOES16', sector: 'se', label: 'Southeast' };
-  return lat > 40
-    ? { sat: 'GOES16', sector: 'ne', label: 'Northeast' }
+  return lat > 36
+    ? { sat: 'GOES16', sector: 'mw', label: 'Upper Midwest' }
     : { sat: 'GOES16', sector: 'se', label: 'Southeast' };
 };
 
