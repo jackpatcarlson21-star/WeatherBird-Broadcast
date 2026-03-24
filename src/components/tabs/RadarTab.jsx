@@ -150,17 +150,19 @@ const findNearestRadar = (lat, lon) => {
 };
 
 // Map lat/lon to a confirmed-working GOES sector.
-// Verified working: GOES19/SECTOR/NE, SE, SP | GOES19/CONUS | GOES18/SECTOR/AK, HI
+// Verified working: GOES19/SECTOR/NE, SE, SP, CGL | GOES19/CONUS | GOES18/SECTOR/AK, HI
 const getSatelliteInfo = (lat, lon) => {
-  if (lat > 54)                   return { sat: 'GOES18', path: 'SECTOR/AK', label: 'Alaska' };
-  if (lat < 25 && lon < -150)     return { sat: 'GOES18', path: 'SECTOR/HI', label: 'Hawaii' };
-  if (lon <= -100)                 return { sat: 'GOES19', path: 'CONUS',     label: 'Continental US' };
-  if (lon <= -90) return lat < 40
-    ? { sat: 'GOES19', path: 'SECTOR/SP', label: 'Southern Plains' }
-    : { sat: 'GOES19', path: 'SECTOR/NE', label: 'Northeast' };
-  return lat > 35
-    ? { sat: 'GOES19', path: 'SECTOR/NE', label: 'Northeast' }
-    : { sat: 'GOES19', path: 'SECTOR/SE', label: 'Southeast' };
+  if (lat > 54)               return { sat: 'GOES18', path: 'SECTOR/AK', label: 'Alaska' };
+  if (lat < 25 && lon < -150) return { sat: 'GOES18', path: 'SECTOR/HI', label: 'Hawaii' };
+  if (lon <= -100)             return { sat: 'GOES19', path: 'CONUS',     label: 'Continental US' };
+  // Central US: lon -90 to -100
+  if (lon <= -90) return lat < 37
+    ? { sat: 'GOES19', path: 'SECTOR/SP',  label: 'Southern Plains' }
+    : { sat: 'GOES19', path: 'SECTOR/CGL', label: 'Great Lakes' };
+  // Eastern US: lon > -90
+  if (lat < 35)   return { sat: 'GOES19', path: 'SECTOR/SE',  label: 'Southeast' };
+  if (lon > -78)  return { sat: 'GOES19', path: 'SECTOR/NE',  label: 'Northeast' };
+  return               { sat: 'GOES19', path: 'SECTOR/CGL', label: 'Great Lakes' };
 };
 
 // view: 'local' | 'national' | 'satellite'
