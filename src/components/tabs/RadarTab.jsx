@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 import TabPanel from '../layout/TabPanel';
 
@@ -165,26 +165,6 @@ const getSatelliteInfo = (lat, lon) => {
   return               { sat: 'GOES19', path: 'SECTOR/CGL', label: 'Great Lakes' };
 };
 
-// Generate last N satellite frame URLs (10-min cadence, 15-min processing lag)
-const generateSatFrames = (sat, path, count = 12) => {
-  const isSector = path.startsWith('SECTOR/');
-  const code = isSector ? path.split('/')[1] : 'CONUS';
-  const res = isSector ? '600x600' : '1800x1080';
-  const base = isSector
-    ? `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/SECTOR/${code}/GEOCOLOR`
-    : `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/CONUS/GEOCOLOR`;
-
-  const now = new Date();
-  const lag = new Date(now.getTime() - 15 * 60 * 1000);
-  lag.setUTCMinutes(Math.floor(lag.getUTCMinutes() / 10) * 10, 0, 0);
-
-  return Array.from({ length: count }, (_, i) => {
-    const t = new Date(lag.getTime() - (count - 1 - i) * 10 * 60 * 1000);
-    const ts = `${t.getUTCFullYear()}${String(t.getUTCMonth()+1).padStart(2,'0')}${String(t.getUTCDate()).padStart(2,'0')}_${String(t.getUTCHours()).padStart(2,'0')}${String(t.getUTCMinutes()).padStart(2,'0')}`;
-    return `${base}/${ts}_${sat}-ABI-${code}-GEOCOLOR-${res}.jpg`;
-  });
-};
-
 // view: 'local' | 'national' | 'satellite'
 const RadarTab = ({ location }) => {
   const nearestRadar = useMemo(() => findNearestRadar(location.lat, location.lon), [location.lat, location.lon]);
@@ -194,53 +174,15 @@ const RadarTab = ({ location }) => {
   const [imgError, setImgError] = useState(false);
   const [refreshKey, setRefreshKey] = useState(() => Date.now());
 
-  // Satellite animation state
-  const [satFrames, setSatFrames] = useState([]);
-  const [satFrameIdx, setSatFrameIdx] = useState(0);
-  const [satReady, setSatReady] = useState(false);
-  const animRef = useRef(null);
-  const preloadRef = useRef([]);
-
-  // Preload satellite frames when satellite view is active
   useEffect(() => {
-    if (view !== 'satellite') {
-      clearInterval(animRef.current);
-      setSatReady(false);
-      return;
-    }
-    setSatReady(false);
-    setSatFrameIdx(0);
-    const urls = generateSatFrames(satInfo.sat, satInfo.path);
-    setSatFrames(urls);
-    let loaded = 0;
-    const needed = Math.ceil(urls.length / 2);
-    preloadRef.current = urls.map(url => {
-      const img = new Image();
-      img.onload = img.onerror = () => { loaded++; if (loaded >= needed) setSatReady(true); };
-      img.src = url;
-      return img;
-    });
-    return () => {
-      preloadRef.current.forEach(img => { img.onload = null; img.onerror = null; });
-      clearInterval(animRef.current);
-    };
-  }, [view, satInfo]);
-
-  // Start animation once frames are ready
-  useEffect(() => {
-    if (!satReady || view !== 'satellite') return;
-    animRef.current = setInterval(() => setSatFrameIdx(i => (i + 1) % satFrames.length), 500);
-    return () => clearInterval(animRef.current);
-  }, [satReady, view, satFrames.length]);
-
-  useEffect(() => {
+    // Radar refreshes every 60s, satellite every 10 min (GOES capture interval)
     const interval = setInterval(() => {
       setRefreshKey(Date.now());
       setImgLoading(true);
       setImgError(false);
-    }, 60000);
+    }, view === 'satellite' ? 600000 : 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [view]);
 
   const handleToggle = (v) => {
     setView(v);
@@ -248,9 +190,11 @@ const RadarTab = ({ location }) => {
     setImgError(false);
   };
 
-  const imgSrc = view === 'national'
-    ? `https://radar.weather.gov/ridge/standard/CONUS-LARGE_loop.gif?t=${refreshKey}`
-    : `https://radar.weather.gov/ridge/standard/${nearestRadar.id}_loop.gif?t=${refreshKey}`;
+  const imgSrc = view === 'satellite'
+    ? `https://cdn.star.nesdis.noaa.gov/${satInfo.sat}/ABI/${satInfo.path}/GEOCOLOR/latest.jpg`
+    : view === 'national'
+      ? `https://radar.weather.gov/ridge/standard/CONUS-LARGE_loop.gif?t=${refreshKey}`
+      : `https://radar.weather.gov/ridge/standard/${nearestRadar.id}_loop.gif?t=${refreshKey}`;
 
   const title = view === 'satellite'
     ? `${satInfo.label.toUpperCase()} SATELLITE`
@@ -298,55 +242,33 @@ const RadarTab = ({ location }) => {
         <p className="text-sm text-cyan-400">{subtitle}</p>
 
         <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden bg-black flex items-center justify-center" style={{ minHeight: '500px' }}>
-          {view === 'satellite' ? (
-            <>
-              {!satReady && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-                  <RefreshCw size={32} className="text-cyan-400 animate-spin mb-2" />
-                  <span className="text-cyan-400 text-sm">Loading satellite frames...</span>
-                </div>
-              )}
-              {satReady && satFrames.map((src, i) => (
-                <img
-                  key={src}
-                  src={src}
-                  alt={`Satellite frame ${i + 1}`}
-                  className="max-w-full max-h-full absolute inset-0 w-full h-full object-contain transition-opacity duration-100"
-                  style={{ opacity: i === satFrameIdx ? 1 : 0 }}
-                />
-              ))}
-            </>
-          ) : (
-            <>
-              {imgLoading && !imgError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-                  <RefreshCw size={32} className="text-cyan-400 animate-spin mb-2" />
-                  <span className="text-cyan-400 text-sm">Loading imagery...</span>
-                </div>
-              )}
-              {imgError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-                  <AlertTriangle size={32} className="text-yellow-400 mb-2" />
-                  <span className="text-yellow-400 text-sm">Failed to load image</span>
-                  <button
-                    onClick={() => { setImgError(false); setImgLoading(true); }}
-                    className="mt-2 px-3 py-1 text-xs bg-cyan-900/50 text-cyan-300 rounded border border-cyan-600 hover:bg-cyan-800 transition"
-                  >
-                    RETRY
-                  </button>
-                </div>
-              )}
-              <img
-                key={`${view}-${refreshKey}`}
-                src={imgSrc}
-                alt={title}
-                className={`max-w-full max-h-full ${imgLoading || imgError ? 'opacity-0' : 'opacity-100'} transition-opacity`}
-                style={view === 'local' ? { imageRendering: 'pixelated' } : {}}
-                onLoad={() => { setImgLoading(false); setImgError(false); }}
-                onError={() => { setImgLoading(false); setImgError(true); }}
-              />
-            </>
+          {imgLoading && !imgError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+              <RefreshCw size={32} className="text-cyan-400 animate-spin mb-2" />
+              <span className="text-cyan-400 text-sm">Loading imagery...</span>
+            </div>
           )}
+          {imgError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+              <AlertTriangle size={32} className="text-yellow-400 mb-2" />
+              <span className="text-yellow-400 text-sm">Failed to load image</span>
+              <button
+                onClick={() => { setImgError(false); setImgLoading(true); }}
+                className="mt-2 px-3 py-1 text-xs bg-cyan-900/50 text-cyan-300 rounded border border-cyan-600 hover:bg-cyan-800 transition"
+              >
+                RETRY
+              </button>
+            </div>
+          )}
+          <img
+            key={`${view}-${refreshKey}`}
+            src={imgSrc}
+            alt={title}
+            className={`max-w-full max-h-full ${imgLoading || imgError ? 'opacity-0' : 'opacity-100'} transition-opacity`}
+            style={view === 'local' ? { imageRendering: 'pixelated' } : {}}
+            onLoad={() => { setImgLoading(false); setImgError(false); }}
+            onError={() => { setImgLoading(false); setImgError(true); }}
+          />
         </div>
 
         <p className="text-xs text-cyan-400">{source}</p>
