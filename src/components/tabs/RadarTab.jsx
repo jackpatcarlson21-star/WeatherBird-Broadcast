@@ -149,22 +149,18 @@ const findNearestRadar = (lat, lon) => {
   return nearest;
 };
 
-// Map lat/lon to the appropriate GOES satellite and regional sector
+// Map lat/lon to a confirmed-working GOES sector.
+// Verified working: GOES19/SECTOR/NE, SE, SP | GOES19/CONUS | GOES18/SECTOR/AK, HI
 const getSatelliteInfo = (lat, lon) => {
-  if (lat > 54) return { sat: 'GOES18', sector: 'ak', label: 'Alaska' };
-  if (lat < 23 && lon < -150) return { sat: 'GOES18', sector: 'hi', label: 'Hawaii' };
-  if (lon <= -110) return lat > 42
-    ? { sat: 'GOES18', sector: 'nw', label: 'Northwest' }
-    : { sat: 'GOES18', sector: 'sw', label: 'Southwest' };
-  if (lon <= -95) return lat > 41
-    ? { sat: 'GOES19', sector: 'np', label: 'Northern Plains' }
-    : { sat: 'GOES19', sector: 'sp', label: 'Southern Plains' };
-  if (lon <= -85) return lat > 36
-    ? { sat: 'GOES19', sector: 'mw', label: 'Upper Midwest' }
-    : { sat: 'GOES19', sector: 'se', label: 'Southeast' };
-  return lat > 36
-    ? { sat: 'GOES19', sector: 'mw', label: 'Upper Midwest' }
-    : { sat: 'GOES19', sector: 'se', label: 'Southeast' };
+  if (lat > 54)                   return { sat: 'GOES18', path: 'SECTOR/AK', label: 'Alaska' };
+  if (lat < 25 && lon < -150)     return { sat: 'GOES18', path: 'SECTOR/HI', label: 'Hawaii' };
+  if (lon <= -100)                 return { sat: 'GOES19', path: 'CONUS',     label: 'Continental US' };
+  if (lon <= -90) return lat < 40
+    ? { sat: 'GOES19', path: 'SECTOR/SP', label: 'Southern Plains' }
+    : { sat: 'GOES19', path: 'SECTOR/NE', label: 'Northeast' };
+  return lat > 35
+    ? { sat: 'GOES19', path: 'SECTOR/NE', label: 'Northeast' }
+    : { sat: 'GOES19', path: 'SECTOR/SE', label: 'Southeast' };
 };
 
 // view: 'local' | 'national' | 'satellite'
@@ -192,7 +188,7 @@ const RadarTab = ({ location }) => {
   };
 
   const imgSrc = view === 'satellite'
-    ? `https://cdn.star.nesdis.noaa.gov/${satInfo.sat}/ABI/SECTOR/${satInfo.sector}/GEOCOLOR/latest.jpg`
+    ? `https://cdn.star.nesdis.noaa.gov/${satInfo.sat}/ABI/${satInfo.path}/GEOCOLOR/latest.jpg`
     : view === 'national'
       ? `https://radar.weather.gov/ridge/standard/CONUS-LARGE_loop.gif?t=${refreshKey}`
       : `https://radar.weather.gov/ridge/standard/${nearestRadar.id}_loop.gif?t=${refreshKey}`;
