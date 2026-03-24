@@ -157,14 +157,14 @@ const getSatelliteInfo = (lat, lon) => {
     ? { sat: 'GOES18', sector: 'nw', label: 'Northwest' }
     : { sat: 'GOES18', sector: 'sw', label: 'Southwest' };
   if (lon <= -95) return lat > 41
-    ? { sat: 'GOES16', sector: 'np', label: 'Northern Plains' }
-    : { sat: 'GOES16', sector: 'sp', label: 'Southern Plains' };
+    ? { sat: 'GOES19', sector: 'np', label: 'Northern Plains' }
+    : { sat: 'GOES19', sector: 'sp', label: 'Southern Plains' };
   if (lon <= -85) return lat > 36
-    ? { sat: 'GOES16', sector: 'mw', label: 'Upper Midwest' }
-    : { sat: 'GOES16', sector: 'se', label: 'Southeast' };
+    ? { sat: 'GOES19', sector: 'mw', label: 'Upper Midwest' }
+    : { sat: 'GOES19', sector: 'se', label: 'Southeast' };
   return lat > 36
-    ? { sat: 'GOES16', sector: 'mw', label: 'Upper Midwest' }
-    : { sat: 'GOES16', sector: 'se', label: 'Southeast' };
+    ? { sat: 'GOES19', sector: 'mw', label: 'Upper Midwest' }
+    : { sat: 'GOES19', sector: 'se', label: 'Southeast' };
 };
 
 // view: 'local' | 'national' | 'satellite'
@@ -192,7 +192,7 @@ const RadarTab = ({ location }) => {
   };
 
   const imgSrc = view === 'satellite'
-    ? `https://cdn.star.nesdis.noaa.gov/${satInfo.sat}/ABI/SECTOR/${satInfo.sector}/GEOCOLOR/latest.jpg?t=${refreshKey}`
+    ? `https://cdn.star.nesdis.noaa.gov/${satInfo.sat}/ABI/SECTOR/${satInfo.sector}/GEOCOLOR/latest.jpg`
     : view === 'national'
       ? `https://radar.weather.gov/ridge/standard/CONUS-LARGE_loop.gif?t=${refreshKey}`
       : `https://radar.weather.gov/ridge/standard/${nearestRadar.id}_loop.gif?t=${refreshKey}`;
