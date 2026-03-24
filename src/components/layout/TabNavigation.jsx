@@ -10,10 +10,10 @@ const TabNavigation = ({ currentTab, setTab, alerts = [] }) => {
     { id: SCREENS.RADAR,        name: 'RADAR'     },
     { id: SCREENS.SPC,          name: 'SEVERE'    },
     { id: SCREENS.ALERTS,       name: 'ALERTS'    },
-    { id: SCREENS.TRIP_WEATHER, name: 'TRIP'      },
     { id: SCREENS.ALMANAC,      name: 'ALMANAC'   },
     { id: SCREENS.MODELS,       name: 'MODELS'    },
     { id: SCREENS.HURRICANE,    name: 'HURRICANE' },
+    { id: SCREENS.TRIP_WEATHER, name: 'TRIP'      },
   ];
 
   const renderTab = (tab) => {
