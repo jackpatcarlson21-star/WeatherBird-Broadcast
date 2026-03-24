@@ -149,9 +149,29 @@ const findNearestRadar = (lat, lon) => {
   return nearest;
 };
 
+// Map lat/lon to the appropriate GOES satellite and regional sector
+const getSatelliteInfo = (lat, lon) => {
+  if (lat > 54) return { sat: 'GOES18', sector: 'ak', label: 'Alaska' };
+  if (lat < 23 && lon < -150) return { sat: 'GOES18', sector: 'hi', label: 'Hawaii' };
+  if (lon <= -110) return lat > 42
+    ? { sat: 'GOES18', sector: 'nw', label: 'Northwest' }
+    : { sat: 'GOES18', sector: 'sw', label: 'Southwest' };
+  if (lon <= -95) return lat > 41
+    ? { sat: 'GOES16', sector: 'np', label: 'Northern Plains' }
+    : { sat: 'GOES16', sector: 'sp', label: 'Southern Plains' };
+  if (lon <= -85) return lat > 40
+    ? { sat: 'GOES16', sector: 'mw', label: 'Upper Midwest' }
+    : { sat: 'GOES16', sector: 'se', label: 'Southeast' };
+  return lat > 40
+    ? { sat: 'GOES16', sector: 'ne', label: 'Northeast' }
+    : { sat: 'GOES16', sector: 'se', label: 'Southeast' };
+};
+
+// view: 'local' | 'national' | 'satellite'
 const RadarTab = ({ location }) => {
   const nearestRadar = useMemo(() => findNearestRadar(location.lat, location.lon), [location.lat, location.lon]);
-  const [showNational, setShowNational] = useState(false);
+  const satInfo = useMemo(() => getSatelliteInfo(location.lat, location.lon), [location.lat, location.lon]);
+  const [view, setView] = useState('local');
   const [imgLoading, setImgLoading] = useState(true);
   const [imgError, setImgError] = useState(false);
   const [refreshKey, setRefreshKey] = useState(() => Date.now());
@@ -165,59 +185,74 @@ const RadarTab = ({ location }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const localRadarUrl = `https://radar.weather.gov/ridge/standard/${nearestRadar.id}_loop.gif?t=${refreshKey}`;
-
-  const handleToggle = (national) => {
-    setShowNational(national);
+  const handleToggle = (v) => {
+    setView(v);
     setImgLoading(true);
     setImgError(false);
   };
+
+  const imgSrc = view === 'satellite'
+    ? `https://cdn.star.nesdis.noaa.gov/${satInfo.sat}/ABI/SECTOR/${satInfo.sector}/GEOCOLOR/latest.jpg?t=${refreshKey}`
+    : view === 'national'
+      ? `https://radar.weather.gov/ridge/standard/CONUS-LARGE_loop.gif?t=${refreshKey}`
+      : `https://radar.weather.gov/ridge/standard/${nearestRadar.id}_loop.gif?t=${refreshKey}`;
+
+  const title = view === 'satellite'
+    ? `${satInfo.label.toUpperCase()} SATELLITE`
+    : view === 'national'
+      ? 'NATIONAL RADAR'
+      : `NEXRAD RADAR - ${nearestRadar.id}`;
+
+  const subtitle = view === 'satellite'
+    ? `GOES GeoColor — ${satInfo.label} Region`
+    : view === 'national'
+      ? 'Continental United States'
+      : nearestRadar.name;
+
+  const source = view === 'satellite'
+    ? 'Source: NOAA GOES Satellite — auto-refreshes every 60s'
+    : 'Source: NOAA/NWS RIDGE Radar — auto-refreshes every 60s';
+
+  const TABS = [
+    { id: 'local', label: 'LOCAL' },
+    { id: 'national', label: 'NATIONAL' },
+    { id: 'satellite', label: 'SATELLITE' },
+  ];
 
   return (
     <TabPanel title="DOPPLER RADAR">
       <div className="text-center space-y-4">
         {/* Toggle buttons */}
         <div className="flex justify-center gap-2">
-          <button
-            onClick={() => handleToggle(false)}
-            className={`px-4 py-2 rounded-lg font-vt323 text-lg transition-all ${
-              !showNational
-                ? 'bg-cyan-600 text-white border-2 border-white'
-                : 'bg-black/30 text-cyan-300 border-2 border-cyan-700 hover:border-cyan-500'
-            }`}
-          >
-            LOCAL
-          </button>
-          <button
-            onClick={() => handleToggle(true)}
-            className={`px-4 py-2 rounded-lg font-vt323 text-lg transition-all ${
-              showNational
-                ? 'bg-cyan-600 text-white border-2 border-white'
-                : 'bg-black/30 text-cyan-300 border-2 border-cyan-700 hover:border-cyan-500'
-            }`}
-          >
-            NATIONAL
-          </button>
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              onClick={() => handleToggle(t.id)}
+              className={`px-4 py-2 rounded-lg font-vt323 text-lg transition-all ${
+                view === t.id
+                  ? 'bg-cyan-600 text-white border-2 border-white'
+                  : 'bg-black/30 text-cyan-300 border-2 border-cyan-700 hover:border-cyan-500'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        <h3 className="text-xl sm:text-2xl text-cyan-300">
-          {showNational ? 'NATIONAL RADAR' : `NEXRAD RADAR - ${nearestRadar.id}`}
-        </h3>
-        <p className="text-sm text-cyan-400">
-          {showNational ? 'Continental United States' : nearestRadar.name}
-        </p>
+        <h3 className="text-xl sm:text-2xl text-cyan-300">{title}</h3>
+        <p className="text-sm text-cyan-400">{subtitle}</p>
 
         <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden bg-black flex items-center justify-center" style={{ minHeight: '500px' }}>
           {imgLoading && !imgError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
               <RefreshCw size={32} className="text-cyan-400 animate-spin mb-2" />
-              <span className="text-cyan-400 text-sm">Loading radar imagery...</span>
+              <span className="text-cyan-400 text-sm">Loading imagery...</span>
             </div>
           )}
           {imgError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
               <AlertTriangle size={32} className="text-yellow-400 mb-2" />
-              <span className="text-yellow-400 text-sm">Failed to load radar image</span>
+              <span className="text-yellow-400 text-sm">Failed to load image</span>
               <button
                 onClick={() => { setImgError(false); setImgLoading(true); }}
                 className="mt-2 px-3 py-1 text-xs bg-cyan-900/50 text-cyan-300 rounded border border-cyan-600 hover:bg-cyan-800 transition"
@@ -227,19 +262,17 @@ const RadarTab = ({ location }) => {
             </div>
           )}
           <img
-            key={`${showNational ? 'national' : nearestRadar.id}-${refreshKey}`}
-            src={showNational ? `https://radar.weather.gov/ridge/standard/CONUS-LARGE_loop.gif?t=${refreshKey}` : localRadarUrl}
-            alt={showNational ? "National CONUS Radar" : `NEXRAD Radar ${nearestRadar.id}`}
+            key={`${view}-${refreshKey}`}
+            src={imgSrc}
+            alt={title}
             className={`max-w-full max-h-full ${imgLoading || imgError ? 'opacity-0' : 'opacity-100'} transition-opacity`}
-            style={showNational ? {} : { imageRendering: 'pixelated' }}
+            style={view === 'local' ? { imageRendering: 'pixelated' } : {}}
             onLoad={() => { setImgLoading(false); setImgError(false); }}
             onError={() => { setImgLoading(false); setImgError(true); }}
           />
         </div>
 
-        <p className="text-xs text-cyan-400">
-          Source: NOAA/NWS RIDGE Radar &mdash; auto-refreshes every 60s
-        </p>
+        <p className="text-xs text-cyan-400">{source}</p>
       </div>
     </TabPanel>
   );
