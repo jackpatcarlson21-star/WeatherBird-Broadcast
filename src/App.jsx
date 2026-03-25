@@ -26,6 +26,7 @@ import useAutoLocation from './utils/useAutoLocation';
 import { Header, Footer, Scanlines, TabNavigation, CRTPowerOn } from './components/layout';
 import { AppStatus, LocationModal, SettingsModal } from './components/common';
 import { WeatherBackground } from './components/weather';
+import { ModernBackground, ModernBottomNav, ModernHome } from './components/modern';
 const IconTestPage = lazy(() => import('./components/weather/IconTestPage'));
 import {
   AlertsTab,
@@ -517,92 +518,65 @@ const App = () => {
     }
   };
 
+  const activeAlerts = alerts.filter(a => !dismissedAlertIds.has(a.properties?.id));
+
   return (
-    <div className="h-screen text-white font-vt323 antialiased flex flex-col overflow-hidden" style={{ backgroundColor: NAVY_BLUE }}>
+    <div className="h-screen overflow-hidden relative" style={{ fontFamily: "'Inter', sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
-        .font-vt323 { font-family: 'VT323', monospace; }
-        .shadow-neon-md { box-shadow: 0 0 10px 2px rgba(0, 255, 255, 0.5), 0 0 20px 5px rgba(0, 255, 255, 0.2); }
-        .shadow-neon-lg { box-shadow: 0 0 15px 3px rgba(0, 255, 255, 0.7), 0 0 30px 8px rgba(0, 255, 255, 0.4); }
-        .shadow-inner-neon { box-shadow: inset 0 0 8px rgba(0, 255, 255, 0.5); }
         @keyframes alertFlash {
           0%, 100% { opacity: 0; }
           50% { opacity: 0.3; }
         }
-        .alert-flash-warning {
-          animation: alertFlash 1s ease-in-out infinite;
-          background-color: rgba(239, 68, 68, 1);
-        }
-        .alert-flash-watch {
-          animation: alertFlash 1.5s ease-in-out infinite;
-          background-color: rgba(249, 115, 22, 1);
-        }
+        .alert-flash-warning { animation: alertFlash 1s ease-in-out infinite; background-color: rgba(239,68,68,1); }
+        .alert-flash-watch   { animation: alertFlash 1.5s ease-in-out infinite; background-color: rgba(249,115,22,1); }
+
+        /* Modern theme overrides — strip retro styling from legacy tab components */
+        .modern-tabs .font-vt323 { font-family: 'Inter', sans-serif !important; letter-spacing: normal !important; }
+        .modern-tabs [class*="border-cyan"] { border-color: rgba(255,255,255,0.12) !important; }
+        .modern-tabs [class*="text-cyan"] { color: rgba(255,255,255,0.7) !important; }
+        .modern-tabs [class*="bg-black\\/20"] { background-color: rgba(255,255,255,0.06) !important; }
+        .modern-tabs [class*="bg-black\\/30"] { background-color: rgba(255,255,255,0.08) !important; }
+        .modern-tabs [class*="bg-cyan"] { background-color: rgba(255,255,255,0.15) !important; }
+        .modern-tabs [class*="shadow-neon"] { box-shadow: none !important; }
+        .modern-tabs button[class*="border-cyan"] { border-color: rgba(255,255,255,0.2) !important; }
+        .modern-tabs button[class*="border-cyan"]:hover { border-color: rgba(255,255,255,0.4) !important; }
       `}</style>
 
-      {/* CRT Power-On Animation */}
-      {!crtDone && <CRTPowerOn onComplete={() => setCrtDone(true)} />}
+      {/* Dynamic gradient background */}
+      <ModernBackground weatherCode={current?.weather_code} night={night} />
 
-      {/* Animated Weather Background Particles */}
-      <WeatherBackground weatherCode={current?.weather_code} night={night} />
-
-      {/* Severe Weather Alert Flash Overlay */}
-      {showAlertFlash && getSevereAlertLevel(alerts.filter(a => !dismissedAlertIds.has(a.properties?.id))) && (
-        <div
-          className={`fixed inset-0 pointer-events-none z-40 ${
-            getSevereAlertLevel(alerts.filter(a => !dismissedAlertIds.has(a.properties?.id))) === 'warning' ? 'alert-flash-warning' : 'alert-flash-watch'
-          }`}
-        />
+      {/* Alert flash overlay */}
+      {showAlertFlash && getSevereAlertLevel(activeAlerts) && (
+        <div className={`fixed inset-0 pointer-events-none z-40 ${
+          getSevereAlertLevel(activeAlerts) === 'warning' ? 'alert-flash-warning' : 'alert-flash-watch'
+        }`} />
       )}
 
-      {/* App Status Modal */}
+      {/* App status */}
       <AppStatus isLoading={isWeatherLoading} error={appError} isReady={isAuthReady} isAutoDetecting={false} />
 
-      {/* TORNADO WARNING Full-Screen Takeover — shows ALL active tornado warnings */}
+      {/* Tornado warning takeover */}
       {(() => {
-        const tornadoWarnings = getTornadoWarnings(alerts)
-          .filter(alert => !dismissedTornadoModals.has(alert.properties?.id));
+        const tornadoWarnings = getTornadoWarnings(alerts).filter(a => !dismissedTornadoModals.has(a.properties?.id));
         if (!tornadoWarnings.length) return null;
-        const dismissAll = () =>
-          setDismissedTornadoModals(prev => new Set([...prev, ...tornadoWarnings.map(a => a.properties?.id)]));
-        const soonestExpiry = tornadoWarnings
-          .map(a => a.properties?.expires)
-          .filter(Boolean)
-          .sort()[0];
+        const dismissAll = () => setDismissedTornadoModals(prev => new Set([...prev, ...tornadoWarnings.map(a => a.properties?.id)]));
+        const soonestExpiry = tornadoWarnings.map(a => a.properties?.expires).filter(Boolean).sort()[0];
         return (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-red-900/95 p-4">
             <div className="bg-black border-4 border-red-500 rounded-xl p-6 md:p-8 max-w-2xl w-full shadow-2xl text-center">
-              <div className="flex justify-center mb-4">
-                <AlertTriangle size={80} className="text-red-500 animate-bounce" />
-              </div>
-              <h1 className="text-4xl md:text-6xl font-bold text-red-500 mb-4 tracking-wider">
-                TORNADO WARNING{tornadoWarnings.length > 1 ? 'S' : ''}
-              </h1>
-              <div className="space-y-1 mb-4">
-                {tornadoWarnings.map(alert => (
-                  <p key={alert.properties?.id} className="text-xl md:text-2xl text-white">
-                    {alert.properties?.areaDesc}
-                  </p>
-                ))}
-              </div>
-              <div className="bg-red-900/50 rounded-lg p-4 mb-6 text-left">
-                <p className="text-lg text-red-200 font-bold mb-2">TAKE SHELTER IMMEDIATELY!</p>
-                <ul className="text-yellow-300 space-y-1 text-sm md:text-base">
+              <AlertTriangle size={80} className="text-red-500 animate-bounce mx-auto mb-4" />
+              <h1 className="text-4xl md:text-6xl font-bold text-red-500 mb-4">TORNADO WARNING{tornadoWarnings.length > 1 ? 'S' : ''}</h1>
+              {tornadoWarnings.map(a => <p key={a.properties?.id} className="text-xl text-white">{a.properties?.areaDesc}</p>)}
+              <div className="bg-red-900/50 rounded-lg p-4 my-4 text-left">
+                <p className="text-red-200 font-bold mb-2">TAKE SHELTER IMMEDIATELY!</p>
+                <ul className="text-yellow-300 space-y-1 text-sm">
                   <li>Move to an interior room on the lowest floor</li>
                   <li>Stay away from windows, doors, and outside walls</li>
                   <li>Get under a sturdy table and cover your head</li>
-                  <li>If in a mobile home, evacuate to a sturdy building</li>
                 </ul>
               </div>
-              {soonestExpiry && (
-                <p className="text-cyan-400 mb-4">
-                  <Clock size={16} className="inline mr-1" />
-                  {getExpirationCountdown(soonestExpiry)}
-                </p>
-              )}
-              <button
-                onClick={dismissAll}
-                className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white text-xl font-bold rounded-lg transition-colors"
-              >
+              {soonestExpiry && <p className="text-white/70 mb-4 text-sm">{getExpirationCountdown(soonestExpiry)}</p>}
+              <button onClick={dismissAll} className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors">
                 I UNDERSTAND - DISMISS
               </button>
             </div>
@@ -610,72 +584,82 @@ const App = () => {
         );
       })()}
 
-      {/* Main Header */}
-      <Header
-        locationName={location.name}
-        onLocationClick={() => setIsModalOpen(true)}
-        onSettingsClick={() => setIsSettingsOpen(true)}
-        timezone={weatherData?.timezone}
-        isPlaying={isPlaying}
-        toggleMusic={toggleMusic}
-        volume={volume}
-        setVolume={setVolume}
-        autoCycle={autoCycle}
-        setAutoCycle={setAutoCycle}
-        night={night}
-        weatherCode={current?.weather_code}
-        sunrise={daily?.sunrise?.[0]}
-        sunset={daily?.sunset?.[0]}
-        isTracking={isTracking}
-      />
+      {/* Scrollable content area */}
+      <div className="relative z-10 h-full flex flex-col">
 
-      {/* Severe Weather Alert Banner */}
-      {getSevereAlerts(alerts)
-        .filter(alert => !dismissedAlertIds.has(alert.properties?.id))
-        .map(alert => {
-          const event = alert.properties?.event?.toLowerCase() || '';
-          const isWarning = event.includes('warning');
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-5 pt-safe pt-4 pb-2">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-1.5 text-white font-semibold text-lg hover:text-white/80 transition-colors"
+          >
+            <span>📍</span>
+            <span>{location.name?.split(',')[0] ?? 'Select Location'}</span>
+          </button>
+          <div className="flex items-center gap-3">
+            {isWeatherLoading && (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            )}
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="text-white/70 hover:text-white transition-colors p-1"
+            >
+              ⚙️
+            </button>
+          </div>
+        </div>
+
+        {/* Severe alert banner */}
+        {activeAlerts.filter(a => getSevereAlerts([a]).length > 0).slice(0, 1).map(alert => {
+          const isWarning = alert.properties?.event?.toLowerCase().includes('warning');
           return (
             <div
               key={alert.properties?.id}
               onClick={() => setCurrentScreen(SCREENS.ALERTS)}
-              className={`relative flex items-center justify-center px-4 py-3 font-bold text-white cursor-pointer hover:brightness-110 transition-all ${
-                isWarning ? 'bg-red-600' : 'bg-orange-500'
-              }`}
+              className={`relative flex items-center justify-between px-4 py-2.5 cursor-pointer text-white text-sm font-medium ${isWarning ? 'bg-red-500/90' : 'bg-orange-500/90'}`}
             >
-              <AlertTriangle size={24} className="mr-2 flex-shrink-0" />
-              <span className="text-center text-lg sm:text-xl md:text-2xl">
-                {alert.properties?.event?.toUpperCase()} IN EFFECT FOR YOUR AREA. TAP FOR DETAILS.
-              </span>
-              <button
-                onClick={(e) => { e.stopPropagation(); setDismissedAlertIds(prev => new Set([...prev, alert.properties?.id])); }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-black/20 rounded transition-colors"
-                aria-label="Dismiss alert"
-              >
-                <X size={20} />
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={16} />
+                <span>{alert.properties?.event?.toUpperCase()} IN EFFECT — TAP FOR DETAILS</span>
+              </div>
+              <button onClick={e => { e.stopPropagation(); setDismissedAlertIds(prev => new Set([...prev, alert.properties?.id])); }}>
+                <X size={16} />
               </button>
             </div>
           );
         })}
 
-      {/* Main Content Area */}
-      <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col md:flex-row gap-6 overflow-hidden">
-        <TabNavigation currentTab={currentScreen} setTab={(tab) => { setAutoCycle(false); setCurrentScreen(tab); }} alerts={alerts} />
-        <div ref={contentRef} key={currentScreen} className="tab-content-enter flex-grow overflow-auto">
-          {renderTabContent()}
+        {/* Main scrollable content */}
+        <div ref={contentRef} className="flex-1 overflow-y-auto pb-20">
+          {currentScreen === SCREENS.CONDITIONS ? (
+            <ModernHome
+              current={current}
+              daily={daily}
+              hourly={hourly}
+              night={night}
+              alerts={activeAlerts}
+              aqiData={aqiData}
+              location={location}
+              units={units}
+            />
+          ) : (
+            <div className="p-4 modern-tabs">
+              {renderTabContent()}
+            </div>
+          )}
         </div>
-      </main>
+      </div>
 
-      {/* Footer Ticker */}
-      <Footer current={current} daily={daily} locationName={location.name} alerts={alerts} />
+      {/* Bottom navigation */}
+      <ModernBottomNav
+        currentScreen={currentScreen}
+        setScreen={(tab) => { setAutoCycle(false); setCurrentScreen(tab); }}
+        alerts={activeAlerts}
+      />
 
       {/* Settings Modal */}
       {isSettingsOpen && (
-        <SettingsModal
-          units={units}
-          onUnitsChange={handleUnitsChange}
-          onClose={() => setIsSettingsOpen(false)}
-        />
+        <SettingsModal units={units} onUnitsChange={handleUnitsChange} onClose={() => setIsSettingsOpen(false)} />
       )}
 
       {/* Location Modal */}
@@ -691,9 +675,6 @@ const App = () => {
           onTrackingToggle={setTrackingEnabled}
         />
       )}
-
-      {/* Retro Scanline Overlay */}
-      <Scanlines />
     </div>
   );
 };

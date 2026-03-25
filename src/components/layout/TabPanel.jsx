@@ -1,12 +1,8 @@
 import React from 'react';
-import { DARK_BLUE, NAVY_BLUE, BRIGHT_CYAN } from '../../utils/constants';
 
 const TabPanel = ({ title, children }) => (
-  <div
-    className="flex-grow p-3 sm:p-6 rounded-xl shadow-neon-md sm:min-h-[400px]"
-    style={{ border: `4px solid ${BRIGHT_CYAN}`, background: `linear-gradient(to bottom right, ${DARK_BLUE}, ${NAVY_BLUE})` }}
-  >
-    <h2 className="text-3xl text-white font-bold mb-4 border-b border-cyan-700 pb-2">{title}</h2>
+  <div className="flex-grow p-4 sm:p-6 rounded-2xl sm:min-h-[400px] bg-white/10 backdrop-blur-md border border-white/10">
+    <h2 className="text-2xl font-semibold text-white mb-4 pb-3 border-b border-white/10">{title}</h2>
     {children}
   </div>
 );
