@@ -7,7 +7,6 @@ import { BRIGHT_CYAN } from '../../utils/constants';
 import { SCREENS } from '../../utils/constants';
 import { formatTime, getAQIInfo, getWeatherDescription, degreeToCardinal, fmtTemp, fmtWind } from '../../utils/helpers';
 import { getNarrationText, speakNarration, cancelNarration } from '../../utils/narration';
-import { getNWSPointsUrl } from '../../utils/api';
 
 // Temperature color coding based on Fahrenheit
 const getTemperatureColorClass = (tempF) => {
@@ -21,7 +20,7 @@ const getTemperatureColorClass = (tempF) => {
 };
 
 // Generate a brief weather description based on conditions
-const generateWeatherSummary = (current, daily, night, alerts, units, nwsHigh) => {
+const generateWeatherSummary = (current, daily, night, alerts, units) => {
   if (!current || !daily) return "Weather data loading...";
 
   const temp = Math.round(current.temperature_2m || 0);
@@ -29,7 +28,7 @@ const generateWeatherSummary = (current, daily, night, alerts, units, nwsHigh) =
   const windSpeed = Math.round(current.wind_speed_10m || 0);
   const weatherCode = current.weather_code || 0;
 
-  const high = nwsHigh ?? Math.round(daily.temperature_2m_max?.[0] || 0);
+  const high = Math.round(daily.temperature_2m_max?.[0] || 0);
   const low = Math.round(daily.temperature_2m_min?.[0] || 0);
   const pop = Math.round(daily.precipitation_probability_max?.[0] || 0);
 
@@ -156,34 +155,6 @@ const StatCard = ({ children, className = '' }) => (
 const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading, alerts, aqiData, location, units }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-  const [nwsHigh, setNwsHigh] = useState(null);
-
-  useEffect(() => {
-    if (!location?.lat || !location?.lon) return;
-    let cancelled = false;
-    const fetchNWSHigh = async () => {
-      try {
-        const pointsRes = await fetch(getNWSPointsUrl(location.lat, location.lon), {
-          headers: { 'User-Agent': 'WeatherBird App' }
-        });
-        if (!pointsRes.ok) return;
-        const pointsData = await pointsRes.json();
-        const forecastUrl = pointsData.properties?.forecast;
-        if (!forecastUrl) return;
-        const forecastRes = await fetch(forecastUrl, { headers: { 'User-Agent': 'WeatherBird App' } });
-        if (!forecastRes.ok) return;
-        const forecastData = await forecastRes.json();
-        const periods = forecastData.properties?.periods || [];
-        // Find today's daytime period
-        const todayDay = periods.find(p => p.isDaytime);
-        if (todayDay && !cancelled) setNwsHigh(todayDay.temperature);
-      } catch {
-        // fall through to Open-Meteo fallback
-      }
-    };
-    fetchNWSHigh();
-    return () => { cancelled = true; };
-  }, [location?.lat, location?.lon]);
 
   if (isWeatherLoading) return <LoadingIndicator />;
 
@@ -199,7 +170,7 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
   const aqiInfo = getAQIInfo(aqi);
   const uvIndex = daily?.uv_index_max?.[0] ?? null;
   const uvInfo = getUVInfo(uvIndex != null ? Math.round(uvIndex) : null);
-  const weatherSummary = generateWeatherSummary(current, daily, night, alerts, units, nwsHigh);
+  const weatherSummary = generateWeatherSummary(current, daily, night, alerts, units);
 
   const handleNarration = () => {
     if (isSpeaking) {
