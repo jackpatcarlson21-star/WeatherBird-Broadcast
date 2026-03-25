@@ -175,14 +175,13 @@ const RadarTab = ({ location }) => {
   const [refreshKey, setRefreshKey] = useState(() => Date.now());
 
   useEffect(() => {
-    // Radar refreshes every 60s, satellite every 10 min (GOES capture interval)
     const interval = setInterval(() => {
       setRefreshKey(Date.now());
       setImgLoading(true);
       setImgError(false);
-    }, view === 'satellite' ? 600000 : 60000);
+    }, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [view]);
+  }, []);
 
   const handleToggle = (v) => {
     setView(v);
@@ -190,8 +189,11 @@ const RadarTab = ({ location }) => {
     setImgError(false);
   };
 
+  const satSectorCode = satInfo.path === 'CONUS' ? 'CONUS' : satInfo.path.split('/')[1];
+  const satGifUrl = `https://cdn.star.nesdis.noaa.gov/${satInfo.sat}/ABI/${satInfo.path}/GEOCOLOR/${satInfo.sat}-${satSectorCode}-GEOCOLOR-600x600.gif`;
+
   const imgSrc = view === 'satellite'
-    ? `https://cdn.star.nesdis.noaa.gov/${satInfo.sat}/ABI/${satInfo.path}/GEOCOLOR/latest.jpg`
+    ? `${satGifUrl}?t=${refreshKey}`
     : view === 'national'
       ? `https://radar.weather.gov/ridge/standard/CONUS-LARGE_loop.gif?t=${refreshKey}`
       : `https://radar.weather.gov/ridge/standard/${nearestRadar.id}_loop.gif?t=${refreshKey}`;
