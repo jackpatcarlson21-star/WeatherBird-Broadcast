@@ -310,14 +310,19 @@ const AlmanacTab = ({ location, userId }) => {
         let firstFallFrost = '--';
         let lastSpringFrostDOY = null;
         let firstFallFrostDOY = null;
+        // Parse YYYY-MM-DD as local time to avoid UTC off-by-one
+        const parseLocalDate = (str) => {
+          const [y, m, d] = str.split('-').map(Number);
+          return new Date(y, m - 1, d);
+        };
         if (springFrostData?.daily?.temperature_2m_min && springFrostData?.daily?.time) {
           const springFrostDates = [];
           springFrostData.daily.time.forEach((date, i) => {
             const temp = springFrostData.daily.temperature_2m_min[i];
             if (temp != null && temp <= 32) {
-              const d = new Date(date);
+              const d = parseLocalDate(date);
               const dayOfYear = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
-              if (dayOfYear >= 60 && dayOfYear <= 152) { // March through May
+              if (dayOfYear >= 60 && dayOfYear <= 152) {
                 springFrostDates.push(dayOfYear);
               }
             }
@@ -333,9 +338,9 @@ const AlmanacTab = ({ location, userId }) => {
           fallFrostData.daily.time.forEach((date, i) => {
             const temp = fallFrostData.daily.temperature_2m_min[i];
             if (temp != null && temp <= 32) {
-              const d = new Date(date);
+              const d = parseLocalDate(date);
               const dayOfYear = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
-              if (dayOfYear >= 244 && dayOfYear <= 335) { // September through November
+              if (dayOfYear >= 244 && dayOfYear <= 335) {
                 fallFrostDates.push(dayOfYear);
               }
             }

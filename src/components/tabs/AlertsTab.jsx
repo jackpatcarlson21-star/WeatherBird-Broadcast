@@ -79,9 +79,6 @@ const AlertsTab = ({ alerts, location }) => {
     };
   }, []);
 
-  // Alerts are now passed down from App to avoid double fetching
-  if (!alerts) return <TabPanel title="ACTIVE ALERTS"><LoadingIndicator /></TabPanel>;
-
   return (
     <TabPanel title="ACTIVE ALERTS">
 

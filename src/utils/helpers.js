@@ -81,7 +81,7 @@ export const getTornadoWarnings = (alerts) => {
 };
 
 export const getExpirationCountdown = (expiresTime) => {
-  if (!expiresTime) return null;
+  if (!expiresTime) return '--';
   const now = new Date();
   const expires = new Date(expiresTime);
   const diffMs = expires - now;

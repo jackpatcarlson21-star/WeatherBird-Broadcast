@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import TabPanel from '../layout/TabPanel';
 import { PLACEHOLDER_IMG } from '../../utils/constants';
 
@@ -47,33 +47,46 @@ const PRODUCTS = [
 
 const CascadeImage = ({ candidates, cacheKey, alt, className }) => {
   const [idx, setIdx] = useState(0);
+  const [loading, setLoading] = useState(true);
   const urls = candidates.map(f => `${BASE}${f}?v=${cacheKey}`);
   const src = idx < urls.length ? urls[idx] : PLACEHOLDER_IMG;
 
   return (
-    <img
-      key={src}
-      src={src}
-      alt={alt}
-      referrerPolicy="no-referrer"
-      className={className}
-      onError={() => setIdx(i => i + 1)}
-    />
+    <div className="relative">
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg z-10" style={{ minHeight: 200 }}>
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+            <span className="text-cyan-400 text-sm font-vt323">LOADING MAP...</span>
+          </div>
+        </div>
+      )}
+      <img
+        key={src}
+        src={src}
+        alt={alt}
+        referrerPolicy="no-referrer"
+        className={className}
+        style={loading ? { opacity: 0 } : {}}
+        onLoad={() => setLoading(false)}
+        onError={() => { setLoading(true); setIdx(i => i + 1); }}
+      />
+    </div>
   );
 };
 
 const getSPCDays = () => {
   const now = new Date();
   return [1, 2, 3].map(offset => {
-    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + (offset - 1)));
-    const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (offset - 1));
+    const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     return {
       day: offset,
       label: `DAY ${offset}`,
       date,
       desc: offset === 1
-        ? `Valid ${date} through tomorrow morning (UTC)`
-        : `Valid ${date} (UTC)`,
+        ? `Valid ${date} through tomorrow morning`
+        : `Valid ${date}`,
     };
   });
 };
@@ -161,7 +174,11 @@ const SPCOutlookTab = () => {
   const [showDay48, setShowDay48] = useState(false);
   const [selected48, setSelected48] = useState('all');
 
-  const refreshKey = useMemo(() => Date.now(), []);
+  const [refreshKey, setRefreshKey] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setRefreshKey(Date.now()), 30 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
   const DAY48_MAPS = useMemo(() => getDay48Maps(refreshKey), [refreshKey]);
   const SPC_DAYS = getSPCDays();
   const currentDay = SPC_DAYS.find(d => d.day === selectedDay);
@@ -233,7 +250,7 @@ const SPCOutlookTab = () => {
                 {SPC_DAYS.map(d => (
                   <button
                     key={d.day}
-                    onClick={() => setSelectedDay(d.day)}
+                    onClick={() => { setSelectedDay(d.day); if (d.day === 3) setSelectedProduct('categorical'); }}
                     className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-vt323 text-lg sm:text-xl transition-all border-2 ${
                       selectedDay === d.day
                         ? 'bg-red-600 text-white border-white shadow-lg'
@@ -245,24 +262,27 @@ const SPCOutlookTab = () => {
                 ))}
               </div>
 
-              {/* Product type selector */}
-              <div className="flex flex-wrap justify-center gap-2">
-                {PRODUCTS.map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => setSelectedProduct(p.id)}
-                    className={productBtn(selectedProduct === p.id, p.color)}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
+              {/* Product type selector — Day 3 only has combined prob */}
+              {selectedDay === 3 ? (
+                <p className="text-center text-sm text-orange-300 bg-orange-900/20 border border-orange-700/40 rounded-lg px-4 py-2">
+                  Day 3 outlooks only include Categorical and combined severe probability — individual tornado/wind/hail maps are not issued for Day 3.
+                </p>
+              ) : (
+                <div className="flex flex-wrap justify-center gap-2">
+                  {PRODUCTS.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => setSelectedProduct(p.id)}
+                      className={productBtn(selectedProduct === p.id, p.color)}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {currentDay && (
-                <p className="text-center text-sm text-red-300">
-                  {currentDay.desc}
-                  {isDay3Prob && ' — Day 3 shows combined severe probability'}
-                </p>
+                <p className="text-center text-sm text-red-300">{currentDay.desc}</p>
               )}
 
               {/* Map */}
