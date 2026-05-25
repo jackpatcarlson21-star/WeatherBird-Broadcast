@@ -12,6 +12,11 @@ const useAutoLocation = (setIsAutoDetecting, onLocationUpdate) => {
   });
   const [isTracking, setIsTracking] = useState(false);
   const inFlightRef = useRef(false);
+  const onLocationUpdateRef = useRef(onLocationUpdate);
+
+  useEffect(() => {
+    onLocationUpdateRef.current = onLocationUpdate;
+  }, [onLocationUpdate]);
 
   // Persist preference
   useEffect(() => {
@@ -51,7 +56,7 @@ const useAutoLocation = (setIsAutoDetecting, onLocationUpdate) => {
             const stateName = addr.state || '';
             const displayName = stateName ? `${cityName}, ${stateName}` : cityName;
 
-            onLocationUpdate({ name: displayName, lat: latitude, lon: longitude });
+            onLocationUpdateRef.current({ name: displayName, lat: latitude, lon: longitude });
           }
         } catch (err) {
           console.error('Auto-location update failed:', err);
@@ -69,7 +74,7 @@ const useAutoLocation = (setIsAutoDetecting, onLocationUpdate) => {
       },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
     );
-  }, [trackingEnabled, setIsAutoDetecting, onLocationUpdate]);
+  }, [trackingEnabled, setIsAutoDetecting]);
 
   // On mount — run check
   useEffect(() => {
