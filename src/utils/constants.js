@@ -12,6 +12,7 @@ export const SCREENS = {
   TRIP_WEATHER: 'TRIP_WEATHER',
   HURRICANE: 'HURRICANE',
   MODELS: 'MODELS',
+  SATELLITE: 'SATELLITE',
 };
 
 // --- Config ---

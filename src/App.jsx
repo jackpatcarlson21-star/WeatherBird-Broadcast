@@ -41,6 +41,7 @@ import {
   HurricaneTab,
   ModelComparisonTab,
   GardenTab,
+  SatelliteTab,
 } from './components/tabs';
 
 
@@ -97,7 +98,7 @@ const App = () => {
 
     const screenOrder = [
       SCREENS.CONDITIONS, SCREENS.HOURLY, SCREENS.DAILY, SCREENS.RADAR,
-      SCREENS.PRECIP, SCREENS.ALERTS, SCREENS.WWA,
+      SCREENS.SATELLITE, SCREENS.PRECIP, SCREENS.ALERTS, SCREENS.WWA,
       SCREENS.SPC, SCREENS.TRIP_WEATHER, SCREENS.ALMANAC,
       SCREENS.HURRICANE, SCREENS.MODELS,
     ];
@@ -512,6 +513,8 @@ const App = () => {
         return <ModelComparisonTab location={location} />;
       case SCREENS.GARDEN:
         return <GardenTab location={location} current={current} daily={daily} hourly={hourly} units={units} />;
+      case SCREENS.SATELLITE:
+        return <SatelliteTab location={location} />;
       default:
         return <div>Error: Tab Not Found</div>;
     }

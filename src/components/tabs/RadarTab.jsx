@@ -165,6 +165,28 @@ const getSatelliteInfo = (lat, lon) => {
   return               { sat: 'GOES19', path: 'SECTOR/CGL', label: 'Great Lakes' };
 };
 
+// Approximate pixel position of user's location on the radar image (0–1 fractions)
+const getDotPosition = (view, location, nearestRadar) => {
+  if (view === 'satellite') return null;
+
+  if (view === 'local') {
+    const rangeKm = 460;
+    const latRange = rangeKm / 111;
+    const lonRange = latRange / Math.cos((nearestRadar.lat * Math.PI) / 180);
+    const x = 0.5 + (location.lon - nearestRadar.lon) / (2 * lonRange);
+    const y = 0.5 - (location.lat - nearestRadar.lat) / (2 * latRange);
+    if (x < 0.02 || x > 0.98 || y < 0.02 || y > 0.98) return null;
+    return { x, y };
+  }
+
+  // National CONUS-LARGE bounds (approximate)
+  const lonMin = -127, lonMax = -66, latMin = 20.5, latMax = 49.5;
+  const x = (location.lon - lonMin) / (lonMax - lonMin);
+  const y = 1 - (location.lat - latMin) / (latMax - latMin);
+  if (x < 0.02 || x > 0.98 || y < 0.02 || y > 0.98) return null;
+  return { x, y };
+};
+
 // view: 'local' | 'national' | 'satellite'
 const RadarTab = ({ location }) => {
   const nearestRadar = useMemo(() => findNearestRadar(location.lat, location.lon), [location.lat, location.lon]);
@@ -173,6 +195,10 @@ const RadarTab = ({ location }) => {
   const [imgLoading, setImgLoading] = useState(true);
   const [imgError, setImgError] = useState(false);
   const [refreshKey, setRefreshKey] = useState(() => Date.now());
+  const dotPosition = useMemo(
+    () => getDotPosition(view, location, nearestRadar),
+    [view, location, nearestRadar]
+  );
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -262,15 +288,31 @@ const RadarTab = ({ location }) => {
               </button>
             </div>
           )}
-          <img
-            key={`${view}-${refreshKey}`}
-            src={imgSrc}
-            alt={title}
-            className={`max-w-full max-h-full ${imgLoading || imgError ? 'opacity-0' : 'opacity-100'} transition-opacity`}
-            style={view === 'local' ? { imageRendering: 'pixelated' } : {}}
-            onLoad={() => { setImgLoading(false); setImgError(false); }}
-            onError={() => { setImgLoading(false); setImgError(true); }}
-          />
+          <div style={{ position: 'relative', lineHeight: 0 }}>
+            <img
+              key={`${view}-${refreshKey}`}
+              src={imgSrc}
+              alt={title}
+              className={`block max-w-full max-h-full ${imgLoading || imgError ? 'opacity-0' : 'opacity-100'} transition-opacity`}
+              style={view === 'local' ? { imageRendering: 'pixelated' } : {}}
+              onLoad={() => { setImgLoading(false); setImgError(false); }}
+              onError={() => { setImgLoading(false); setImgError(true); }}
+            />
+            {!imgLoading && !imgError && dotPosition && (
+              <svg
+                className="absolute inset-0 w-full h-full pointer-events-none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                {/* Pulsing ring */}
+                <circle cx={`${dotPosition.x * 100}%`} cy={`${dotPosition.y * 100}%`} r="8" fill="none" stroke="cyan" strokeWidth="1.5">
+                  <animate attributeName="r" values="8;24" dur="1.8s" repeatCount="indefinite" />
+                  <animate attributeName="stroke-opacity" values="0.8;0" dur="1.8s" repeatCount="indefinite" />
+                </circle>
+                {/* Center dot */}
+                <circle cx={`${dotPosition.x * 100}%`} cy={`${dotPosition.y * 100}%`} r="4" fill="white" fillOpacity="0.9" stroke="rgba(0,255,255,0.9)" strokeWidth="1.5" />
+              </svg>
+            )}
+          </div>
         </div>
 
         <p className="text-xs text-cyan-400">{source}</p>

@@ -92,6 +92,12 @@ const useAutoLocation = (setIsAutoDetecting, onLocationUpdate) => {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [runCheck]);
 
+  // Periodic check every 20 minutes (catches location changes while app stays open)
+  useEffect(() => {
+    const interval = setInterval(runCheck, 20 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [runCheck]);
+
   return { isTracking, trackingEnabled, setTrackingEnabled };
 };
 

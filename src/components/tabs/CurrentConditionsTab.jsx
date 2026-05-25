@@ -121,6 +121,35 @@ const generateWeatherSummary = (current, daily, night, alerts, units) => {
   return summary;
 };
 
+// Dew point comfort levels (°F)
+const getDewPointComfort = (dewF) => {
+  if (dewF == null) return null;
+  if (dewF < 40)  return { label: 'DRY',         color: 'text-yellow-400' };
+  if (dewF < 55)  return { label: 'COMFORTABLE',  color: 'text-green-400' };
+  if (dewF < 60)  return { label: 'PLEASANT',     color: 'text-green-300' };
+  if (dewF < 65)  return { label: 'STICKY',       color: 'text-yellow-300' };
+  if (dewF < 70)  return { label: 'HUMID',        color: 'text-orange-400' };
+  if (dewF < 75)  return { label: 'VERY HUMID',   color: 'text-orange-500' };
+  return               { label: 'OPPRESSIVE',   color: 'text-red-400' };
+};
+
+// Check next 3 hours of hourly data for rain
+const getUpcomingRain = (hourly) => {
+  if (!hourly?.time || !hourly?.precipitation) return null;
+  const now = new Date();
+  for (let i = 0; i < hourly.time.length; i++) {
+    const t = new Date(hourly.time[i]);
+    const diffMs = t - now;
+    if (diffMs <= 0 || diffMs > 3 * 60 * 60 * 1000) continue;
+    const precip = hourly.precipitation[i] || 0;
+    const prob = hourly.precipitation_probability?.[i] || 0;
+    if (precip > 0.04 || prob >= 50) {
+      return { minutesAway: Math.round(diffMs / 60000), prob };
+    }
+  }
+  return null;
+};
+
 // UV Index color info
 const getUVInfo = (uv) => {
   if (uv == null) return { label: '--', color: 'text-gray-400', border: 'border-cyan-700', bg: 'bg-black/20' };
@@ -171,6 +200,7 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
   const uvIndex = daily?.uv_index_max?.[0] ?? null;
   const uvInfo = getUVInfo(uvIndex != null ? Math.round(uvIndex) : null);
   const weatherSummary = generateWeatherSummary(current, daily, night, alerts, units);
+  const upcomingRain = getUpcomingRain(hourly);
 
   const handleNarration = () => {
     if (isSpeaking) {
@@ -222,6 +252,19 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
           alerts={alerts}
         />
       </div>
+
+      {/* Rain soon banner */}
+      {upcomingRain && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg mb-4 bg-blue-900/40 border border-blue-500 text-blue-200">
+          <CloudRain size={16} className="text-blue-400 flex-shrink-0" />
+          <span className="text-lg">
+            {upcomingRain.minutesAway <= 10
+              ? 'Rain arriving soon'
+              : `Rain expected in ~${upcomingRain.minutesAway} min`}
+            {upcomingRain.prob > 0 && ` (${upcomingRain.prob}% chance)`}
+          </span>
+        </div>
+      )}
 
       {/* Hero temp + icon */}
       <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start mb-8 border-b border-cyan-800 pb-4">
@@ -330,11 +373,17 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
         </button>
         {showDetails && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-white font-vt323 text-lg mt-2">
-            <StatCard>
-              <Thermometer size={20} className="text-cyan-400" />
-              <span className="text-sm text-cyan-300">DEW POINT</span>
-              <span className="font-bold">{fmtTemp(currentData.dew_point_2m || 0, units)}</span>
-            </StatCard>
+            {(() => {
+              const dp = getDewPointComfort(currentData.dew_point_2m);
+              return (
+                <StatCard>
+                  <Thermometer size={20} className="text-cyan-400" />
+                  <span className="text-sm text-cyan-300">DEW POINT</span>
+                  <span className="font-bold">{fmtTemp(currentData.dew_point_2m || 0, units)}</span>
+                  {dp && <span className={`text-xs font-bold ${dp.color}`}>{dp.label}</span>}
+                </StatCard>
+              );
+            })()}
             <StatCard>
               <PressureTrend hourlyData={hourly} currentPressure={currentData.pressure_msl} />
             </StatCard>
