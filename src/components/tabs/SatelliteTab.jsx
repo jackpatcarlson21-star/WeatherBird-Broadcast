@@ -2,10 +2,20 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 import TabPanel from '../layout/TabPanel';
 
+// NOAA CDN only serves animated GIF loops for composite products (GEOCOLOR, Sandwich, AirMass).
+// Individual raw bands (13, 09, etc.) are only available as timestamped static JPGs.
+// Sandwich = visible + IR cloud-top temperature overlay (good IR substitute)
+// AirMass = multi-channel RGB showing moisture/jet stream boundaries (good WV substitute)
 const getSatelliteInfo = (lat, lon) => {
-  if (lat > 54)               return { sat: 'GOES18', path: 'SECTOR/AK',  sector: 'AK',    label: 'Alaska' };
-  if (lat < 25 && lon < -150) return { sat: 'GOES18', path: 'SECTOR/HI',  sector: 'HI',    label: 'Hawaii' };
-  if (lon <= -100)             return { sat: 'GOES19', path: 'CONUS',      sector: 'CONUS', label: 'Continental US' };
+  if (lat > 54)               return { sat: 'GOES18', path: 'SECTOR/AK',  sector: 'AK',  label: 'Alaska' };
+  if (lat < 25 && lon < -150) return { sat: 'GOES18', path: 'SECTOR/HI',  sector: 'HI',  label: 'Hawaii' };
+  // Western US — use regional sectors instead of CONUS (CONUS has no composite GIFs)
+  if (lon <= -115) return lat < 37
+    ? { sat: 'GOES19', path: 'SECTOR/PSW', sector: 'PSW', label: 'Pacific Southwest' }
+    : { sat: 'GOES19', path: 'SECTOR/PNW', sector: 'PNW', label: 'Pacific Northwest' };
+  if (lon <= -100) return lat < 37
+    ? { sat: 'GOES19', path: 'SECTOR/SR',  sector: 'SR',  label: 'Southern Rockies' }
+    : { sat: 'GOES19', path: 'SECTOR/NR',  sector: 'NR',  label: 'Northern Rockies' };
   if (lon <= -90) return lat < 37
     ? { sat: 'GOES19', path: 'SECTOR/SP',  sector: 'SP',  label: 'Southern Plains' }
     : { sat: 'GOES19', path: 'SECTOR/CGL', sector: 'CGL', label: 'Great Lakes' };
@@ -14,27 +24,29 @@ const getSatelliteInfo = (lat, lon) => {
   return               { sat: 'GOES19', path: 'SECTOR/CGL', sector: 'CGL', label: 'Great Lakes' };
 };
 
+const BASE = 'https://cdn.star.nesdis.noaa.gov';
+
 const CHANNELS = [
   {
     id: 'GEOCOLOR',
     label: 'VISIBLE',
     description: 'GeoColor — daytime true-color / nighttime IR composite',
     buildUrl: (sat, path, sector) =>
-      `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/${path}/GEOCOLOR/${sat}-${sector}-GEOCOLOR-600x600.gif`,
+      `${BASE}/${sat}/ABI/${path}/GEOCOLOR/${sat}-${sector}-GEOCOLOR-600x600.gif`,
   },
   {
-    id: '13',
+    id: 'Sandwich',
     label: 'INFRARED',
-    description: 'Band 13 — Clean longwave IR (shows cloud tops, day & night)',
+    description: 'Sandwich — visible imagery with IR cloud-top temperature overlay',
     buildUrl: (sat, path, sector) =>
-      `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/${path}/13/${sat}-${sector}-Band13-600x600.gif`,
+      `${BASE}/${sat}/ABI/${path}/Sandwich/${sat}-${sector}-Sandwich-600x600.gif`,
   },
   {
-    id: '09',
+    id: 'AirMass',
     label: 'WATER VAPOR',
-    description: 'Band 09 — Mid-level water vapor (tracks moisture & jet stream)',
+    description: 'AirMass RGB — moisture patterns, jet stream & air mass boundaries',
     buildUrl: (sat, path, sector) =>
-      `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/${path}/09/${sat}-${sector}-Band09-600x600.gif`,
+      `${BASE}/${sat}/ABI/${path}/AirMass/${sat}-${sector}-AirMass-600x600.gif`,
   },
 ];
 
