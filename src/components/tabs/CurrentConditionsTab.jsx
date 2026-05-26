@@ -260,7 +260,9 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
           <span className="text-lg">
             {upcomingRain.minutesAway <= 10
               ? 'Rain arriving soon'
-              : `Rain expected in ~${upcomingRain.minutesAway} min`}
+              : upcomingRain.minutesAway < 60
+                ? `Rain expected in ~${upcomingRain.minutesAway} min`
+                : `Rain expected in ~${Math.floor(upcomingRain.minutesAway / 60)} hr ${upcomingRain.minutesAway % 60} min`}
             {upcomingRain.prob > 0 && ` (${upcomingRain.prob}% chance)`}
           </span>
         </div>
