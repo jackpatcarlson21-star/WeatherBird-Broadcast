@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background gradient: sky blue to deep blue -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+
+    <!-- Sun glow -->
+    <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FDE68A" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#FDE68A" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Cloud gradient -->
+    <linearGradient id="cloudGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#BAE6FD" stop-opacity="0.85"/>
+    </linearGradient>
+
+    <!-- Bird body gradient -->
+    <linearGradient id="birdGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#E0F2FE"/>
+    </linearGradient>
+
+    <!-- Rounded rect clip -->
+    <clipPath id="roundedClip">
+      <rect width="512" height="512" rx="112" ry="112"/>
+    </clipPath>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="112" ry="112" fill="url(#bg)"/>
+
+  <!-- Clipping group -->
+  <g clip-path="url(#roundedClip)">
+
+    <!-- Sky atmosphere overlay -->
+    <ellipse cx="256" cy="100" rx="300" ry="180" fill="#7DD3FC" fill-opacity="0.25"/>
+
+    <!-- Sun glow halo -->
+    <circle cx="370" cy="130" r="80" fill="url(#sunGlow)"/>
+
+    <!-- Sun -->
+    <circle cx="370" cy="130" r="38" fill="#FDE68A"/>
+    <circle cx="370" cy="130" r="30" fill="#FCD34D"/>
+
+    <!-- Sun rays -->
+    <g stroke="#FDE68A" stroke-width="4" stroke-linecap="round" opacity="0.8">
+      <line x1="370" y1="78"  x2="370" y2="62"/>
+      <line x1="370" y1="182" x2="370" y2="198"/>
+      <line x1="318" y1="130" x2="302" y2="130"/>
+      <line x1="422" y1="130" x2="438" y2="130"/>
+      <line x1="333" y1="93"  x2="321" y2="81"/>
+      <line x1="407" y1="93"  x2="419" y2="81"/>
+      <line x1="333" y1="167" x2="321" y2="179"/>
+      <line x1="407" y1="167" x2="419" y2="179"/>
+    </g>
+
+    <!-- Cloud (behind bird) -->
+    <g fill="url(#cloudGrad)" opacity="0.9">
+      <circle cx="155" cy="205" r="38"/>
+      <circle cx="195" cy="185" r="48"/>
+      <circle cx="245" cy="195" r="42"/>
+      <circle cx="285" cy="210" r="32"/>
+      <rect x="155" y="205" width="162" height="40" rx="0"/>
+    </g>
+
+    <!-- ── Bird in flight (facing right) ── -->
+    <g fill="url(#birdGrad)" opacity="0.97">
+
+      <!-- Body -->
+      <ellipse cx="252" cy="295" rx="62" ry="28" transform="rotate(-8 252 295)"/>
+
+      <!-- Head -->
+      <ellipse cx="300" cy="272" rx="28" ry="24" transform="rotate(-5 300 272)"/>
+
+      <!-- Beak -->
+      <polygon points="323,268 350,275 323,280" fill="#FCD34D"/>
+
+      <!-- Eye -->
+      <circle cx="310" cy="268" r="5" fill="#1E3A5F"/>
+      <circle cx="312" cy="266" r="1.5" fill="white"/>
+
+      <!-- Upper wing (swept back, mid-flap) -->
+      <path d="M 255,280
+               C 220,240 160,210 105,195
+               C 130,215 155,238 175,262
+               C 195,270 225,278 255,280 Z"
+            fill="white" opacity="0.95"/>
+
+      <!-- Wing detail/feather shading -->
+      <path d="M 255,280
+               C 225,265 185,250 145,235
+               C 155,248 170,258 185,267
+               C 210,275 235,279 255,280 Z"
+            fill="#BAE6FD" opacity="0.5"/>
+
+      <!-- Lower wing tip -->
+      <path d="M 240,290
+               C 200,300 150,330 110,355
+               C 140,340 175,318 205,305
+               C 220,298 232,294 240,290 Z"
+            fill="white" opacity="0.85"/>
+
+      <!-- Tail feathers -->
+      <path d="M 192,305
+               C 165,320 140,340 118,368
+               C 138,352 160,332 185,315 Z"
+            fill="white" opacity="0.8"/>
+      <path d="M 200,310
+               C 178,332 158,355 142,382
+               C 160,362 180,340 202,320 Z"
+            fill="#E0F2FE" opacity="0.75"/>
+
+    </g>
+
+    <!-- Small accent cloud (foreground, lower right) -->
+    <g fill="white" opacity="0.35">
+      <circle cx="360" cy="340" r="22"/>
+      <circle cx="390" cy="328" r="28"/>
+      <circle cx="425" cy="336" r="22"/>
+      <rect x="360" y="336" width="87" height="24"/>
+    </g>
+
+  </g>
+</svg>

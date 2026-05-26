@@ -13,6 +13,7 @@ export const SCREENS = {
   HURRICANE: 'HURRICANE',
   MODELS: 'MODELS',
   SATELLITE: 'SATELLITE',
+  GARDEN: 'GARDEN',
 };
 
 // --- Config ---

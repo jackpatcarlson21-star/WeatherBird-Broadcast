@@ -45,6 +45,13 @@ import {
 } from './components/tabs';
 
 
+const SCREEN_ORDER = [
+  SCREENS.CONDITIONS, SCREENS.HOURLY, SCREENS.DAILY, SCREENS.RADAR,
+  SCREENS.SATELLITE, SCREENS.PRECIP, SCREENS.ALERTS, SCREENS.WWA,
+  SCREENS.SPC, SCREENS.TRIP_WEATHER, SCREENS.ALMANAC,
+  SCREENS.HURRICANE, SCREENS.MODELS, SCREENS.GARDEN,
+];
+
 const App = () => {
   // --- State Hooks ---
   const [db, setDb] = useState(null);
@@ -96,23 +103,34 @@ const App = () => {
   useEffect(() => {
     if (!autoCycle) return;
 
-    const screenOrder = [
-      SCREENS.CONDITIONS, SCREENS.HOURLY, SCREENS.DAILY, SCREENS.RADAR,
-      SCREENS.SATELLITE, SCREENS.PRECIP, SCREENS.ALERTS, SCREENS.WWA,
-      SCREENS.SPC, SCREENS.TRIP_WEATHER, SCREENS.ALMANAC,
-      SCREENS.HURRICANE, SCREENS.MODELS,
-    ];
-
     const interval = setInterval(() => {
       setCurrentScreen(current => {
-        const currentIndex = screenOrder.indexOf(current);
-        const nextIndex = (currentIndex + 1) % screenOrder.length;
-        return screenOrder[nextIndex];
+        const i = SCREEN_ORDER.indexOf(current);
+        return SCREEN_ORDER[(i + 1) % SCREEN_ORDER.length];
       });
     }, cycleSpeed * 1000);
 
     return () => clearInterval(interval);
   }, [autoCycle, cycleSpeed]);
+
+  // --- Keyboard Navigation ---
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowRight') {
+        setCurrentScreen(current => {
+          const i = SCREEN_ORDER.indexOf(current);
+          return SCREEN_ORDER[(i + 1) % SCREEN_ORDER.length];
+        });
+      } else if (e.key === 'ArrowLeft') {
+        setCurrentScreen(current => {
+          const i = SCREEN_ORDER.indexOf(current);
+          return SCREEN_ORDER[(i - 1 + SCREEN_ORDER.length) % SCREEN_ORDER.length];
+        });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // --- Auto-Scroll Effect (scrolls content panel during auto-cycle) ---
   useEffect(() => {
@@ -677,6 +695,8 @@ const App = () => {
         <SettingsModal
           units={units}
           onUnitsChange={handleUnitsChange}
+          cycleSpeed={cycleSpeed}
+          onCycleSpeedChange={setCycleSpeed}
           onClose={() => setIsSettingsOpen(false)}
         />
       )}

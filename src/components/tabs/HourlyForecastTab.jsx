@@ -190,6 +190,7 @@ const ViewToggle = ({ viewMode, setViewMode }) => (
 
 const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading, units }) => {
   const [viewMode, setViewMode] = useState('table');
+  const [hourCount, setHourCount] = useState(12);
 
   if (isWeatherLoading) return <LoadingIndicator />;
 
@@ -210,7 +211,7 @@ const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading, units })
     }
   }
 
-  const data = hourly?.time ? hourly.time.slice(startIndex, startIndex + 12).map((time, i) => {
+  const data = hourly?.time ? hourly.time.slice(startIndex, startIndex + hourCount).map((time, i) => {
     const idx = startIndex + i;
     const hourDate = new Date(time);
     return {
@@ -229,10 +230,25 @@ const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading, units })
   const hasSomeSnow = data.some(h => h.snowfall > 0);
 
   return (
-    <TabPanel title="12-HOUR FORECAST">
+    <TabPanel title={`${hourCount}-HOUR FORECAST`}>
 
-      {/* Toggle */}
-      <div className="flex justify-end mb-3">
+      {/* Toggle row */}
+      <div className="flex justify-between items-center mb-3">
+        <div className="flex gap-1 bg-black/30 border border-cyan-800 rounded-lg p-1">
+          {[12, 24].map(n => (
+            <button
+              key={n}
+              onClick={() => setHourCount(n)}
+              className={`px-3 py-1 rounded text-xs tracking-widest transition-all ${
+                hourCount === n
+                  ? 'bg-cyan-800 text-cyan-200 shadow-inner'
+                  : 'text-cyan-700 hover:text-cyan-400'
+              }`}
+            >
+              {n}H
+            </button>
+          ))}
+        </div>
         <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
       </div>
 

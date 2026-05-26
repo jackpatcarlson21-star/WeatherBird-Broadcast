@@ -2,7 +2,7 @@ import React from 'react';
 import { X, Settings } from 'lucide-react';
 import { BRIGHT_CYAN } from '../../utils/constants';
 
-const SettingsModal = ({ units, onUnitsChange, onClose }) => {
+const SettingsModal = ({ units, onUnitsChange, cycleSpeed, onCycleSpeedChange, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
       <div
@@ -53,6 +53,27 @@ const SettingsModal = ({ units, onUnitsChange, onClose }) => {
                     : 'border-cyan-800 text-cyan-500 hover:border-cyan-500 hover:text-cyan-300'
                 }`}
                 style={units.wind === val ? { borderColor: BRIGHT_CYAN, backgroundColor: BRIGHT_CYAN, color: '#000' } : {}}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Cycle Speed */}
+        <div className="mb-6">
+          <p className="text-cyan-400 text-sm tracking-widest mb-2 font-vt323">AUTO-CYCLE SPEED</p>
+          <div className="flex gap-2">
+            {[[10, '10S'], [15, '15S'], [30, '30S']].map(([val, label]) => (
+              <button
+                key={val}
+                onClick={() => onCycleSpeedChange(val)}
+                className={`flex-1 py-2 rounded border-2 font-bold text-xl font-vt323 transition-all ${
+                  cycleSpeed === val
+                    ? 'text-black'
+                    : 'border-cyan-800 text-cyan-500 hover:border-cyan-500 hover:text-cyan-300'
+                }`}
+                style={cycleSpeed === val ? { borderColor: BRIGHT_CYAN, backgroundColor: BRIGHT_CYAN, color: '#000' } : {}}
               >
                 {label}
               </button>

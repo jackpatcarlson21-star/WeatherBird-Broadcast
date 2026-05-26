@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 import TabPanel from '../layout/TabPanel';
+import { getSatelliteInfo } from '../../utils/helpers';
 
 // NEXRAD Radar Stations with coordinates (decimal degrees)
 const NEXRAD_STATIONS = [
@@ -149,22 +150,6 @@ const findNearestRadar = (lat, lon) => {
   return nearest;
 };
 
-// Map lat/lon to a confirmed-working GOES sector.
-// Verified working: GOES19/SECTOR/NE, SE, SP, CGL | GOES19/CONUS | GOES18/SECTOR/AK, HI
-const getSatelliteInfo = (lat, lon) => {
-  if (lat > 54)               return { sat: 'GOES18', path: 'SECTOR/AK', label: 'Alaska' };
-  if (lat < 25 && lon < -150) return { sat: 'GOES18', path: 'SECTOR/HI', label: 'Hawaii' };
-  if (lon <= -100)             return { sat: 'GOES19', path: 'CONUS',     label: 'Continental US' };
-  // Central US: lon -90 to -100
-  if (lon <= -90) return lat < 37
-    ? { sat: 'GOES19', path: 'SECTOR/SP',  label: 'Southern Plains' }
-    : { sat: 'GOES19', path: 'SECTOR/CGL', label: 'Great Lakes' };
-  // Eastern US: lon > -90
-  if (lat < 35)   return { sat: 'GOES19', path: 'SECTOR/SE',  label: 'Southeast' };
-  if (lon > -78)  return { sat: 'GOES19', path: 'SECTOR/NE',  label: 'Northeast' };
-  return               { sat: 'GOES19', path: 'SECTOR/CGL', label: 'Great Lakes' };
-};
-
 // view: 'local' | 'national' | 'satellite'
 const RadarTab = ({ location }) => {
   const nearestRadar = useMemo(() => findNearestRadar(location.lat, location.lon), [location.lat, location.lon]);
@@ -189,8 +174,7 @@ const RadarTab = ({ location }) => {
     setImgError(false);
   };
 
-  const satSectorCode = satInfo.path === 'CONUS' ? 'CONUS' : satInfo.path.split('/')[1];
-  const satGifUrl = `https://cdn.star.nesdis.noaa.gov/${satInfo.sat}/ABI/${satInfo.path}/GEOCOLOR/${satInfo.sat}-${satSectorCode}-GEOCOLOR-600x600.gif`;
+  const satGifUrl = `https://cdn.star.nesdis.noaa.gov/${satInfo.sat}/ABI/${satInfo.path}/GEOCOLOR/${satInfo.sat}-${satInfo.sector}-GEOCOLOR-600x600.gif`;
 
   const imgSrc = view === 'satellite'
     ? `${satGifUrl}?t=${refreshKey}`

@@ -1,28 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 import TabPanel from '../layout/TabPanel';
-
-// NOAA CDN only serves animated GIF loops for composite products (GEOCOLOR, Sandwich, AirMass).
-// Individual raw bands (13, 09, etc.) are only available as timestamped static JPGs.
-// Sandwich = visible + IR cloud-top temperature overlay (good IR substitute)
-// AirMass = multi-channel RGB showing moisture/jet stream boundaries (good WV substitute)
-const getSatelliteInfo = (lat, lon) => {
-  if (lat > 54)               return { sat: 'GOES18', path: 'SECTOR/AK',  sector: 'AK',  label: 'Alaska' };
-  if (lat < 25 && lon < -150) return { sat: 'GOES18', path: 'SECTOR/HI',  sector: 'HI',  label: 'Hawaii' };
-  // Western US — use regional sectors instead of CONUS (CONUS has no composite GIFs)
-  if (lon <= -115) return lat < 37
-    ? { sat: 'GOES19', path: 'SECTOR/PSW', sector: 'PSW', label: 'Pacific Southwest' }
-    : { sat: 'GOES19', path: 'SECTOR/PNW', sector: 'PNW', label: 'Pacific Northwest' };
-  if (lon <= -100) return lat < 37
-    ? { sat: 'GOES19', path: 'SECTOR/SR',  sector: 'SR',  label: 'Southern Rockies' }
-    : { sat: 'GOES19', path: 'SECTOR/NR',  sector: 'NR',  label: 'Northern Rockies' };
-  if (lon <= -90) return lat < 37
-    ? { sat: 'GOES19', path: 'SECTOR/SP',  sector: 'SP',  label: 'Southern Plains' }
-    : { sat: 'GOES19', path: 'SECTOR/CGL', sector: 'CGL', label: 'Great Lakes' };
-  if (lat < 35)   return { sat: 'GOES19', path: 'SECTOR/SE',  sector: 'SE',  label: 'Southeast' };
-  if (lon > -78)  return { sat: 'GOES19', path: 'SECTOR/NE',  sector: 'NE',  label: 'Northeast' };
-  return               { sat: 'GOES19', path: 'SECTOR/CGL', sector: 'CGL', label: 'Great Lakes' };
-};
+import { getSatelliteInfo } from '../../utils/helpers';
 
 const BASE = 'https://cdn.star.nesdis.noaa.gov';
 
