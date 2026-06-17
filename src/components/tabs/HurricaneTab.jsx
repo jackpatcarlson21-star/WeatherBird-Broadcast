@@ -15,11 +15,56 @@ import {
 } from '../../utils/constants';
 
 const SAT_TYPES = [
-  { key: 'GEOCOLOR',   label: 'GeoColor',   desc: 'True-color visible' },
-  { key: 'IR',         label: 'Infrared',   desc: 'Cloud-top temps (CH 13)' },
+  { key: 'GEOCOLOR',   label: 'GeoColor',    desc: 'True-color visible' },
+  { key: 'IR',         label: 'Infrared',    desc: 'Cloud-top temps (CH 13)' },
   { key: 'WATERVAPOR', label: 'Water Vapor', desc: 'Mid-level moisture (CH 9)' },
-  { key: 'AIRMASS',    label: 'Air Mass',   desc: 'Air mass boundaries (RGB)' },
+  { key: 'AIRMASS',    label: 'Air Mass',    desc: 'Air mass boundaries (RGB)' },
 ];
+
+const MESO_BASE = 'https://cdn.star.nesdis.noaa.gov/GOES19/ABI/MESO/';
+
+const parseMesoCoord = (sector) => {
+  const m = sector.match(/^(\d+)(N|S)-(\d+)(E|W)$/);
+  if (!m) return null;
+  return { lat: m[2] === 'N' ? +m[1] : -+m[1], lon: m[4] === 'W' ? -+m[3] : +m[3] };
+};
+
+const findNearestMeso = (sectors, lat, lon) => {
+  let best = null, bestD = Infinity;
+  for (const s of sectors) {
+    const c = parseMesoCoord(s);
+    if (!c) continue;
+    const d = Math.hypot(c.lat - lat, c.lon - lon);
+    if (d < bestD) { bestD = d; best = s; }
+  }
+  return bestD < 25 ? best : null;
+};
+
+const fetchDirFrames = async (dirUrl, size) => {
+  const res = await fetch(dirUrl);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const html = await res.text();
+  const re = new RegExp(`href="(\\d+_[^"]+${size}\\.jpg)"`, 'g');
+  const urls = [];
+  let m;
+  while ((m = re.exec(html)) !== null) urls.push(dirUrl + m[1]);
+  return urls.slice(-24);
+};
+
+const fetchMesoSectors = async () => {
+  const res = await fetch(MESO_BASE);
+  if (!res.ok) return [];
+  const html = await res.text();
+  return [...html.matchAll(/href="(\d+[NS]-\d+[EW])\/"/g)].map(m => m[1]);
+};
+
+const parseGoesTimestamp = (url) => {
+  const m = url.match(/\/(\d{4})(\d{3})(\d{2})(\d{2})\d*_/);
+  if (!m) return '';
+  const [, year, doy, hh, mm] = m;
+  const date = new Date(Date.UTC(+year, 0, +doy));
+  return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })} ${hh}:${mm} UTC`;
+};
 
 // ── HURDAT2 ──────────────────────────────────────────────────────────────────────
 
@@ -168,10 +213,21 @@ const HurricaneTab = () => {
   const [selectedYear, setSelectedYear]   = useState(2023);
 
   // Satellite state
-  const [satType, setSatType]       = useState('GEOCOLOR');
+  const [satType, setSatType]           = useState('GEOCOLOR');
   const [satCacheBust, setSatCacheBust] = useState(() => Date.now());
   const [satLastUpdated, setSatLastUpdated] = useState(() => new Date());
-  const [satImgLoaded, setSatImgLoaded]   = useState(false);
+  const [satImgLoaded, setSatImgLoaded] = useState(false);
+
+  // Loop state
+  const [satMode, setSatMode]           = useState('still');
+  const [loopFrames, setLoopFrames]     = useState([]);
+  const [loopIdx, setLoopIdx]           = useState(0);
+  const [loopPlaying, setLoopPlaying]   = useState(true);
+  const [loopSpeed, setLoopSpeed]       = useState(250);
+  const [loopLoading, setLoopLoading]   = useState(false);
+  const [loopError, setLoopError]       = useState(null);
+  const [stormFocus, setStormFocus]     = useState(false);
+  const [mesoList, setMesoList]         = useState(null);
 
   const refreshSat = useCallback(() => {
     setSatCacheBust(Date.now());
@@ -179,11 +235,55 @@ const HurricaneTab = () => {
     setSatImgLoaded(false);
   }, []);
 
+  // Still mode auto-refresh
   useEffect(() => {
-    if (view !== 'satellite') return;
+    if (view !== 'satellite' || satMode !== 'still') return;
     const id = setInterval(refreshSat, 10 * 60 * 1000);
     return () => clearInterval(id);
-  }, [view, refreshSat]);
+  }, [view, satMode, refreshSat]);
+
+  // Load loop frames whenever mode/type/basin/stormFocus changes
+  useEffect(() => {
+    if (view !== 'satellite' || satMode !== 'loop') return;
+    setLoopLoading(true);
+    setLoopError(null);
+    setLoopFrames([]);
+    setLoopIdx(0);
+
+    const goesUrls = basin === 'atlantic' ? GOES_ATLANTIC : GOES_PACIFIC;
+
+    const load = async () => {
+      if (stormFocus) {
+        const storms = basin === 'atlantic' ? atlanticStorms : pacificStorms;
+        if (storms && storms.length > 0) {
+          const list = mesoList ?? await fetchMesoSectors();
+          if (mesoList === null) setMesoList(list);
+          const storm = storms[0];
+          const sector = findNearestMeso(list, storm.lat ?? 0, storm.lon ?? 0);
+          if (sector) {
+            const dirUrl = `${MESO_BASE}${sector}/GEOCOLOR/`;
+            return fetchDirFrames(dirUrl, '1000x1000');
+          }
+        }
+        // No nearby meso — fall through to sector
+        setStormFocus(false);
+      }
+      const dirUrl = goesUrls[satType].replace(/[^/]+\.jpg$/, '');
+      return fetchDirFrames(dirUrl, '900x540');
+    };
+
+    load()
+      .then(frames => { setLoopFrames(frames); setLoopIdx(frames.length - 1); })
+      .catch(err => setLoopError(err.message || 'Failed to load frames'))
+      .finally(() => setLoopLoading(false));
+  }, [view, satMode, satType, basin, stormFocus]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Animation ticker
+  useEffect(() => {
+    if (!loopPlaying || loopFrames.length === 0 || loopLoading) return;
+    const id = setInterval(() => setLoopIdx(i => (i + 1) % loopFrames.length), loopSpeed);
+    return () => clearInterval(id);
+  }, [loopPlaying, loopFrames.length, loopLoading, loopSpeed]);
 
   // Fetch live active storms on mount
   useEffect(() => {
@@ -637,11 +737,14 @@ const HurricaneTab = () => {
 
       {/* ══════════════════════ SATELLITE VIEW ══════════════════════ */}
       {view === 'satellite' && (() => {
-        const goesUrls = basin === 'atlantic' ? GOES_ATLANTIC : GOES_PACIFIC;
-        const imgSrc   = `${goesUrls[satType]}?t=${satCacheBust}`;
-        const satLabel = SAT_TYPES.find(t => t.key === satType);
-        const satellite = basin === 'atlantic' ? 'GOES-16 (East)' : 'GOES-18 (West)';
+        const goesUrls  = basin === 'atlantic' ? GOES_ATLANTIC : GOES_PACIFIC;
+        const imgSrc    = `${goesUrls[satType]}?t=${satCacheBust}`;
+        const satLabel  = SAT_TYPES.find(t => t.key === satType);
+        const satellite = basin === 'atlantic' ? 'GOES-19 (East)' : 'GOES-18 (West)';
         const sector    = basin === 'atlantic' ? 'Tropical Atlantic / Gulf' : 'Eastern Pacific';
+        const hasStorms = ((basin === 'atlantic' ? atlanticStorms : pacificStorms) ?? []).length > 0;
+        const currentFrame = loopFrames[loopIdx];
+        const frameTime    = currentFrame ? parseGoesTimestamp(currentFrame) : '';
 
         return (
           <>
@@ -650,7 +753,7 @@ const HurricaneTab = () => {
               {['atlantic', 'pacific'].map(b => (
                 <button
                   key={b}
-                  onClick={() => { setBasin(b); setSatImgLoaded(false); }}
+                  onClick={() => { setBasin(b); setSatImgLoaded(false); setLoopFrames([]); }}
                   className={`px-4 py-2 rounded border-2 font-bold transition-all ${
                     basin === b
                       ? 'border-cyan-400 bg-cyan-900/50 text-white shadow-neon-md'
@@ -662,72 +765,178 @@ const HurricaneTab = () => {
               ))}
             </div>
 
-            {/* Image type selector */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-              {SAT_TYPES.map(t => (
+            {/* Image type selector (hidden in storm-focus loop since meso is always GEOCOLOR) */}
+            {!(satMode === 'loop' && stormFocus) && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                {SAT_TYPES.map(t => (
+                  <button
+                    key={t.key}
+                    onClick={() => { setSatType(t.key); setSatImgLoaded(false); setLoopFrames([]); }}
+                    className={`flex flex-col items-center px-3 py-2 rounded border-2 font-bold transition-all text-center ${
+                      satType === t.key
+                        ? 'border-cyan-400 bg-cyan-900/50 text-white shadow-neon-md'
+                        : 'border-cyan-800 text-cyan-400 hover:border-cyan-500 hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="text-sm">{t.label}</span>
+                    <span className="text-xs font-normal text-cyan-600 mt-0.5">{t.desc}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Still / Loop toggle + storm focus */}
+            <div className="flex flex-wrap gap-2 mb-4 items-center">
+              {['still', 'loop'].map(m => (
                 <button
-                  key={t.key}
-                  onClick={() => { setSatType(t.key); setSatImgLoaded(false); }}
-                  className={`flex flex-col items-center px-3 py-2 rounded border-2 font-bold transition-all text-center ${
-                    satType === t.key
+                  key={m}
+                  onClick={() => { setSatMode(m); setLoopFrames([]); setLoopError(null); }}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded border-2 font-bold transition-all ${
+                    satMode === m
                       ? 'border-cyan-400 bg-cyan-900/50 text-white shadow-neon-md'
                       : 'border-cyan-800 text-cyan-400 hover:border-cyan-500 hover:bg-white/5'
                   }`}
                 >
-                  <span className="text-sm">{t.label}</span>
-                  <span className="text-xs font-normal text-cyan-600 mt-0.5">{t.desc}</span>
+                  {m === 'still' ? '◼ STILL' : '▶ LOOP'}
                 </button>
               ))}
+              {satMode === 'loop' && hasStorms && (
+                <button
+                  onClick={() => { setStormFocus(f => !f); setLoopFrames([]); }}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded border-2 font-bold transition-all ${
+                    stormFocus
+                      ? 'border-yellow-400 bg-yellow-900/40 text-yellow-300'
+                      : 'border-yellow-800 text-yellow-600 hover:border-yellow-500 hover:bg-white/5'
+                  }`}
+                >
+                  <Satellite size={14} /> STORM FOCUS
+                </button>
+              )}
             </div>
 
-            {/* Header + refresh */}
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h3 className="text-lg text-cyan-300 font-bold">
-                  {satellite} · {sector}
-                </h3>
-                <p className="text-xs text-cyan-600">
-                  {satLabel?.label} · Updated {satLastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · auto-refreshes every 10 min
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
+            {/* Loop playback controls */}
+            {satMode === 'loop' && (
+              <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-black/30 rounded-lg border border-cyan-800">
                 <button
-                  onClick={refreshSat}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded border border-cyan-700 text-cyan-400 hover:bg-cyan-900/40 hover:text-white transition font-bold text-sm"
+                  onClick={() => setLoopPlaying(p => !p)}
+                  disabled={loopFrames.length === 0}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-cyan-600 text-cyan-300 font-bold hover:bg-cyan-900/40 disabled:opacity-30 transition"
                 >
-                  <RefreshCw size={14} /> REFRESH
+                  {loopPlaying ? '⏸ PAUSE' : '▶ PLAY'}
                 </button>
-                <a
-                  href="https://www.star.nesdis.noaa.gov/GOES/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-3 py-1.5 bg-cyan-900/50 text-cyan-300 rounded border border-cyan-500 hover:bg-cyan-800 hover:text-white transition font-vt323 text-sm"
-                >
-                  <ExternalLink size={14} /> NESDIS
-                </a>
+
+                <div className="flex items-center gap-2 text-sm text-cyan-400">
+                  <span>SPEED</span>
+                  {[{ label: 'SLOW', ms: 500 }, { label: 'MED', ms: 250 }, { label: 'FAST', ms: 100 }].map(s => (
+                    <button
+                      key={s.ms}
+                      onClick={() => setLoopSpeed(s.ms)}
+                      className={`px-2 py-0.5 rounded border text-xs font-bold transition ${
+                        loopSpeed === s.ms
+                          ? 'border-cyan-400 bg-cyan-900/50 text-white'
+                          : 'border-cyan-800 text-cyan-600 hover:border-cyan-600'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="ml-auto text-xs text-cyan-500 text-right">
+                  {loopLoading && <span className="flex items-center gap-1"><RefreshCw size={12} className="animate-spin" /> Loading frames...</span>}
+                  {!loopLoading && loopFrames.length > 0 && (
+                    <>
+                      <span className="text-cyan-300 font-bold">{loopIdx + 1}/{loopFrames.length}</span>
+                      {frameTime && <span className="block">{frameTime}</span>}
+                    </>
+                  )}
+                  {loopError && <span className="text-yellow-400">{loopError}</span>}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Frame scrubber */}
+            {satMode === 'loop' && loopFrames.length > 0 && (
+              <div className="flex gap-0.5 mb-3">
+                {loopFrames.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setLoopIdx(i); setLoopPlaying(false); }}
+                    className={`flex-1 h-1.5 rounded-full transition-all ${
+                      i === loopIdx ? 'bg-cyan-400' : i < loopIdx ? 'bg-cyan-800' : 'bg-cyan-900/40'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Header (still mode only) */}
+            {satMode === 'still' && (
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h3 className="text-lg text-cyan-300 font-bold">{satellite} · {sector}</h3>
+                  <p className="text-xs text-cyan-600">
+                    {satLabel?.label} · Updated {satLastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · auto-refreshes every 10 min
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={refreshSat}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded border border-cyan-700 text-cyan-400 hover:bg-cyan-900/40 hover:text-white transition font-bold text-sm"
+                  >
+                    <RefreshCw size={14} /> REFRESH
+                  </button>
+                  <a
+                    href="https://www.star.nesdis.noaa.gov/GOES/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-cyan-900/50 text-cyan-300 rounded border border-cyan-500 hover:bg-cyan-800 hover:text-white transition font-vt323 text-sm"
+                  >
+                    <ExternalLink size={14} /> NESDIS
+                  </a>
+                </div>
+              </div>
+            )}
 
             {/* Satellite image */}
-            <div className="relative rounded-lg overflow-hidden border-4 border-cyan-500 bg-black">
-              {!satImgLoaded && (
+            <div className="relative rounded-lg overflow-hidden border-4 border-cyan-500 bg-black" style={{ minHeight: 200 }}>
+              {satMode === 'still' && !satImgLoaded && (
                 <div className="absolute inset-0 flex items-center justify-center text-cyan-400 gap-2 z-10">
                   <RefreshCw size={18} className="animate-spin" />
                   <span className="font-vt323 text-lg">Loading satellite feed...</span>
                 </div>
               )}
-              <img
-                key={imgSrc}
-                src={imgSrc}
-                alt={`${basin} ${satLabel?.label} satellite`}
-                className={`w-full h-auto transition-opacity duration-500 ${satImgLoaded ? 'opacity-100' : 'opacity-0'}`}
-                onLoad={() => setSatImgLoaded(true)}
-                onError={(e) => { e.target.onerror = null; e.target.src = PLACEHOLDER_IMG; setSatImgLoaded(true); }}
-              />
+              {satMode === 'loop' && loopLoading && loopFrames.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center text-cyan-400 gap-2 z-10">
+                  <RefreshCw size={18} className="animate-spin" />
+                  <span className="font-vt323 text-lg">Fetching image frames...</span>
+                </div>
+              )}
+              {satMode === 'still' && (
+                <img
+                  key={imgSrc}
+                  src={imgSrc}
+                  alt={`${basin} ${satLabel?.label} satellite`}
+                  className={`w-full h-auto transition-opacity duration-500 ${satImgLoaded ? 'opacity-100' : 'opacity-0'}`}
+                  onLoad={() => setSatImgLoaded(true)}
+                  onError={(e) => { e.target.onerror = null; e.target.src = PLACEHOLDER_IMG; setSatImgLoaded(true); }}
+                />
+              )}
+              {satMode === 'loop' && loopFrames.length > 0 && (
+                <img
+                  key={currentFrame}
+                  src={currentFrame}
+                  alt={`${basin} satellite frame ${loopIdx + 1}`}
+                  className="w-full h-auto"
+                  onError={(e) => { e.target.onerror = null; e.target.src = PLACEHOLDER_IMG; }}
+                />
+              )}
             </div>
 
             <p className="text-xs text-gray-500 mt-2 italic text-center">
-              Source: NOAA / NESDIS GOES imagery · Images update approximately every 10 minutes
+              {satMode === 'loop' && stormFocus
+                ? 'GOES-19 Mesoscale · Storm-centered · ~1-min updates (when NOAA scanner is focused on storm)'
+                : `Source: NOAA / NESDIS ${satellite} · ${satMode === 'loop' ? 'Last 24 frames (~4 hrs)' : 'Updates every ~10 min'}`}
             </p>
           </>
         );
