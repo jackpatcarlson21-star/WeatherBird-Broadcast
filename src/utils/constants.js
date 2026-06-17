@@ -38,17 +38,18 @@ export const NHC_ATLANTIC_OUTLOOK_URL = "https://www.nhc.noaa.gov/xgtwo/two_atl_
 export const NHC_PACIFIC_OUTLOOK_URL = "https://www.nhc.noaa.gov/xgtwo/two_pac_7d0.png";
 
 // --- GOES Tropical Satellite Imagery (NESDIS CDN) ---
+// GOES-16 replaced by GOES-19 for East; GOES-18 for West Pacific
 export const GOES_ATLANTIC = {
-  GEOCOLOR:   'https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR/taw/GEOCOLOR/latest.jpg',
-  IR:         'https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR/taw/13/latest.jpg',
-  WATERVAPOR: 'https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR/taw/09/latest.jpg',
-  AIRMASS:    'https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR/taw/AIRMASS/latest.jpg',
+  GEOCOLOR:   'https://cdn.star.nesdis.noaa.gov/GOES19/ABI/SECTOR/taw/GEOCOLOR/900x540.jpg',
+  IR:         'https://cdn.star.nesdis.noaa.gov/GOES19/ABI/SECTOR/taw/13/900x540.jpg',
+  WATERVAPOR: 'https://cdn.star.nesdis.noaa.gov/GOES19/ABI/SECTOR/taw/09/900x540.jpg',
+  AIRMASS:    'https://cdn.star.nesdis.noaa.gov/GOES19/ABI/SECTOR/taw/AirMass/900x540.jpg',
 };
 export const GOES_PACIFIC = {
-  GEOCOLOR:   'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/GEOCOLOR/latest.jpg',
-  IR:         'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/13/latest.jpg',
-  WATERVAPOR: 'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/09/latest.jpg',
-  AIRMASS:    'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/AIRMASS/latest.jpg',
+  GEOCOLOR:   'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/GEOCOLOR/900x540.jpg',
+  IR:         'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/13/900x540.jpg',
+  WATERVAPOR: 'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/09/900x540.jpg',
+  AIRMASS:    'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/AirMass/900x540.jpg',
 };
 
 // NOAA MapServer for active tropical cyclone data (JSON queries)
