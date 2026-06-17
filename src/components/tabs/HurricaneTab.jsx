@@ -225,9 +225,12 @@ const HurricaneTab = () => {
   const [loopPlaying, setLoopPlaying]   = useState(true);
   const [loopSpeed, setLoopSpeed]       = useState(250);
   const [loopLoading, setLoopLoading]   = useState(false);
+  const [loopReady, setLoopReady]       = useState(false);
+  const [loopPreloaded, setLoopPreloaded] = useState(0);
   const [loopError, setLoopError]       = useState(null);
   const [stormFocus, setStormFocus]     = useState(false);
   const [mesoList, setMesoList]         = useState(null);
+  const loopImgRef                      = React.useRef(null);
 
   const refreshSat = useCallback(() => {
     setSatCacheBust(Date.now());
@@ -242,10 +245,12 @@ const HurricaneTab = () => {
     return () => clearInterval(id);
   }, [view, satMode, refreshSat]);
 
-  // Load loop frames whenever mode/type/basin/stormFocus changes
+  // Fetch frame URL list
   useEffect(() => {
     if (view !== 'satellite' || satMode !== 'loop') return;
     setLoopLoading(true);
+    setLoopReady(false);
+    setLoopPreloaded(0);
     setLoopError(null);
     setLoopFrames([]);
     setLoopIdx(0);
@@ -261,29 +266,50 @@ const HurricaneTab = () => {
           const storm = storms[0];
           const sector = findNearestMeso(list, storm.lat ?? 0, storm.lon ?? 0);
           if (sector) {
-            const dirUrl = `${MESO_BASE}${sector}/GEOCOLOR/`;
-            return fetchDirFrames(dirUrl, '1000x1000');
+            return fetchDirFrames(`${MESO_BASE}${sector}/GEOCOLOR/`, '1000x1000');
           }
         }
-        // No nearby meso — fall through to sector
         setStormFocus(false);
       }
-      const dirUrl = goesUrls[satType].replace(/[^/]+\.jpg$/, '');
-      return fetchDirFrames(dirUrl, '900x540');
+      return fetchDirFrames(goesUrls[satType].replace(/[^/]+\.jpg$/, ''), '900x540');
     };
 
     load()
-      .then(frames => { setLoopFrames(frames); setLoopIdx(frames.length - 1); })
-      .catch(err => setLoopError(err.message || 'Failed to load frames'))
-      .finally(() => setLoopLoading(false));
+      .then(frames => { setLoopFrames(frames); setLoopLoading(false); })
+      .catch(err => { setLoopError(err.message || 'Failed to load frames'); setLoopLoading(false); });
   }, [view, satMode, satType, basin, stormFocus]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Animation ticker
+  // Preload all frames into browser cache after URLs are fetched
   useEffect(() => {
-    if (!loopPlaying || loopFrames.length === 0 || loopLoading) return;
-    const id = setInterval(() => setLoopIdx(i => (i + 1) % loopFrames.length), loopSpeed);
+    if (loopFrames.length === 0) return;
+    setLoopReady(false);
+    setLoopPreloaded(0);
+    let cancelled = false;
+    let done = 0;
+    loopFrames.forEach(url => {
+      const img = new Image();
+      img.onload = img.onerror = () => {
+        if (cancelled) return;
+        done++;
+        setLoopPreloaded(done);
+        if (done === loopFrames.length) setLoopReady(true);
+      };
+      img.src = url;
+    });
+    return () => { cancelled = true; };
+  }, [loopFrames]);
+
+  // Animation ticker — only mutates the img src directly via ref, no React re-render per frame
+  useEffect(() => {
+    if (!loopPlaying || !loopReady || loopFrames.length === 0) return;
+    let idx = loopIdx;
+    const id = setInterval(() => {
+      idx = (idx + 1) % loopFrames.length;
+      setLoopIdx(idx);
+      if (loopImgRef.current) loopImgRef.current.src = loopFrames[idx];
+    }, loopSpeed);
     return () => clearInterval(id);
-  }, [loopPlaying, loopFrames.length, loopLoading, loopSpeed]);
+  }, [loopPlaying, loopReady, loopFrames, loopSpeed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch live active storms on mount
   useEffect(() => {
@@ -819,7 +845,7 @@ const HurricaneTab = () => {
               <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-black/30 rounded-lg border border-cyan-800">
                 <button
                   onClick={() => setLoopPlaying(p => !p)}
-                  disabled={loopFrames.length === 0}
+                  disabled={!loopReady}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-cyan-600 text-cyan-300 font-bold hover:bg-cyan-900/40 disabled:opacity-30 transition"
                 >
                   {loopPlaying ? '⏸ PAUSE' : '▶ PLAY'}
@@ -843,8 +869,13 @@ const HurricaneTab = () => {
                 </div>
 
                 <div className="ml-auto text-xs text-cyan-500 text-right">
-                  {loopLoading && <span className="flex items-center gap-1"><RefreshCw size={12} className="animate-spin" /> Loading frames...</span>}
-                  {!loopLoading && loopFrames.length > 0 && (
+                  {(loopLoading || (!loopReady && loopFrames.length > 0)) && (
+                    <span className="flex items-center gap-1">
+                      <RefreshCw size={12} className="animate-spin" />
+                      {loopLoading ? 'Fetching...' : `${loopPreloaded}/${loopFrames.length}`}
+                    </span>
+                  )}
+                  {loopReady && loopFrames.length > 0 && (
                     <>
                       <span className="text-cyan-300 font-bold">{loopIdx + 1}/{loopFrames.length}</span>
                       {frameTime && <span className="block">{frameTime}</span>}
@@ -906,10 +937,20 @@ const HurricaneTab = () => {
                   <span className="font-vt323 text-lg">Loading satellite feed...</span>
                 </div>
               )}
-              {satMode === 'loop' && loopLoading && loopFrames.length === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center text-cyan-400 gap-2 z-10">
+              {satMode === 'loop' && (loopLoading || (!loopReady && loopFrames.length > 0)) && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-cyan-400 gap-2 z-10">
                   <RefreshCw size={18} className="animate-spin" />
-                  <span className="font-vt323 text-lg">Fetching image frames...</span>
+                  <span className="font-vt323 text-lg">
+                    {loopLoading ? 'Fetching frame list...' : `Preloading ${loopPreloaded}/${loopFrames.length} frames...`}
+                  </span>
+                  {!loopLoading && loopFrames.length > 0 && (
+                    <div className="w-48 h-1.5 bg-cyan-900 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-cyan-400 rounded-full transition-all"
+                        style={{ width: `${(loopPreloaded / loopFrames.length) * 100}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
               {satMode === 'still' && (
@@ -924,9 +965,9 @@ const HurricaneTab = () => {
               )}
               {satMode === 'loop' && loopFrames.length > 0 && (
                 <img
-                  key={currentFrame}
-                  src={currentFrame}
-                  alt={`${basin} satellite frame ${loopIdx + 1}`}
+                  ref={loopImgRef}
+                  src={loopFrames[loopIdx]}
+                  alt={`${basin} satellite loop`}
                   className="w-full h-auto"
                   onError={(e) => { e.target.onerror = null; e.target.src = PLACEHOLDER_IMG; }}
                 />
