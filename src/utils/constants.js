@@ -37,6 +37,20 @@ export const PLACEHOLDER_IMG = "https://placehold.co/800x400/003366/00ffff?text=
 export const NHC_ATLANTIC_OUTLOOK_URL = "https://www.nhc.noaa.gov/xgtwo/two_atl_7d0.png";
 export const NHC_PACIFIC_OUTLOOK_URL = "https://www.nhc.noaa.gov/xgtwo/two_pac_7d0.png";
 
+// --- GOES Tropical Satellite Imagery (NESDIS CDN) ---
+export const GOES_ATLANTIC = {
+  GEOCOLOR:   'https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR/taw/GEOCOLOR/latest.jpg',
+  IR:         'https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR/taw/13/latest.jpg',
+  WATERVAPOR: 'https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR/taw/09/latest.jpg',
+  AIRMASS:    'https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR/taw/AIRMASS/latest.jpg',
+};
+export const GOES_PACIFIC = {
+  GEOCOLOR:   'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/GEOCOLOR/latest.jpg',
+  IR:         'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/13/latest.jpg',
+  WATERVAPOR: 'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/09/latest.jpg',
+  AIRMASS:    'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/AIRMASS/latest.jpg',
+};
+
 // NOAA MapServer for active tropical cyclone data (JSON queries)
 // AT1-AT5 forecast points: layers 6, 32, 58, 84, 110
 // EP1-EP5 forecast points: layers 136, 162, 188, 214, 240

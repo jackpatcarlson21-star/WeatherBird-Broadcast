@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { CloudLightning, ExternalLink, AlertTriangle, RefreshCw, Calendar, TrendingUp, Map, Activity } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { CloudLightning, ExternalLink, AlertTriangle, RefreshCw, Calendar, TrendingUp, Map, Activity, Satellite } from 'lucide-react';
 import { MapContainer, TileLayer, Polyline, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import TabPanel from '../layout/TabPanel';
@@ -9,8 +9,17 @@ import {
   NHC_MAPSERVER_BASE,
   NHC_ATLANTIC_STORM_LAYERS,
   NHC_PACIFIC_STORM_LAYERS,
+  GOES_ATLANTIC,
+  GOES_PACIFIC,
   PLACEHOLDER_IMG,
 } from '../../utils/constants';
+
+const SAT_TYPES = [
+  { key: 'GEOCOLOR',   label: 'GeoColor',   desc: 'True-color visible' },
+  { key: 'IR',         label: 'Infrared',   desc: 'Cloud-top temps (CH 13)' },
+  { key: 'WATERVAPOR', label: 'Water Vapor', desc: 'Mid-level moisture (CH 9)' },
+  { key: 'AIRMASS',    label: 'Air Mass',   desc: 'Air mass boundaries (RGB)' },
+];
 
 // ── HURDAT2 ──────────────────────────────────────────────────────────────────────
 
@@ -158,6 +167,24 @@ const HurricaneTab = () => {
   const [selectedStorm, setSelectedStorm] = useState(null);
   const [selectedYear, setSelectedYear]   = useState(2023);
 
+  // Satellite state
+  const [satType, setSatType]       = useState('GEOCOLOR');
+  const [satCacheBust, setSatCacheBust] = useState(() => Date.now());
+  const [satLastUpdated, setSatLastUpdated] = useState(() => new Date());
+  const [satImgLoaded, setSatImgLoaded]   = useState(false);
+
+  const refreshSat = useCallback(() => {
+    setSatCacheBust(Date.now());
+    setSatLastUpdated(new Date());
+    setSatImgLoaded(false);
+  }, []);
+
+  useEffect(() => {
+    if (view !== 'satellite') return;
+    const id = setInterval(refreshSat, 10 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [view, refreshSat]);
+
   // Fetch live active storms on mount
   useEffect(() => {
     const fetchAll = async () => {
@@ -220,8 +247,8 @@ const HurricaneTab = () => {
   return (
     <TabPanel title="HURRICANE TRACKER">
 
-      {/* ── Top toggle: ACTIVE / HISTORY ── */}
-      <div className="flex gap-2 mb-4">
+      {/* ── Top toggle: ACTIVE / HISTORY / SATELLITE ── */}
+      <div className="flex gap-2 mb-4 flex-wrap">
         <button
           onClick={() => setView('active')}
           className={`flex items-center gap-2 px-4 py-2 rounded border-2 font-bold transition-all ${
@@ -241,6 +268,16 @@ const HurricaneTab = () => {
           }`}
         >
           <Map size={16} /> HISTORY
+        </button>
+        <button
+          onClick={() => setView('satellite')}
+          className={`flex items-center gap-2 px-4 py-2 rounded border-2 font-bold transition-all ${
+            view === 'satellite'
+              ? 'border-cyan-400 bg-cyan-900/50 text-white shadow-neon-md'
+              : 'border-cyan-800 text-cyan-400 hover:border-cyan-500 hover:bg-white/5'
+          }`}
+        >
+          <Satellite size={16} /> SATELLITE
         </button>
       </div>
 
@@ -597,6 +634,104 @@ const HurricaneTab = () => {
           </p>
         </>
       )}
+
+      {/* ══════════════════════ SATELLITE VIEW ══════════════════════ */}
+      {view === 'satellite' && (() => {
+        const goesUrls = basin === 'atlantic' ? GOES_ATLANTIC : GOES_PACIFIC;
+        const imgSrc   = `${goesUrls[satType]}?t=${satCacheBust}`;
+        const satLabel = SAT_TYPES.find(t => t.key === satType);
+        const satellite = basin === 'atlantic' ? 'GOES-16 (East)' : 'GOES-18 (West)';
+        const sector    = basin === 'atlantic' ? 'Tropical Atlantic / Gulf' : 'Eastern Pacific';
+
+        return (
+          <>
+            {/* Basin toggle */}
+            <div className="flex gap-2 mb-4">
+              {['atlantic', 'pacific'].map(b => (
+                <button
+                  key={b}
+                  onClick={() => { setBasin(b); setSatImgLoaded(false); }}
+                  className={`px-4 py-2 rounded border-2 font-bold transition-all ${
+                    basin === b
+                      ? 'border-cyan-400 bg-cyan-900/50 text-white shadow-neon-md'
+                      : 'border-cyan-800 text-cyan-400 hover:border-cyan-500 hover:bg-white/5'
+                  }`}
+                >
+                  {b.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            {/* Image type selector */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+              {SAT_TYPES.map(t => (
+                <button
+                  key={t.key}
+                  onClick={() => { setSatType(t.key); setSatImgLoaded(false); }}
+                  className={`flex flex-col items-center px-3 py-2 rounded border-2 font-bold transition-all text-center ${
+                    satType === t.key
+                      ? 'border-cyan-400 bg-cyan-900/50 text-white shadow-neon-md'
+                      : 'border-cyan-800 text-cyan-400 hover:border-cyan-500 hover:bg-white/5'
+                  }`}
+                >
+                  <span className="text-sm">{t.label}</span>
+                  <span className="text-xs font-normal text-cyan-600 mt-0.5">{t.desc}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Header + refresh */}
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h3 className="text-lg text-cyan-300 font-bold">
+                  {satellite} · {sector}
+                </h3>
+                <p className="text-xs text-cyan-600">
+                  {satLabel?.label} · Updated {satLastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · auto-refreshes every 10 min
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={refreshSat}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded border border-cyan-700 text-cyan-400 hover:bg-cyan-900/40 hover:text-white transition font-bold text-sm"
+                >
+                  <RefreshCw size={14} /> REFRESH
+                </button>
+                <a
+                  href="https://www.star.nesdis.noaa.gov/GOES/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-3 py-1.5 bg-cyan-900/50 text-cyan-300 rounded border border-cyan-500 hover:bg-cyan-800 hover:text-white transition font-vt323 text-sm"
+                >
+                  <ExternalLink size={14} /> NESDIS
+                </a>
+              </div>
+            </div>
+
+            {/* Satellite image */}
+            <div className="relative rounded-lg overflow-hidden border-4 border-cyan-500 bg-black">
+              {!satImgLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center text-cyan-400 gap-2 z-10">
+                  <RefreshCw size={18} className="animate-spin" />
+                  <span className="font-vt323 text-lg">Loading satellite feed...</span>
+                </div>
+              )}
+              <img
+                key={imgSrc}
+                src={imgSrc}
+                alt={`${basin} ${satLabel?.label} satellite`}
+                className={`w-full h-auto transition-opacity duration-500 ${satImgLoaded ? 'opacity-100' : 'opacity-0'}`}
+                onLoad={() => setSatImgLoaded(true)}
+                onError={(e) => { e.target.onerror = null; e.target.src = PLACEHOLDER_IMG; setSatImgLoaded(true); }}
+              />
+            </div>
+
+            <p className="text-xs text-gray-500 mt-2 italic text-center">
+              Source: NOAA / NESDIS GOES imagery · Images update approximately every 10 minutes
+            </p>
+          </>
+        );
+      })()}
 
     </TabPanel>
   );
