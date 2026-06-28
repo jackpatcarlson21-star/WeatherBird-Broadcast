@@ -9,8 +9,8 @@ import {
   NHC_MAPSERVER_BASE,
   NHC_ATLANTIC_STORM_LAYERS,
   NHC_PACIFIC_STORM_LAYERS,
-  GOES_ATLANTIC,
-  GOES_PACIFIC,
+  GOES_SECTORS,
+  GOES_CH,
   PLACEHOLDER_IMG,
 } from '../../utils/constants';
 
@@ -214,6 +214,7 @@ const HurricaneTab = () => {
 
   // Satellite state
   const [satType, setSatType]           = useState('GEOCOLOR');
+  const [satRegion, setSatRegion]       = useState('wide');
   const [satCacheBust, setSatCacheBust] = useState(() => Date.now());
   const [satLastUpdated, setSatLastUpdated] = useState(() => new Date());
   const [satImgLoaded, setSatImgLoaded] = useState(false);
@@ -255,7 +256,8 @@ const HurricaneTab = () => {
     setLoopFrames([]);
     setLoopIdx(0);
 
-    const goesUrls = basin === 'atlantic' ? GOES_ATLANTIC : GOES_PACIFIC;
+    const sectors = GOES_SECTORS[basin];
+    const sectorDef = sectors.find(s => s.key === satRegion) ?? sectors[0];
 
     const load = async () => {
       if (stormFocus) {
@@ -264,20 +266,21 @@ const HurricaneTab = () => {
           const list = mesoList ?? await fetchMesoSectors();
           if (mesoList === null) setMesoList(list);
           const storm = storms[0];
-          const sector = findNearestMeso(list, storm.lat ?? 0, storm.lon ?? 0);
-          if (sector) {
-            return fetchDirFrames(`${MESO_BASE}${sector}/GEOCOLOR/`, '1000x1000');
+          const nearest = findNearestMeso(list, storm.lat ?? 0, storm.lon ?? 0);
+          if (nearest) {
+            return fetchDirFrames(`${MESO_BASE}${nearest}/GEOCOLOR/`, '1000x1000');
           }
         }
         setStormFocus(false);
       }
-      return fetchDirFrames(goesUrls[satType].replace(/[^/]+\.jpg$/, ''), '900x540');
+      const dirUrl = `${sectorDef.base}${GOES_CH[satType]}/`;
+      return fetchDirFrames(dirUrl, sectorDef.size);
     };
 
     load()
       .then(frames => { setLoopFrames(frames); setLoopLoading(false); })
       .catch(err => { setLoopError(err.message || 'Failed to load frames'); setLoopLoading(false); });
-  }, [view, satMode, satType, basin, stormFocus]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [view, satMode, satType, satRegion, basin, stormFocus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Preload all frames into browser cache after URLs are fetched
   useEffect(() => {
@@ -763,11 +766,10 @@ const HurricaneTab = () => {
 
       {/* ══════════════════════ SATELLITE VIEW ══════════════════════ */}
       {view === 'satellite' && (() => {
-        const goesUrls  = basin === 'atlantic' ? GOES_ATLANTIC : GOES_PACIFIC;
-        const imgSrc    = `${goesUrls[satType]}?t=${satCacheBust}`;
+        const sectors   = GOES_SECTORS[basin];
+        const sectorDef = sectors.find(s => s.key === satRegion) ?? sectors[0];
+        const imgSrc    = `${sectorDef.base}${GOES_CH[satType]}/${sectorDef.size}.jpg?t=${satCacheBust}`;
         const satLabel  = SAT_TYPES.find(t => t.key === satType);
-        const satellite = basin === 'atlantic' ? 'GOES-19 (East)' : 'GOES-18 (West)';
-        const sector    = basin === 'atlantic' ? 'Tropical Atlantic / Gulf' : 'Eastern Pacific';
         const hasStorms = ((basin === 'atlantic' ? atlanticStorms : pacificStorms) ?? []).length > 0;
         const currentFrame = loopFrames[loopIdx];
         const frameTime    = currentFrame ? parseGoesTimestamp(currentFrame) : '';
@@ -775,11 +777,11 @@ const HurricaneTab = () => {
         return (
           <>
             {/* Basin toggle */}
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-3">
               {['atlantic', 'pacific'].map(b => (
                 <button
                   key={b}
-                  onClick={() => { setBasin(b); setSatImgLoaded(false); setLoopFrames([]); }}
+                  onClick={() => { setBasin(b); setSatRegion('wide'); setSatImgLoaded(false); setLoopFrames([]); }}
                   className={`px-4 py-2 rounded border-2 font-bold transition-all ${
                     basin === b
                       ? 'border-cyan-400 bg-cyan-900/50 text-white shadow-neon-md'
@@ -790,6 +792,25 @@ const HurricaneTab = () => {
                 </button>
               ))}
             </div>
+
+            {/* Region selector (only shows sub-options when there are multiple) */}
+            {sectors.length > 1 && (
+              <div className="flex gap-2 mb-4">
+                {sectors.map(s => (
+                  <button
+                    key={s.key}
+                    onClick={() => { setSatRegion(s.key); setSatImgLoaded(false); setLoopFrames([]); }}
+                    className={`px-3 py-1.5 rounded border-2 font-bold text-sm transition-all ${
+                      satRegion === s.key
+                        ? 'border-cyan-400 bg-cyan-900/50 text-white'
+                        : 'border-cyan-800 text-cyan-400 hover:border-cyan-500 hover:bg-white/5'
+                    }`}
+                  >
+                    {s.label.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Image type selector (hidden in storm-focus loop since meso is always GEOCOLOR) */}
             {!(satMode === 'loop' && stormFocus) && (
@@ -905,7 +926,7 @@ const HurricaneTab = () => {
             {satMode === 'still' && (
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <h3 className="text-lg text-cyan-300 font-bold">{satellite} · {sector}</h3>
+                  <h3 className="text-lg text-cyan-300 font-bold">{sectorDef.sat} · {sectorDef.label}</h3>
                   <p className="text-xs text-cyan-600">
                     {satLabel?.label} · Updated {satLastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · auto-refreshes every 10 min
                   </p>
@@ -977,7 +998,7 @@ const HurricaneTab = () => {
             <p className="text-xs text-gray-500 mt-2 italic text-center">
               {satMode === 'loop' && stormFocus
                 ? 'GOES-19 Mesoscale · Storm-centered · ~1-min updates (when NOAA scanner is focused on storm)'
-                : `Source: NOAA / NESDIS ${satellite} · ${satMode === 'loop' ? 'Last 24 frames (~4 hrs)' : 'Updates every ~10 min'}`}
+                : `Source: NOAA / NESDIS ${sectorDef.sat} · ${sectorDef.label} · ${satMode === 'loop' ? 'Last 24 frames (~4 hrs)' : 'Updates every ~10 min'}`}
             </p>
           </>
         );

@@ -38,18 +38,23 @@ export const NHC_ATLANTIC_OUTLOOK_URL = "https://www.nhc.noaa.gov/xgtwo/two_atl_
 export const NHC_PACIFIC_OUTLOOK_URL = "https://www.nhc.noaa.gov/xgtwo/two_pac_7d0.png";
 
 // --- GOES Tropical Satellite Imagery (NESDIS CDN) ---
-// GOES-16 replaced by GOES-19 for East; GOES-18 for West Pacific
-export const GOES_ATLANTIC = {
-  GEOCOLOR:   'https://cdn.star.nesdis.noaa.gov/GOES19/ABI/SECTOR/taw/GEOCOLOR/900x540.jpg',
-  IR:         'https://cdn.star.nesdis.noaa.gov/GOES19/ABI/SECTOR/taw/13/900x540.jpg',
-  WATERVAPOR: 'https://cdn.star.nesdis.noaa.gov/GOES19/ABI/SECTOR/taw/09/900x540.jpg',
-  AIRMASS:    'https://cdn.star.nesdis.noaa.gov/GOES19/ABI/SECTOR/taw/AirMass/900x540.jpg',
+// Each sector: base dir URL + image size used for still and loop frames.
+// Channel folder is appended at runtime: base + CH[satType] + '/' + size + '.jpg'
+export const GOES_CH = {
+  GEOCOLOR:   'GEOCOLOR',
+  IR:         '13',
+  WATERVAPOR: '09',
+  AIRMASS:    'AirMass',
 };
-export const GOES_PACIFIC = {
-  GEOCOLOR:   'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/GEOCOLOR/900x540.jpg',
-  IR:         'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/13/900x540.jpg',
-  WATERVAPOR: 'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/09/900x540.jpg',
-  AIRMASS:    'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/AirMass/900x540.jpg',
+export const GOES_SECTORS = {
+  atlantic: [
+    { key: 'wide',      label: 'Atlantic Wide', base: 'https://cdn.star.nesdis.noaa.gov/GOES19/ABI/SECTOR/taw/', size: '900x540',   sat: 'GOES-19' },
+    { key: 'caribbean', label: 'Caribbean',     base: 'https://cdn.star.nesdis.noaa.gov/GOES19/ABI/SECTOR/car/', size: '1000x1000', sat: 'GOES-19' },
+    { key: 'gulf',      label: 'Gulf',          base: 'https://cdn.star.nesdis.noaa.gov/GOES19/ABI/SECTOR/mex/', size: '1000x1000', sat: 'GOES-19' },
+  ],
+  pacific: [
+    { key: 'wide', label: 'East Pacific', base: 'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/eep/', size: '900x540', sat: 'GOES-18' },
+  ],
 };
 
 // NOAA MapServer for active tropical cyclone data (JSON queries)
