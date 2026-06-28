@@ -216,6 +216,8 @@ const App = () => {
 
   // --- Auth and Firebase Initialization ---
   useEffect(() => {
+    let authSettled = false;
+
     try {
       const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 
@@ -230,7 +232,17 @@ const App = () => {
       const newAuth = getAuth(app);
       const newDb = getFirestore(app);
 
-      setDb(newDb);
+      // On mobile PWAs, signInAnonymously can hang indefinitely if the network
+      // isn't ready at launch. After 8s with no response, fall back to standalone
+      // mode so the app isn't permanently stuck on the loading screen.
+      const authTimeoutId = setTimeout(() => {
+        if (!authSettled) {
+          authSettled = true;
+          console.warn("Firebase auth timed out — running without cloud sync");
+          setUserId(crypto.randomUUID());
+          setIsAuthReady(true);
+        }
+      }, 8000);
 
       const unsubscribe = onAuthStateChanged(newAuth, async (user) => {
         if (!user) {
@@ -246,11 +258,20 @@ const App = () => {
             setAppError("Authentication failed. Cannot load app.");
           }
         }
-        setUserId(newAuth.currentUser?.uid || crypto.randomUUID());
-        setIsAuthReady(true);
+        if (!authSettled) {
+          authSettled = true;
+          clearTimeout(authTimeoutId);
+          setDb(newDb);
+          setUserId(newAuth.currentUser?.uid || crypto.randomUUID());
+          setIsAuthReady(true);
+        }
       });
 
-      return () => unsubscribe();
+      return () => {
+        authSettled = true;
+        clearTimeout(authTimeoutId);
+        unsubscribe();
+      };
     } catch (e) {
       console.error("Firebase Initialization Error:", e);
       setAppError("Application failed to initialize. See console for details.");
