@@ -86,7 +86,9 @@ const generateWeatherSummary = (current, daily, night, alerts, units) => {
   } else if (weatherCode <= 86) {
     summary += "Snow showers in the forecast. ";
   } else if (weatherCode >= 95) {
-    summary += "Thunderstorms in the forecast - stay weather aware. ";
+    summary += pop < 40
+      ? "Slight chance of thunderstorms - keep an eye on the sky. "
+      : "Thunderstorms in the forecast - stay weather aware. ";
   }
 
   // Precipitation chance
@@ -250,6 +252,7 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
           windSpeed={Math.round(currentData.wind_speed_10m || 0)}
           night={night}
           alerts={alerts}
+          pop={Math.round(daily?.precipitation_probability_max?.[0] || 0)}
         />
       </div>
 

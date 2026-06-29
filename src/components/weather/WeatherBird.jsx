@@ -60,7 +60,7 @@ const getTimeOfDay = () => {
   return 'late_night';
 };
 
-const WeatherBird = ({ temp, weatherCode, windSpeed, night, alerts }) => {
+const WeatherBird = ({ temp, weatherCode, windSpeed, night, alerts, pop }) => {
   let message = "";
   let animation = "";
   let accessory = "";
@@ -104,14 +104,23 @@ const WeatherBird = ({ temp, weatherCode, windSpeed, night, alerts }) => {
     bodyColor = "#FACC15";
     accessory = "\u26A1";
     animation = "animate-bounce";
-    message = pick([
-      "YIKES! Stay safe inside!",
-      "Thunder and lightning! Not ideal flying weather!",
-      "Even this bird is grounded right now!",
-      "Mother Nature is putting on a show!",
-      "Storms rolling through! Hunker down!",
-      night ? "Scary night out there! Stay cozy!" : "Wild weather! Maybe skip the picnic!",
-    ]);
+    if ((pop ?? 100) < 40) {
+      message = pick([
+        "Slight storm chance today - keep an eye on the sky!",
+        "Afternoon storms possible - stay weather aware!",
+        "Low storm risk, but don't put the umbrella away!",
+        night ? "Small storm chance tonight - sleep easy!" : "Isolated storms possible - check back later!",
+      ]);
+    } else {
+      message = pick([
+        "YIKES! Stay safe inside!",
+        "Thunder and lightning! Not ideal flying weather!",
+        "Even this bird is grounded right now!",
+        "Mother Nature is putting on a show!",
+        "Storms rolling through! Hunker down!",
+        night ? "Scary night out there! Stay cozy!" : "Wild weather! Maybe skip the picnic!",
+      ]);
+    }
 
   // === SNOW ===
   } else if (weatherCode >= 71 && weatherCode <= 77) {

@@ -158,7 +158,7 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading, units }) => {
   // Convert NWS forecast text to WMO code for AnimatedWeatherIcon
   const getForecastCode = (shortForecast, nwsIcon) => {
     const f = (shortForecast || '').toLowerCase();
-    if (f.includes('thunder') || f.includes('storm')) return 95;
+    if (f.includes('thunder')) return 95;
     if (f.includes('sleet') || f.includes('ice') || f.includes('freezing rain')) return 66;
     if (f.includes('freezing drizzle')) return 56;
     if (f.includes('snow') || f.includes('blizzard') || f.includes('flurr')) return 73;
@@ -204,11 +204,12 @@ const DailyOutlookTab = ({ location, daily, isWeatherLoading, units }) => {
                 <p className="text-xs text-cyan-400">{d.date}</p>
               </div>
               <div className="w-10 sm:w-1/6 shrink-0 flex justify-center">
-                <AnimatedWeatherIcon
-                  code={d.shortForecast ? getForecastCode(d.shortForecast, d.icon) : (d.code || 0)}
-                  night={d.shortForecast ? isForecastNight(d.icon) : false}
-                  size={40}
-                />
+                {(() => {
+                  let iconCode = d.shortForecast ? getForecastCode(d.shortForecast, d.icon) : (d.code || 0);
+                  // Low-probability thunderstorm risk: show rain showers instead of full storm icon
+                  if (iconCode >= 95 && (d.pop ?? 100) < 40) iconCode = 80;
+                  return <AnimatedWeatherIcon code={iconCode} night={d.shortForecast ? isForecastNight(d.icon) : false} size={40} />;
+                })()}
               </div>
               <div className="flex-1 sm:w-2/6 text-center">
                 {d.isNightOnly ? (
