@@ -524,6 +524,13 @@ const App = () => {
   const night = isNight(time, daily?.sunrise?.[0], daily?.sunset?.[0]);
   const isWeatherLoading = isLoading && !weatherData;
 
+  // Open-Meteo sets code 95 when a storm cell exists anywhere in the model grid,
+  // even with zero local precipitation. Downgrade to rain showers when there's
+  // no measurable precipitation at the location.
+  const effectiveCurrentCode = current?.weather_code >= 95 && (current?.precipitation ?? 0) < 0.1
+    ? 80
+    : current?.weather_code;
+
   const renderTabContent = () => {
     switch (currentScreen) {
       case SCREENS.CONDITIONS:
@@ -585,7 +592,7 @@ const App = () => {
       {!crtDone && <CRTPowerOn onComplete={() => setCrtDone(true)} />}
 
       {/* Animated Weather Background Particles */}
-      <WeatherBackground weatherCode={current?.weather_code} night={night} />
+      <WeatherBackground weatherCode={effectiveCurrentCode} night={night} />
 
       {/* Severe Weather Alert Flash Overlay */}
       {showAlertFlash && getSevereAlertLevel(alerts.filter(a => !dismissedAlertIds.has(a.properties?.id))) && (
@@ -665,7 +672,7 @@ const App = () => {
         autoCycle={autoCycle}
         setAutoCycle={setAutoCycle}
         night={night}
-        weatherCode={current?.weather_code}
+        weatherCode={effectiveCurrentCode}
         sunrise={daily?.sunrise?.[0]}
         sunset={daily?.sunset?.[0]}
         isTracking={isTracking}

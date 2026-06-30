@@ -190,6 +190,10 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
   if (isWeatherLoading) return <LoadingIndicator />;
 
   const currentData = current || {};
+  // Downgrade thunderstorm code to rain showers when there's no local precipitation
+  const effectiveCode = currentData.weather_code >= 95 && (currentData.precipitation ?? 0) < 0.1
+    ? 80
+    : (currentData.weather_code || 0);
   const dailyData = daily?.time?.[0] ? {
     max: daily.temperature_2m_max[0],
     min: daily.temperature_2m_min[0],
@@ -248,7 +252,7 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
         </div>
         <WeatherBird
           temp={Math.round(currentData.temperature_2m || 0)}
-          weatherCode={currentData.weather_code || 0}
+          weatherCode={effectiveCode}
           windSpeed={Math.round(currentData.wind_speed_10m || 0)}
           night={night}
           alerts={alerts}
@@ -278,13 +282,13 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
             {fmtTemp(currentData.temperature_2m || 0, units)}
           </p>
           <p className="text-xl sm:text-2xl font-vt323" style={{ color: BRIGHT_CYAN }}>
-            {getWeatherDescription(currentData.weather_code)}
+            {getWeatherDescription(effectiveCode)}
           </p>
           <TemperatureTrend dailyData={dailyData} />
         </div>
         <div className="text-white/90 flex items-center justify-center">
-          <span className="hidden sm:inline"><AnimatedWeatherIcon code={currentData.weather_code} night={night} size={150} /></span>
-          <span className="sm:hidden"><AnimatedWeatherIcon code={currentData.weather_code} night={night} size={100} /></span>
+          <span className="hidden sm:inline"><AnimatedWeatherIcon code={effectiveCode} night={night} size={150} /></span>
+          <span className="sm:hidden"><AnimatedWeatherIcon code={effectiveCode} night={night} size={100} /></span>
         </div>
       </div>
 

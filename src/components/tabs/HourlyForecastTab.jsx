@@ -219,7 +219,10 @@ const HourlyForecastTab = ({ hourly, sunrise, sunset, isWeatherLoading, units })
       temp:      cvtTemp(hourly.temperature_2m[idx]),
       feelsLike: cvtTemp(hourly.apparent_temperature?.[idx] ?? hourly.temperature_2m[idx]),
       pop:       Math.round(hourly.precipitation_probability[idx]),
-      code:      hourly.weather_code[idx],
+      code:      (() => {
+        const c = hourly.weather_code[idx];
+        return c >= 95 && (hourly.precipitation?.[idx] ?? 0) < 0.1 ? 80 : c;
+      })(),
       wind:      cvtWind(hourly.wind_speed_10m[idx]),
       humidity:  Math.round(hourly.relative_humidity_2m?.[idx] ?? 0),
       snowfall:  hourly.snowfall?.[idx] ?? 0,
