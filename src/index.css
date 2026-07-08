@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Self-hosted VT323 (was a Google Fonts @import — bundling it keeps the PWA working offline) */
+@font-face {
+  font-family: 'VT323';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/vt323-latin.woff2') format('woff2');
+}
+
+.font-vt323 {
+  font-family: 'VT323', monospace;
+}
+
 * {
   margin: 0;
   padding: 0;

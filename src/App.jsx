@@ -2,13 +2,16 @@ import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 
 import { AlertTriangle, X, Clock } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
-// Fix for default marker icons in Leaflet with webpack/vite
+// Fix for default marker icons in Leaflet with webpack/vite — bundled locally so they work offline
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
 });
 
 // Firebase
@@ -24,26 +27,41 @@ import useAutoLocation from './utils/useAutoLocation';
 
 // Components
 import { Header, Footer, Scanlines, TabNavigation, CRTPowerOn } from './components/layout';
-import { AppStatus, LocationModal, SettingsModal } from './components/common';
+import { AppStatus, LocationModal, SettingsModal, ErrorBoundary, LoadingIndicator } from './components/common';
 import { WeatherBackground } from './components/weather';
 const IconTestPage = lazy(() => import('./components/weather/IconTestPage'));
-import {
-  AlertsTab,
-  CurrentConditionsTab,
-  HourlyForecastTab,
-  DailyOutlookTab,
-  RadarTab,
-  WWADisplayTab,
-  SPCOutlookTab,
-  PrecipGraphTab,
-  AlmanacTab,
-  TripWeatherTab,
-  HurricaneTab,
-  ModelComparisonTab,
-  GardenTab,
-  SatelliteTab,
-} from './components/tabs';
 
+// Tabs are lazy-loaded so the initial bundle stays small; each chunk is fetched on first visit
+const AlertsTab = lazy(() => import('./components/tabs/AlertsTab'));
+const CurrentConditionsTab = lazy(() => import('./components/tabs/CurrentConditionsTab'));
+const HourlyForecastTab = lazy(() => import('./components/tabs/HourlyForecastTab'));
+const DailyOutlookTab = lazy(() => import('./components/tabs/DailyOutlookTab'));
+const RadarTab = lazy(() => import('./components/tabs/RadarTab'));
+const WWADisplayTab = lazy(() => import('./components/tabs/WWADisplayTab'));
+const SPCOutlookTab = lazy(() => import('./components/tabs/SPCOutlookTab'));
+const PrecipGraphTab = lazy(() => import('./components/tabs/PrecipGraphTab'));
+const AlmanacTab = lazy(() => import('./components/tabs/AlmanacTab'));
+const TripWeatherTab = lazy(() => import('./components/tabs/TripWeatherTab'));
+const HurricaneTab = lazy(() => import('./components/tabs/HurricaneTab'));
+const ModelComparisonTab = lazy(() => import('./components/tabs/ModelComparisonTab'));
+const GardenTab = lazy(() => import('./components/tabs/GardenTab'));
+const SatelliteTab = lazy(() => import('./components/tabs/SatelliteTab'));
+
+
+// Cached API snapshots let the app open instantly (and offline) with the last known data
+const CACHE_MAX_AGE_MS = 3 * 60 * 60 * 1000;
+const readCache = (key) => {
+  try {
+    const cached = JSON.parse(localStorage.getItem(key));
+    if (!cached || Date.now() - cached.timestamp > CACHE_MAX_AGE_MS) return null;
+    return cached.data;
+  } catch { return null; }
+};
+const writeCache = (key, data) => {
+  try {
+    localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
+  } catch { /* storage full or unavailable — cache is best-effort */ }
+};
 
 const SCREEN_ORDER = [
   SCREENS.CONDITIONS, SCREENS.HOURLY, SCREENS.DAILY, SCREENS.RADAR,
@@ -58,8 +76,9 @@ const App = () => {
   const [userId, setUserId] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [location, setLocation] = useState(INITIAL_LOCATION);
-  const [weatherData, setWeatherData] = useState(null);
-  const [aqiData, setAqiData] = useState(null);
+  const [weatherData, setWeatherData] = useState(() => readCache('weatherbird-weather-cache'));
+  const [aqiData, setAqiData] = useState(() => readCache('weatherbird-aqi-cache'));
+  const [isStaleData, setIsStaleData] = useState(() => !!readCache('weatherbird-weather-cache'));
   const [alerts, setAlerts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [appError, setAppError] = useState(null);
@@ -213,6 +232,8 @@ const App = () => {
   const weatherIntervalRef = useRef(null);
   const initialLoadRef = useRef(true);
   const contentRef = useRef(null);
+  const hasWeatherDataRef = useRef(!!weatherData);
+  const lastFetchTimeRef = useRef(0);
 
   // --- Auth and Firebase Initialization ---
   useEffect(() => {
@@ -355,11 +376,19 @@ const App = () => {
       if (!response.ok) throw new Error(`API returned status ${response.status}`);
       const data = await response.json();
       setWeatherData(data);
+      hasWeatherDataRef.current = true;
+      lastFetchTimeRef.current = Date.now();
+      setIsStaleData(false);
+      writeCache('weatherbird-weather-cache', data);
       console.log("Weather data fetched successfully.", data);
     } catch (error) {
       console.error("Weather fetching failed:", error);
-      setAppError(`Failed to fetch weather data for ${loc.name}. Check coordinates.`);
-      setWeatherData(null);
+      // Keep showing the last good data on a failed refresh; only error out if we have nothing
+      if (hasWeatherDataRef.current) {
+        setIsStaleData(true);
+      } else {
+        setAppError(`Failed to fetch weather data for ${loc.name}. Check coordinates.`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -375,10 +404,11 @@ const App = () => {
       if (!response.ok) throw new Error(`AQI API returned status ${response.status}`);
       const data = await response.json();
       setAqiData(data);
+      writeCache('weatherbird-aqi-cache', data);
       console.log("AQI data fetched successfully.", data);
     } catch (error) {
+      // Keep the last known AQI on a failed refresh
       console.error("AQI fetching failed:", error);
-      setAqiData(null);
     }
   }, []);
 
@@ -453,6 +483,7 @@ const App = () => {
     }
 
     const alertInterval = setInterval(() => {
+      if (document.hidden) return; // don't poll while the tab is in the background
       if (location.lat && location.lon && isAuthReady) fetchAlerts();
     }, 120000);
 
@@ -471,6 +502,7 @@ const App = () => {
     fetchAQI(location);
 
     weatherIntervalRef.current = setInterval(() => {
+      if (document.hidden) return; // don't poll while the tab is in the background
       fetchWeather(location);
       fetchAQI(location);
     }, REFRESH_RATE_MS);
@@ -479,6 +511,20 @@ const App = () => {
       if (weatherIntervalRef.current) clearInterval(weatherIntervalRef.current);
     };
   }, [location, isAuthReady, fetchWeather, fetchAQI]);
+
+  // --- Catch-Up Refresh on Return to Tab ---
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden || !isAuthReady) return;
+      // Skipped polls while hidden — refresh now if the data is over a minute old
+      if (Date.now() - lastFetchTimeRef.current < 60000) return;
+      fetchWeather(location);
+      fetchAQI(location);
+      fetchAlerts();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [location, isAuthReady, fetchWeather, fetchAQI, fetchAlerts]);
 
   // --- Location Save Handler ---
   const handleUnitsChange = (newUnits) => {
@@ -569,8 +615,6 @@ const App = () => {
   return (
     <div className="h-screen text-white font-vt323 antialiased flex flex-col overflow-hidden" style={{ backgroundColor: NAVY_BLUE }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
-        .font-vt323 { font-family: 'VT323', monospace; }
         .shadow-neon-md { box-shadow: 0 0 10px 2px rgba(0, 255, 255, 0.5), 0 0 20px 5px rgba(0, 255, 255, 0.2); }
         .shadow-neon-lg { box-shadow: 0 0 15px 3px rgba(0, 255, 255, 0.7), 0 0 30px 8px rgba(0, 255, 255, 0.4); }
         .shadow-inner-neon { box-shadow: inset 0 0 8px rgba(0, 255, 255, 0.5); }
@@ -605,6 +649,13 @@ const App = () => {
 
       {/* App Status Modal */}
       <AppStatus isLoading={isWeatherLoading} error={appError} isReady={isAuthReady} isAutoDetecting={false} />
+
+      {/* Stale Data Badge — shown when displaying cached data that couldn't be refreshed */}
+      {isStaleData && weatherData && (
+        <div className="fixed bottom-16 right-4 z-50 px-3 py-1 bg-yellow-900/90 border border-yellow-500 rounded text-yellow-300 text-base pointer-events-none">
+          SHOWING LAST KNOWN DATA
+        </div>
+      )}
 
       {/* TORNADO WARNING Full-Screen Takeover — shows ALL active tornado warnings */}
       {(() => {
@@ -711,7 +762,11 @@ const App = () => {
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col md:flex-row gap-6 overflow-hidden">
         <TabNavigation currentTab={currentScreen} setTab={(tab) => { setAutoCycle(false); setCurrentScreen(tab); }} alerts={alerts} />
         <div ref={contentRef} key={currentScreen} className="tab-content-enter flex-grow overflow-auto">
-          {renderTabContent()}
+          <ErrorBoundary resetKey={currentScreen}>
+            <Suspense fallback={<LoadingIndicator />}>
+              {renderTabContent()}
+            </Suspense>
+          </ErrorBoundary>
         </div>
       </main>
 
