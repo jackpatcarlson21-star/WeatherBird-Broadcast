@@ -14,29 +14,55 @@ const getDay48Maps = (key) => [
   { id: 'd8',  label: 'DAY 8', url: `${BASE48}day8prob.gif?v=${key}`,  desc: 'Day 8 severe probability' },
 ];
 
-// Full-size image candidates per day and product type, tried in order
-const SPC_CANDIDATES = {
-  categorical: {
-    1: ['day1otlk_2000.png', 'day1otlk_1630.png', 'day1otlk_1300.png', 'day1otlk_1200.png', 'day1otlk_0100.png', 'day1otlk_sm.png'],
-    2: ['day2otlk_1730.png', 'day2otlk_0600.png', 'day2otlk_sm.png'],
-    3: ['day3otlk_1930.png', 'day3otlk_0730.png', 'day3otlk_sm.png'],
-  },
-  tornado: {
-    1: ['day1probotlk_2000_torn.png', 'day1probotlk_1630_torn.png', 'day1probotlk_1300_torn.png', 'day1probotlk_1200_torn.png'],
-    2: ['day2probotlk_1730_torn.png', 'day2probotlk_0600_torn.png'],
-    3: ['day3prob_1930.png', 'day3prob_0730.png'], // Day 3 has combined prob only
-  },
-  wind: {
-    1: ['day1probotlk_2000_wind.png', 'day1probotlk_1630_wind.png', 'day1probotlk_1300_wind.png', 'day1probotlk_1200_wind.png'],
-    2: ['day2probotlk_1730_wind.png', 'day2probotlk_0600_wind.png'],
-    3: ['day3prob_1930.png', 'day3prob_0730.png'],
-  },
-  hail: {
-    1: ['day1probotlk_2000_hail.png', 'day1probotlk_1630_hail.png', 'day1probotlk_1300_hail.png', 'day1probotlk_1200_hail.png'],
-    2: ['day2probotlk_1730_hail.png', 'day2probotlk_0600_hail.png'],
-    3: ['day3prob_1930.png', 'day3prob_0730.png'],
-  },
+// SPC keeps every issuance file permanently at a fixed name — e.g. day1otlk_2000.png
+// always returns 200, holding whatever the most recent 20Z run was. So we can't just try
+// the latest issuance and fall back on error; before today's 20Z lands, that file is
+// still yesterday's outlook. Instead we pick by current UTC time against the issuance
+// schedule, then list earlier issuances (wrapping into the previous day) as fallbacks.
+
+// Issuance times in UTC minutes past midnight, ascending.
+const ISSUANCES = {
+  1: [60, 720, 780, 990, 1200],  // 0100, 1200, 1300, 1630, 2000
+  2: [360, 1050],                // 0600, 1730
+  3: [450, 1170],                // 0730, 1930
 };
+
+// SPC's posting time drifts either side of the nominal hour (we've seen 1630Z land at
+// 16:24Z and 2000Z at 20:05Z). Waiting a bit before switching costs us a few stale
+// minutes; switching early would put yesterday's map back on screen, so we wait.
+const ISSUANCE_LAG_MIN = 15;
+
+const pad4 = (mins) => String(Math.floor(mins / 60)).padStart(2, '0') + String(mins % 60).padStart(2, '0');
+
+// Filename builders per day + product.
+const FILENAME = {
+  categorical: (day, hhmm) => `day${day}otlk_${hhmm}.png`,
+  tornado: (day, hhmm) => (day === 3 ? `day3prob_${hhmm}.png` : `day${day}probotlk_${hhmm}_torn.png`),
+  wind:    (day, hhmm) => (day === 3 ? `day3prob_${hhmm}.png` : `day${day}probotlk_${hhmm}_wind.png`),
+  hail:    (day, hhmm) => (day === 3 ? `day3prob_${hhmm}.png` : `day${day}probotlk_${hhmm}_hail.png`),
+};
+
+// Issuance times ordered most-recent-first as of `now`, wrapping to the previous day.
+const orderedIssuances = (day, now) => {
+  const times = ISSUANCES[day];
+  const nowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
+  // Index of the newest issuance that has had time to post.
+  let latest = -1;
+  times.forEach((t, i) => { if (nowMin >= t + ISSUANCE_LAG_MIN) latest = i; });
+  // None yet today -> the operative outlook is yesterday's last issuance.
+  if (latest === -1) latest = times.length - 1;
+  return times.map((_, i) => times[(latest - i + times.length) % times.length]);
+};
+
+// Full-size image candidates, newest valid issuance first.
+const getSPCCandidates = (day, product, now) => {
+  const files = orderedIssuances(day, now).map(t => FILENAME[product](day, pad4(t)));
+  // Small-format map as a last resort for the categorical product.
+  return product === 'categorical' ? [...files, `day${day}otlk_sm.png`] : files;
+};
+
+// Label for the issuance currently being displayed.
+const currentIssuanceLabel = (day, now) => `${pad4(orderedIssuances(day, now)[0])}Z`;
 
 const PRODUCTS = [
   { id: 'categorical', label: 'CATEGORICAL', color: 'red' },
@@ -184,7 +210,15 @@ const SPCOutlookTab = () => {
   const currentDay = SPC_DAYS.find(d => d.day === selectedDay);
   const WPC_FORECASTS = useMemo(() => WPC_BASE_URLS.map(f => ({ ...f, url: `${f.base}?v=${refreshKey}` })), [refreshKey]);
   const currentWPC = WPC_FORECASTS.find(f => f.day === selectedWPCDay);
-  const candidates = SPC_CANDIDATES[selectedProduct]?.[selectedDay] ?? [];
+  // Recomputed on each refresh tick so a new issuance is picked up without a reload.
+  const candidates = useMemo(
+    () => getSPCCandidates(selectedDay, selectedProduct, new Date()),
+    [selectedDay, selectedProduct, refreshKey]
+  );
+  const issuance = useMemo(
+    () => currentIssuanceLabel(selectedDay, new Date()),
+    [selectedDay, refreshKey]
+  );
 
   const isDay3Prob = selectedDay === 3 && selectedProduct !== 'categorical';
 
@@ -282,13 +316,15 @@ const SPCOutlookTab = () => {
               )}
 
               {currentDay && (
-                <p className="text-center text-sm text-red-300">{currentDay.desc}</p>
+                <p className="text-center text-sm text-red-300">
+                  {currentDay.desc} — <span className="text-red-400">{issuance} issuance</span>
+                </p>
               )}
 
               {/* Map */}
               <div className="text-center">
                 <CascadeImage
-                  key={`${selectedDay}-${selectedProduct}`}
+                  key={`${selectedDay}-${selectedProduct}-${refreshKey}`}
                   candidates={candidates}
                   cacheKey={refreshKey}
                   alt={`SPC Day ${selectedDay} ${selectedProduct} outlook`}
