@@ -2,7 +2,7 @@ import React from 'react';
 import { Gauge } from 'lucide-react';
 
 // Calculate pressure trend from hourly data
-const getPressureTrend = (hourlyData) => {
+export const getPressureTrend = (hourlyData) => {
   if (!hourlyData?.pressure_msl || !hourlyData?.time) return { trend: 'steady', change: 0 };
 
   const now = new Date();

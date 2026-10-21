@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Sunrise, Sunset, Thermometer, Sun, Calendar, Clock, Droplets, Moon, Maximize, Minimize, Star } from 'lucide-react';
+import { Sunrise, Sunset, Thermometer, Sun, Calendar, Clock, Droplets, Moon, Maximize, Minimize, Star, Fish, Crosshair, ChevronRight } from 'lucide-react';
 import TabPanel from '../layout/TabPanel';
 import LoadingIndicator from '../common/LoadingIndicator';
 import { BRIGHT_CYAN, MID_BLUE } from '../../utils/constants';
 import { getMoonPhase } from '../../utils/helpers';
+import SolunarForecastScreen from '../almanac/SolunarForecastScreen';
 
 // Weather facts that rotate hourly
 const WEATHER_FACTS = [
@@ -124,6 +125,7 @@ const AlmanacTab = ({ location, userId }) => {
   const today = new Date();
   const [almanacData, setAlmanacData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [huntFishScreen, setHuntFishScreen] = useState(null); // null | 'hunting' | 'fishing'
 
   // Get weather fact based on current hour (changes every hour)
   const currentHour = today.getHours();
@@ -396,6 +398,16 @@ const AlmanacTab = ({ location, userId }) => {
     return () => controller.abort();
   }, [location.lat, location.lon]);
 
+  if (huntFishScreen) {
+    return (
+      <SolunarForecastScreen
+        location={location}
+        activityType={huntFishScreen}
+        onBack={() => setHuntFishScreen(null)}
+      />
+    );
+  }
+
   if (isLoading) {
     return (
       <TabPanel title="RECORDS">
@@ -603,6 +615,28 @@ const AlmanacTab = ({ location, userId }) => {
               <p className="text-xs text-cyan-400">Record for Today</p>
               <p className="text-2xl font-bold text-white">{displayData.recordPrecip}"</p>
               <p className="text-xs text-cyan-500">Set in {displayData.recordPrecipYear}</p>
+            </div>
+          </div>
+
+          {/* Hunting & Fishing - entry point into dedicated forecast screens */}
+          <div className="lg:col-span-3 p-4 rounded-lg" style={{ border: `2px solid ${BRIGHT_CYAN}`, backgroundColor: `${MID_BLUE}4D` }}>
+            <h3 className="text-lg text-white font-bold border-b border-cyan-700 pb-2 mb-3">HUNTING &amp; FISHING FORECAST</h3>
+            <p className="text-xs text-cyan-400 mb-3">7-day solunar outlook with daily star ratings</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                onClick={() => setHuntFishScreen('hunting')}
+                className="flex items-center justify-between p-3 rounded bg-black/20 border border-cyan-800 hover:border-cyan-400 transition-colors text-left"
+              >
+                <span className="flex items-center gap-2 text-white font-bold"><Crosshair size={20} className="text-cyan-400" /> HUNTING</span>
+                <ChevronRight size={18} className="text-cyan-500" />
+              </button>
+              <button
+                onClick={() => setHuntFishScreen('fishing')}
+                className="flex items-center justify-between p-3 rounded bg-black/20 border border-cyan-800 hover:border-cyan-400 transition-colors text-left"
+              >
+                <span className="flex items-center gap-2 text-white font-bold"><Fish size={20} className="text-cyan-400" /> FISHING</span>
+                <ChevronRight size={18} className="text-cyan-500" />
+              </button>
             </div>
           </div>
 
