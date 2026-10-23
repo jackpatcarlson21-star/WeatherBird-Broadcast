@@ -51,27 +51,37 @@ const periodsOverlapTime = (period, time, bufferMin = 60) => {
   return t >= period.start.getTime() - bufferMin * 60000 && t <= period.end.getTime() + bufferMin * 60000;
 };
 
-// Group hourly pressure readings by local calendar date and derive a rising/falling/steady
-// trend for each date by comparing its mean pressure to the prior date's mean.
-export const getDailyPressureTrends = (hourly) => {
-  const trends = {};
-  if (!hourly?.time || !hourly?.pressure_msl) return trends;
+// Group an hourly field by local calendar date and average it per day
+const getDailyMeans = (hourly, field) => {
+  const means = {};
+  if (!hourly?.time || !hourly?.[field]) return means;
 
-  const dailyMeans = {};
+  const buckets = {};
   hourly.time.forEach((t, i) => {
     const dateStr = t.slice(0, 10);
-    const p = hourly.pressure_msl[i];
-    if (p == null) return;
-    if (!dailyMeans[dateStr]) dailyMeans[dateStr] = [];
-    dailyMeans[dateStr].push(p);
+    const v = hourly[field][i];
+    if (v == null) return;
+    if (!buckets[dateStr]) buckets[dateStr] = [];
+    buckets[dateStr].push(v);
   });
 
+  Object.keys(buckets).forEach((dateStr) => {
+    const arr = buckets[dateStr];
+    means[dateStr] = arr.reduce((a, b) => a + b, 0) / arr.length;
+  });
+
+  return means;
+};
+
+// Derive a rising/falling/steady trend per date by comparing its mean pressure to the prior date's mean.
+export const getDailyPressureTrends = (hourly) => {
+  const dailyMeans = getDailyMeans(hourly, 'pressure_msl');
   const dates = Object.keys(dailyMeans).sort();
-  const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+  const trends = {};
 
   dates.forEach((dateStr, i) => {
     if (i === 0) { trends[dateStr] = 'steady'; return; }
-    const diff = avg(dailyMeans[dateStr]) - avg(dailyMeans[dates[i - 1]]);
+    const diff = dailyMeans[dateStr] - dailyMeans[dates[i - 1]];
     if (diff > 1) trends[dateStr] = 'rising';
     else if (diff < -1) trends[dateStr] = 'falling';
     else trends[dateStr] = 'steady';
@@ -79,6 +89,9 @@ export const getDailyPressureTrends = (hourly) => {
 
   return trends;
 };
+
+// Mean cloud cover % per local calendar date
+export const getDailyCloudCover = (hourly) => getDailyMeans(hourly, 'cloud_cover');
 
 export const scoreToStars = (score) => {
   if (score >= 90) return 5;
@@ -91,7 +104,7 @@ export const scoreToStars = (score) => {
 // Folklore-based rating (solunar theory), not scientifically validated - a traditional heuristic
 // combining moon phase, barometric trend, overlap of solunar periods with dawn/dusk, and
 // (for hunting) wind speed, since high wind suppresses big-game movement.
-export const getDayRating = ({ periods, illumination, pressureTrend, sunrise, sunset, windSpeedMax, activityType }) => {
+export const getDayRating = ({ periods, illumination, pressureTrend, sunrise, sunset, windSpeedMax, cloudCoverMean, activityType }) => {
   let score = 0;
   const reasons = [];
 
@@ -124,6 +137,12 @@ export const getDayRating = ({ periods, illumination, pressureTrend, sunrise, su
     if (windSpeedMax > 25) { score -= 20; reasons.push(`${Math.round(windSpeedMax)} mph wind likely limits movement`); }
     else if (windSpeedMax > 15) { score -= 10; reasons.push(`${Math.round(windSpeedMax)} mph wind may limit movement`); }
     else if (windSpeedMax <= 8) { reasons.push('Calm winds favor movement'); }
+  }
+
+  // Fishing-specific: overcast skies traditionally favor the bite; bright/clear skies suppress it
+  if (activityType === 'fishing' && cloudCoverMean != null) {
+    if (cloudCoverMean >= 60) { score += 15; reasons.push('Overcast skies favor the bite'); }
+    else if (cloudCoverMean <= 20) { score -= 5; reasons.push('Clear, bright skies may slow the bite'); }
   }
 
   score = Math.max(0, Math.min(100, Math.round(score)));
