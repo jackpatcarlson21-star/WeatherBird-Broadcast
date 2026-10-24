@@ -4,7 +4,7 @@ import TabPanel from '../layout/TabPanel';
 import LoadingIndicator from '../common/LoadingIndicator';
 import { BRIGHT_CYAN, MID_BLUE } from '../../utils/constants';
 import { formatTime, getMoonPhase } from '../../utils/helpers';
-import { getSolunarPeriods, getSunTimes, getDailyPressureTrends, getDailyCloudCover, getDayRating } from '../../utils/solunar';
+import { getSolunarPeriods, getSunTimes, getDailyPressureTrends, getDailyCloudCover, getSequentialTrend, getDailyMeanTemps, getDayRating } from '../../utils/solunar';
 
 const parseLocalDate = (str) => {
   const [y, m, d] = str.split('-').map(Number);
@@ -139,21 +139,29 @@ const SolunarForecastScreen = ({ location, activityType, onBack }) => {
       setIsLoading(true);
       setError(false);
       try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&daily=wind_speed_10m_max&hourly=pressure_msl,cloud_cover&past_hours=24&forecast_days=7&timezone=auto&wind_speed_unit=mph`;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&daily=wind_speed_10m_max,temperature_2m_max,temperature_2m_min&past_days=1&hourly=pressure_msl,cloud_cover&past_hours=24&forecast_days=7&timezone=auto&wind_speed_unit=mph&temperature_unit=fahrenheit`;
         const res = await fetch(url, { signal: controller.signal });
         if (!res.ok) throw new Error('Forecast fetch failed');
         const json = await res.json();
 
         const pressureTrends = getDailyPressureTrends(json.hourly);
         const cloudCoverMeans = getDailyCloudCover(json.hourly);
-        const dateStrs = json.daily?.time || [];
 
-        const builtDays = dateStrs.map((dateStr, i) => {
+        const allDates = json.daily?.time || [];
+        const windArr = json.daily?.wind_speed_10m_max || [];
+        const meanTemps = getDailyMeanTemps(json.daily?.temperature_2m_max || [], json.daily?.temperature_2m_min || []);
+        const tempTrends = getSequentialTrend(allDates, meanTemps, 3);
+
+        // past_days=1 prepends yesterday (used only as a baseline for today's temp trend) - skip it here
+        const dateStrs = allDates.slice(1);
+
+        const builtDays = dateStrs.map((dateStr, idx) => {
+          const i = idx + 1;
           const date = parseLocalDate(dateStr);
           const periods = getSolunarPeriods(date, location.lat, location.lon);
           const moonData = getMoonPhase(date);
           const sunTimes = getSunTimes(date, location.lat, location.lon);
-          const windMax = json.daily?.wind_speed_10m_max?.[i] ?? null;
+          const windMax = windArr[i] ?? null;
           const cloudCoverMean = !isHunting ? cloudCoverMeans[dateStr] : null;
           const rating = getDayRating({
             periods,
@@ -163,6 +171,7 @@ const SolunarForecastScreen = ({ location, activityType, onBack }) => {
             sunset: sunTimes.sunset,
             windSpeedMax: isHunting ? windMax : null,
             cloudCoverMean,
+            tempTrend: tempTrends[dateStr] || 'steady',
             activityType,
           });
           return { dateStr, date, periods, moonData, windMax, cloudCoverMean, sunrise: sunTimes.sunrise, sunset: sunTimes.sunset, rating };
@@ -198,7 +207,7 @@ const SolunarForecastScreen = ({ location, activityType, onBack }) => {
         <div className="flex items-center gap-2 text-cyan-400">
           <Icon size={18} />
           <p className="text-xs">
-            7-day solunar outlook — a traditional folklore method combining moon position/phase, barometric pressure trend{isHunting ? ', and wind' : ', and cloud cover'}. Not scientifically validated.
+            7-day solunar outlook — a traditional folklore method combining moon position/phase, barometric pressure and temperature trend{isHunting ? ', and wind' : ', and cloud cover'}. Not scientifically validated.
           </p>
         </div>
 
@@ -210,6 +219,17 @@ const SolunarForecastScreen = ({ location, activityType, onBack }) => {
 
         {isLoading && <LoadingIndicator />}
         {!isLoading && error && <p className="text-red-400 text-sm">Could not load forecast data.</p>}
+        {!isLoading && !error && days && (() => {
+          const bestDay = days.reduce((best, d) => (d.rating.score > best.rating.score ? d : best), days[0]);
+          return (
+            <div className="p-3 rounded-lg flex items-center justify-between flex-wrap gap-2" style={{ border: `2px solid #fbbf24`, backgroundColor: 'rgba(251,191,36,0.08)' }}>
+              <span className="text-sm text-yellow-300 font-bold">
+                {bestDay.isSeasonsBest ? "SEASON'S BEST" : 'BEST DAY THIS WEEK'}: {bestDay.date.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
+              </span>
+              <StarRating stars={bestDay.rating.stars} plus={bestDay.isSeasonsBest} />
+            </div>
+          );
+        })()}
         {!isLoading && !error && days && (
           <div className="space-y-3">
             {days.map((day) => (

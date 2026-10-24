@@ -93,6 +93,25 @@ export const getDailyPressureTrends = (hourly) => {
 // Mean cloud cover % per local calendar date
 export const getDailyCloudCover = (hourly) => getDailyMeans(hourly, 'cloud_cover');
 
+// Derive a rising/falling/steady trend by comparing each date's value to the prior date's,
+// given arrays already at daily resolution and in chronological order (e.g. Open-Meteo's daily block).
+export const getSequentialTrend = (dateStrs, values, threshold = 1) => {
+  const trends = {};
+  dateStrs.forEach((dateStr, i) => {
+    if (values[i] == null) return;
+    if (i === 0 || values[i - 1] == null) { trends[dateStr] = 'steady'; return; }
+    const diff = values[i] - values[i - 1];
+    if (diff > threshold) trends[dateStr] = 'rising';
+    else if (diff < -threshold) trends[dateStr] = 'falling';
+    else trends[dateStr] = 'steady';
+  });
+  return trends;
+};
+
+// Daily mean temp (°F) from matching max/min arrays, for use with getSequentialTrend
+export const getDailyMeanTemps = (tempMax, tempMin) =>
+  tempMax.map((max, i) => (max != null && tempMin[i] != null ? (max + tempMin[i]) / 2 : null));
+
 export const scoreToStars = (score) => {
   if (score >= 90) return 5;
   if (score >= 75) return 4;
@@ -104,7 +123,7 @@ export const scoreToStars = (score) => {
 // Folklore-based rating (solunar theory), not scientifically validated - a traditional heuristic
 // combining moon phase, barometric trend, overlap of solunar periods with dawn/dusk, and
 // (for hunting) wind speed, since high wind suppresses big-game movement.
-export const getDayRating = ({ periods, illumination, pressureTrend, sunrise, sunset, windSpeedMax, cloudCoverMean, activityType }) => {
+export const getDayRating = ({ periods, illumination, pressureTrend, sunrise, sunset, windSpeedMax, cloudCoverMean, tempTrend, activityType }) => {
   let score = 0;
   const reasons = [];
 
@@ -144,6 +163,10 @@ export const getDayRating = ({ periods, illumination, pressureTrend, sunrise, su
     if (cloudCoverMean >= 60) { score += 15; reasons.push('Overcast skies favor the bite'); }
     else if (cloudCoverMean <= 20) { score -= 5; reasons.push('Clear, bright skies may slow the bite'); }
   }
+
+  // Falling temps ahead of a front are classic folklore for both game and fish activity
+  if (tempTrend === 'falling') { score += 12; reasons.push('Falling temps ahead of a front'); }
+  else if (tempTrend === 'rising') { score -= 5; reasons.push('Warming trend (less favorable)'); }
 
   score = Math.max(0, Math.min(100, Math.round(score)));
   let rating, color;
