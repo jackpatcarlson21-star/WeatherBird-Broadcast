@@ -1,6 +1,6 @@
 import React from 'react';
 import { DARK_BLUE, NAVY_BLUE, BRIGHT_CYAN } from '../../utils/constants';
-import { getWeatherDescription, formatTime } from '../../utils/helpers';
+import { getWeatherDescription, formatTime, getAQIInfo } from '../../utils/helpers';
 
 const BirdIcon = () => (
   <img
@@ -30,19 +30,22 @@ const getBorderColor = (alerts) => {
   return '#8B5CF6';
 };
 
-const Footer = ({ current, daily, locationName, alerts }) => {
+const Footer = ({ current, daily, locationName, alerts, aqiData }) => {
   const temp = current ? Math.round(current.temperature_2m) : '--';
   const cond = current ? getWeatherDescription(current.weather_code) : 'LOADING';
   const wind = current ? `${Math.round(current.wind_speed_10m)} MPH` : '--';
   const feelsLike = current ? Math.round(current.apparent_temperature) : '--';
+  const humidity = current?.relative_humidity_2m != null ? Math.round(current.relative_humidity_2m) : '--';
   const high = daily?.temperature_2m_max?.[0] != null ? Math.round(daily.temperature_2m_max[0]) : '--';
   const low = daily?.temperature_2m_min?.[0] != null ? Math.round(daily.temperature_2m_min[0]) : '--';
   const sunrise = daily?.sunrise?.[0] ? formatTime(daily.sunrise[0]) : '--';
   const sunset = daily?.sunset?.[0] ? formatTime(daily.sunset[0]) : '--';
+  const aqi = aqiData?.current?.us_aqi;
+  const aqiText = aqi != null ? `${Math.round(aqi)} (${getAQIInfo(aqi).level.toUpperCase()})` : '--';
   const hasAlerts = alerts && alerts.length > 0;
   const borderColor = getBorderColor(alerts);
 
-  const baseText = `CURRENTLY IN ${locationName.toUpperCase()}: ${temp}°F ${cond} - FEELS LIKE: ${feelsLike}°F - WIND: ${wind} ::: HIGH: ${high}°F / LOW: ${low}°F ::: SUNRISE: ${sunrise} / SUNSET: ${sunset} ::: WE LOVE YOU SHANNON! ::: CAW CAW! ::: `;
+  const baseText = `CURRENTLY IN ${locationName.toUpperCase()}: ${temp}°F ${cond} - FEELS LIKE: ${feelsLike}°F - WIND: ${wind} - HUMIDITY: ${humidity}% ::: HIGH: ${high}°F / LOW: ${low}°F ::: SUNRISE: ${sunrise} / SUNSET: ${sunset} ::: AIR QUALITY: ${aqiText} ::: CAW CAW! ::: `;
 
   const tickerSegment = (key) => (
     <span key={key}>

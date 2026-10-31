@@ -117,8 +117,12 @@ const generateWeatherSummary = (current, daily, night, alerts, units) => {
     summary += windDesc + '. ';
   }
 
-  // High/Low
-  summary += `Today's high near ${fmtTemp(high, units)} with a low of ${fmtTemp(low, units)}.`;
+  // High/Low — once evening sets in, today's high is no longer the relevant number
+  if (night) {
+    summary += `Tonight's low near ${fmtTemp(low, units)}.`;
+  } else {
+    summary += `Today's high near ${fmtTemp(high, units)} with a low of ${fmtTemp(low, units)}.`;
+  }
 
   return summary;
 };

@@ -771,7 +771,7 @@ const App = () => {
       </main>
 
       {/* Footer Ticker */}
-      <Footer current={current} daily={daily} locationName={location.name} alerts={alerts} />
+      <Footer current={current} daily={daily} locationName={location.name} alerts={alerts} aqiData={aqiData} />
 
       {/* Settings Modal */}
       {isSettingsOpen && (

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Crosshair, Fish, ArrowLeft, Star, Moon, Wind, Cloud } from 'lucide-react';
+import { Crosshair, Fish, ArrowLeft, Star, Moon, Wind, Cloud, CloudRain } from 'lucide-react';
 import TabPanel from '../layout/TabPanel';
 import LoadingIndicator from '../common/LoadingIndicator';
 import { BRIGHT_CYAN, MID_BLUE } from '../../utils/constants';
 import { formatTime, getMoonPhase } from '../../utils/helpers';
-import { getSolunarPeriods, getSunTimes, getDailyPressureTrends, getDailyCloudCover, getSequentialTrend, getDailyMeanTemps, getDayRating } from '../../utils/solunar';
+import { getSolunarPeriods, getSunTimes, getDailyPressureTrends, getDailyCloudCover, getColdFrontDeltas, getDailyMeanTemps, getRutPhase, getDayRating } from '../../utils/solunar';
 
 const parseLocalDate = (str) => {
   const [y, m, d] = str.split('-').map(Number);
@@ -112,6 +112,9 @@ const DayCard = ({ day, activityType, isToday }) => (
       {activityType === 'fishing' && day.cloudCoverMean != null && (
         <span className="flex items-center gap-1"><Cloud size={12} /> {Math.round(day.cloudCoverMean)}% cloud cover</span>
       )}
+      {day.precipSum != null && (
+        <span className="flex items-center gap-1"><CloudRain size={12} /> {day.precipSum.toFixed(2)}" rain</span>
+      )}
     </div>
 
     {day.rating.reasons.length > 0 && (
@@ -139,7 +142,7 @@ const SolunarForecastScreen = ({ location, activityType, onBack }) => {
       setIsLoading(true);
       setError(false);
       try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&daily=wind_speed_10m_max,temperature_2m_max,temperature_2m_min&past_days=1&hourly=pressure_msl,cloud_cover&past_hours=24&forecast_days=7&timezone=auto&wind_speed_unit=mph&temperature_unit=fahrenheit`;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&daily=wind_speed_10m_max,temperature_2m_max,temperature_2m_min,precipitation_sum&past_days=2&hourly=pressure_msl,cloud_cover&past_hours=48&forecast_days=7&timezone=auto&wind_speed_unit=mph&temperature_unit=fahrenheit&precipitation_unit=inch`;
         const res = await fetch(url, { signal: controller.signal });
         if (!res.ok) throw new Error('Forecast fetch failed');
         const json = await res.json();
@@ -149,20 +152,24 @@ const SolunarForecastScreen = ({ location, activityType, onBack }) => {
 
         const allDates = json.daily?.time || [];
         const windArr = json.daily?.wind_speed_10m_max || [];
+        const precipArr = json.daily?.precipitation_sum || [];
         const meanTemps = getDailyMeanTemps(json.daily?.temperature_2m_max || [], json.daily?.temperature_2m_min || []);
-        const tempTrends = getSequentialTrend(allDates, meanTemps, 3);
+        const coldFrontDeltas = getColdFrontDeltas(allDates, meanTemps);
 
-        // past_days=1 prepends yesterday (used only as a baseline for today's temp trend) - skip it here
-        const dateStrs = allDates.slice(1);
+        // past_days=2 prepends the two prior days (used only as a 48h baseline for the cold-front
+        // delta) - skip them here
+        const dateStrs = allDates.slice(2);
 
         const builtDays = dateStrs.map((dateStr, idx) => {
-          const i = idx + 1;
+          const i = idx + 2;
           const date = parseLocalDate(dateStr);
           const periods = getSolunarPeriods(date, location.lat, location.lon);
           const moonData = getMoonPhase(date);
           const sunTimes = getSunTimes(date, location.lat, location.lon);
           const windMax = windArr[i] ?? null;
           const cloudCoverMean = !isHunting ? cloudCoverMeans[dateStr] : null;
+          const precipSum = precipArr[i] ?? null;
+          const rut = isHunting ? getRutPhase(date, location.lat) : null;
           const rating = getDayRating({
             periods,
             illumination: moonData.illumination,
@@ -171,10 +178,13 @@ const SolunarForecastScreen = ({ location, activityType, onBack }) => {
             sunset: sunTimes.sunset,
             windSpeedMax: isHunting ? windMax : null,
             cloudCoverMean,
-            tempTrend: tempTrends[dateStr] || 'steady',
+            coldFrontDelta: coldFrontDeltas[dateStr] ?? null,
+            precipSum,
+            rutBonus: rut?.bonus ?? 0,
+            rutLabel: rut?.label ?? null,
             activityType,
           });
-          return { dateStr, date, periods, moonData, windMax, cloudCoverMean, sunrise: sunTimes.sunrise, sunset: sunTimes.sunset, rating };
+          return { dateStr, date, periods, moonData, windMax, cloudCoverMean, precipSum, sunrise: sunTimes.sunrise, sunset: sunTimes.sunset, rating };
         });
 
         const maxScore = Math.max(...builtDays.map((d) => d.rating.score));
@@ -207,7 +217,7 @@ const SolunarForecastScreen = ({ location, activityType, onBack }) => {
         <div className="flex items-center gap-2 text-cyan-400">
           <Icon size={18} />
           <p className="text-xs">
-            7-day solunar outlook — a traditional folklore method combining moon position/phase, barometric pressure and temperature trend{isHunting ? ', and wind' : ', and cloud cover'}. Not scientifically validated.
+            7-day outlook weighted toward the most evidence-backed factors for {isHunting ? 'deer movement' : 'fish activity'} — {isHunting ? 'rut timing, cold fronts and wind' : 'cold fronts and cloud cover'}, plus barometric pressure and precipitation — with moon phase included only as a minor, traditional factor.
           </p>
         </div>
 
