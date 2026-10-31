@@ -738,7 +738,7 @@ const App = () => {
           return (
             <div
               key={alert.properties?.id}
-              onClick={() => setCurrentScreen(SCREENS.ALERTS)}
+              onClick={() => { setCurrentScreen(SCREENS.ALERTS); setShowAlertFlash(false); }}
               className={`relative flex items-center justify-center px-4 py-3 font-bold text-white cursor-pointer hover:brightness-110 transition-all ${
                 isWarning ? 'bg-red-600' : 'bg-orange-500'
               }`}
@@ -748,7 +748,7 @@ const App = () => {
                 {alert.properties?.event?.toUpperCase()} IN EFFECT FOR YOUR AREA. TAP FOR DETAILS.
               </span>
               <button
-                onClick={(e) => { e.stopPropagation(); setDismissedAlertIds(prev => new Set([...prev, alert.properties?.id])); }}
+                onClick={(e) => { e.stopPropagation(); setDismissedAlertIds(prev => new Set([...prev, alert.properties?.id])); setShowAlertFlash(false); }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-black/20 rounded transition-colors"
                 aria-label="Dismiss alert"
               >
@@ -760,7 +760,7 @@ const App = () => {
 
       {/* Main Content Area */}
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col md:flex-row gap-6 overflow-hidden">
-        <TabNavigation currentTab={currentScreen} setTab={(tab) => { setAutoCycle(false); setCurrentScreen(tab); }} alerts={alerts} />
+        <TabNavigation currentTab={currentScreen} setTab={(tab) => { setAutoCycle(false); setCurrentScreen(tab); if (tab === SCREENS.ALERTS) setShowAlertFlash(false); }} alerts={alerts} />
         <div ref={contentRef} key={currentScreen} className="tab-content-enter flex-grow overflow-auto">
           <ErrorBoundary resetKey={currentScreen}>
             <Suspense fallback={<LoadingIndicator />}>

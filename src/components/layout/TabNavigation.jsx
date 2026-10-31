@@ -1,7 +1,15 @@
 import React from 'react';
 import { SCREENS, DARK_BLUE, BRIGHT_CYAN, MID_BLUE } from '../../utils/constants';
+import { getSevereAlertLevel } from '../../utils/helpers';
+
+// Tabs where an active watch/warning should bleed into the nav itself, so
+// urgency is visible without having to open the tab.
+const SEVERITY_AWARE_TABS = new Set([SCREENS.ALERTS, SCREENS.SPC]);
+const SEVERITY_COLOR = { warning: '#EF4444', watch: '#F97316' };
 
 const TabNavigation = ({ currentTab, setTab, alerts = [] }) => {
+  const severity = getSevereAlertLevel(alerts);
+  const severityColor = severity ? SEVERITY_COLOR[severity] : null;
 
   const tabs = [
     { id: SCREENS.CONDITIONS,   name: 'CURRENT'   },
@@ -20,16 +28,27 @@ const TabNavigation = ({ currentTab, setTab, alerts = [] }) => {
 
   const renderTab = (tab) => {
     const hasAlertBadge = tab.id === SCREENS.ALERTS && alerts.length > 0;
+    const isUrgent = severityColor && SEVERITY_AWARE_TABS.has(tab.id);
+    const isCurrent = currentTab === tab.id;
+
     return (
       <button
         key={tab.id}
         onClick={() => setTab(tab.id)}
         className={`relative inline-block md:block w-full py-2 md:py-4 px-3 md:px-4 text-xl md:text-3xl font-vt323 transition-all text-left rounded-lg border-2 text-white snap-start
-          ${currentTab === tab.id
+          ${isCurrent
             ? 'font-bold shadow-inner-neon'
-            : 'border-cyan-800 hover:border-cyan-500 hover:bg-white/10'
+            : isUrgent
+              ? 'alert-glow-border hover:bg-white/10'
+              : 'border-cyan-800 hover:border-cyan-500 hover:bg-white/10'
           }`}
-        style={currentTab === tab.id ? { borderColor: BRIGHT_CYAN, backgroundColor: MID_BLUE } : {}}
+        style={
+          isCurrent
+            ? { borderColor: isUrgent ? severityColor : BRIGHT_CYAN, backgroundColor: MID_BLUE }
+            : isUrgent
+              ? { borderColor: severityColor }
+              : {}
+        }
       >
         {tab.name}
         {hasAlertBadge && (
