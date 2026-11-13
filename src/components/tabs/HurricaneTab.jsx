@@ -69,61 +69,41 @@ const parseGoesTimestamp = (url) => {
 // ── HURDAT2 ──────────────────────────────────────────────────────────────────────
 
 const HURDAT2_URLS = {
-  atlantic: '/hurdat2-atlantic.txt',
-  pacific:  '/hurdat2-pacific.txt',
+  atlantic: '/hurdat2-atlantic.json',
+  pacific:  '/hurdat2-pacific.json',
 };
+
+// Newest season in public/hurdat2-*.json (see data/hurdat2/README.md to update)
+const HURDAT2_LAST_YEAR = 2025;
 
 // Module-level cache — persists across renders without re-fetching
 let hurdat2Cache = { atlantic: null, pacific: null };
 
-const parseLatLon = (str) => {
-  const v = parseFloat(str);
-  return (str.includes('S') || str.includes('W')) ? -v : v;
-};
-
-const parseHURDAT2 = (text) => {
-  const storms = [];
-  let current = null;
-
-  for (const raw of text.split('\n')) {
-    const line = raw.trim();
-    if (!line) continue;
-
-    // Header line: e.g. "AL092023, IDA, 54,"
-    if (/^[A-Z]{2}\d{6}/.test(line)) {
-      if (current && current.track.length >= 2) storms.push(current);
-      const parts = line.split(',').map(s => s.trim());
-      current = {
-        id:       parts[0],
-        name:     parts[1] || 'UNNAMED',
-        year:     parseInt(parts[0].slice(4, 8), 10),
-        basin:    parts[0].slice(0, 2),
-        track:    [],
-        peakWind: 0,
-      };
-    } else if (current) {
-      // Data line: YYYYMMDD, HHMM, ident, status, lat, lon, wind, pressure, ...
-      const parts = line.split(',').map(s => s.trim());
-      if (parts.length < 7) continue;
-      const month = parseInt(parts[0].slice(4, 6), 10);
-      const lat   = parseLatLon(parts[4]);
-      const lon   = parseLatLon(parts[5]);
-      const wind  = parseInt(parts[6], 10);
-      if (isNaN(lat) || isNaN(lon) || isNaN(wind)) continue;
-      current.track.push({ lat, lon, wind, month });
-      if (wind > current.peakWind) current.peakWind = wind;
-    }
+// Decodes the compact files built by scripts/build-hurdat2.js:
+// { storms: [[id, name, [lat*10, lon*10, windKts, month, ...]], ...] }
+const decodeHURDAT2 = ({ storms }) => storms.map(([id, name, flat]) => {
+  const track = [];
+  let peakWind = 0;
+  for (let i = 0; i < flat.length; i += 4) {
+    const wind = flat[i + 2];
+    track.push({ lat: flat[i] / 10, lon: flat[i + 1] / 10, wind, month: flat[i + 3] });
+    if (wind > peakWind) peakWind = wind;
   }
-  if (current && current.track.length >= 2) storms.push(current);
-  return storms;
-};
+  return {
+    id,
+    name,
+    year:  parseInt(id.slice(4, 8), 10),
+    basin: id.slice(0, 2),
+    track,
+    peakWind,
+  };
+});
 
 const fetchHURDAT2 = async (basin) => {
   if (hurdat2Cache[basin]) return hurdat2Cache[basin];
   const res = await fetch(HURDAT2_URLS[basin]);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const text = await res.text();
-  const storms = parseHURDAT2(text);
+  const storms = decodeHURDAT2(await res.json());
   hurdat2Cache[basin] = storms;
   return storms;
 };
@@ -210,7 +190,7 @@ const HurricaneTab = () => {
   const [histLoading, setHistLoading]     = useState(false);
   const [histError, setHistError]         = useState(null);
   const [selectedStorm, setSelectedStorm] = useState(null);
-  const [selectedYear, setSelectedYear]   = useState(2023);
+  const [selectedYear, setSelectedYear]   = useState(HURDAT2_LAST_YEAR);
 
   // Satellite state
   const [satType, setSatType]           = useState('GEOCOLOR');
@@ -357,7 +337,7 @@ const HurricaneTab = () => {
 
   // Year bounds per basin
   const minYear = basin === 'atlantic' ? 1851 : 1949;
-  const maxYear = 2023;
+  const maxYear = HURDAT2_LAST_YEAR;
 
   // Filter HURDAT2 tracks to the selected season
   const seasonStorms = (hurdat2Storms ?? []).filter(s => {
@@ -576,7 +556,7 @@ const HurricaneTab = () => {
             {['atlantic', 'pacific'].map(b => (
               <button
                 key={b}
-                onClick={() => { setBasin(b); setSelectedStorm(null); setSelectedYear(2023); }}
+                onClick={() => { setBasin(b); setSelectedStorm(null); setSelectedYear(HURDAT2_LAST_YEAR); }}
                 className={`px-4 py-1.5 rounded border-2 font-bold text-sm transition-all ${
                   basin === b
                     ? 'border-cyan-400 bg-cyan-900/50 text-white'
