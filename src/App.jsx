@@ -15,9 +15,6 @@ L.Icon.Default.mergeOptions({
 });
 
 // Firebase
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 // Constants and utilities
 import { SCREENS, NAV_TABS, INITIAL_LOCATION, MUSIC_URL, REFRESH_RATE_MS, NAVY_BLUE } from './utils/constants';
@@ -63,6 +60,21 @@ const writeCache = (key, data) => {
   } catch { /* storage full or unavailable — cache is best-effort */ }
 };
 
+// The last location the user picked (or GPS found), so a reload doesn't snap
+// back to the default town.
+const LOCATION_KEY = 'weatherbird-location';
+const readSavedLocation = () => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LOCATION_KEY));
+    const lat = parseFloat(saved?.lat);
+    const lon = parseFloat(saved?.lon);
+    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+      return { name: saved.name || 'My Location', lat, lon };
+    }
+  } catch { /* corrupt or unavailable — fall through */ }
+  return INITIAL_LOCATION;
+};
+
 const SCREEN_ORDER = [
   SCREENS.CONDITIONS, SCREENS.HOURLY, SCREENS.DAILY, SCREENS.RADAR,
   SCREENS.SATELLITE, SCREENS.PRECIP, SCREENS.ALERTS, SCREENS.WWA,
@@ -75,10 +87,7 @@ const NAV_ORDER = NAV_TABS.map(t => t.id);
 
 const App = () => {
   // --- State Hooks ---
-  const [db, setDb] = useState(null);
-  const [userId, setUserId] = useState(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
-  const [location, setLocation] = useState(INITIAL_LOCATION);
+  const [location, setLocation] = useState(readSavedLocation);
   const [weatherData, setWeatherData] = useState(() => readCache('weatherbird-weather-cache'));
   const [aqiData, setAqiData] = useState(() => readCache('weatherbird-aqi-cache'));
   const [isStaleData, setIsStaleData] = useState(() => !!readCache('weatherbird-weather-cache'));
@@ -105,7 +114,6 @@ const App = () => {
 
   const [crtDone, setCrtDone] = useState(false);
   const lastAlertIdsRef = useRef('');
-  const pendingGpsLocationRef = useRef(null);
 
   // --- Alert Flash Timeout ---
   useEffect(() => {
@@ -274,74 +282,9 @@ const App = () => {
   // --- Refs ---
   const audioRef = useRef(null);
   const weatherIntervalRef = useRef(null);
-  const initialLoadRef = useRef(true);
   const contentRef = useRef(null);
   const hasWeatherDataRef = useRef(!!weatherData);
   const lastFetchTimeRef = useRef(0);
-
-  // --- Auth and Firebase Initialization ---
-  useEffect(() => {
-    let authSettled = false;
-
-    try {
-      const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-
-      if (!Object.keys(firebaseConfig).length) {
-        console.log("Running in standalone mode (no Firebase)");
-        setUserId(crypto.randomUUID());
-        setIsAuthReady(true);
-        return;
-      }
-
-      const app = initializeApp(firebaseConfig);
-      const newAuth = getAuth(app);
-      const newDb = getFirestore(app);
-
-      // On mobile PWAs, signInAnonymously can hang indefinitely if the network
-      // isn't ready at launch. After 8s with no response, fall back to standalone
-      // mode so the app isn't permanently stuck on the loading screen.
-      const authTimeoutId = setTimeout(() => {
-        if (!authSettled) {
-          authSettled = true;
-          console.warn("Firebase auth timed out — running without cloud sync");
-          setUserId(crypto.randomUUID());
-          setIsAuthReady(true);
-        }
-      }, 8000);
-
-      const unsubscribe = onAuthStateChanged(newAuth, async (user) => {
-        if (!user) {
-          try {
-            const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-            if (token) {
-              await signInWithCustomToken(newAuth, token);
-            } else {
-              await signInAnonymously(newAuth);
-            }
-          } catch (e) {
-            console.error("Firebase sign-in failed:", e);
-            setAppError("Authentication failed. Cannot load app.");
-          }
-        }
-        if (!authSettled) {
-          authSettled = true;
-          clearTimeout(authTimeoutId);
-          setDb(newDb);
-          setUserId(newAuth.currentUser?.uid || crypto.randomUUID());
-          setIsAuthReady(true);
-        }
-      });
-
-      return () => {
-        authSettled = true;
-        clearTimeout(authTimeoutId);
-        unsubscribe();
-      };
-    } catch (e) {
-      console.error("Firebase Initialization Error:", e);
-      setAppError("Application failed to initialize. See console for details.");
-    }
-  }, []);
 
   // --- Clock and Music Handler ---
   useEffect(() => {
@@ -368,45 +311,6 @@ const App = () => {
     }
     setIsPlaying(prev => !prev);
   };
-
-  // --- Location Listener (Firestore) ---
-  useEffect(() => {
-    if (!db || !userId) return;
-
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const locationDocRef = doc(db, `artifacts/${appId}/users/${userId}/location_config`, 'current_location');
-
-    const unsubscribe = onSnapshot(locationDocRef, (docSnap) => {
-      // If GPS fired before Firebase was ready, save that location now instead of
-      // restoring the old Firestore location (which would overwrite the GPS fix).
-      if (pendingGpsLocationRef.current) {
-        const gpsLoc = pendingGpsLocationRef.current;
-        pendingGpsLocationRef.current = null;
-        console.log("Saving pending GPS location to Firestore:", gpsLoc.name);
-        setDoc(locationDocRef, gpsLoc).catch(e => console.error("Failed to save GPS location:", e));
-        return; // Don't overwrite state; snapshot will re-fire with the GPS location
-      }
-
-      if (docSnap.exists()) {
-        const savedLoc = docSnap.data();
-        setLocation({
-          name: savedLoc.name || INITIAL_LOCATION.name,
-          lat: parseFloat(savedLoc.lat) || INITIAL_LOCATION.lat,
-          lon: parseFloat(savedLoc.lon) || INITIAL_LOCATION.lon,
-        });
-        console.log("Location loaded from Firestore.");
-      } else if (initialLoadRef.current) {
-        console.log("No saved location found. Saving initial location to Firestore.");
-        setDoc(locationDocRef, INITIAL_LOCATION).catch(e => console.error("Failed to set initial location:", e));
-      }
-      initialLoadRef.current = false;
-    }, (error) => {
-      console.error("Error listening to location:", error);
-      setAppError("Failed to sync location data with server.");
-    });
-
-    return () => unsubscribe();
-  }, [db, userId]);
 
   // --- Weather Fetching Logic ---
   const fetchWeather = useCallback(async (loc) => {
@@ -522,22 +426,20 @@ const App = () => {
   }, [location.lat, location.lon, location.name]);
 
   useEffect(() => {
-    if (location.lat && location.lon && isAuthReady) {
+    if (location.lat && location.lon) {
       fetchAlerts();
     }
 
     const alertInterval = setInterval(() => {
       if (document.hidden) return; // don't poll while the tab is in the background
-      if (location.lat && location.lon && isAuthReady) fetchAlerts();
+      if (location.lat && location.lon) fetchAlerts();
     }, 120000);
 
     return () => clearInterval(alertInterval);
-  }, [location.lat, location.lon, isAuthReady, fetchAlerts]);
+  }, [location.lat, location.lon, fetchAlerts]);
 
   // --- Fetch Weather on Location Change & Set Interval ---
   useEffect(() => {
-    if (!isAuthReady) return;
-
     if (weatherIntervalRef.current) {
       clearInterval(weatherIntervalRef.current);
     }
@@ -554,12 +456,12 @@ const App = () => {
     return () => {
       if (weatherIntervalRef.current) clearInterval(weatherIntervalRef.current);
     };
-  }, [location, isAuthReady, fetchWeather, fetchAQI]);
+  }, [location, fetchWeather, fetchAQI]);
 
   // --- Catch-Up Refresh on Return to Tab ---
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.hidden || !isAuthReady) return;
+      if (document.hidden) return;
       // Skipped polls while hidden — refresh now if the data is over a minute old
       if (Date.now() - lastFetchTimeRef.current < 60000) return;
       fetchWeather(location);
@@ -568,7 +470,7 @@ const App = () => {
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [location, isAuthReady, fetchWeather, fetchAQI, fetchAlerts]);
+  }, [location, fetchWeather, fetchAQI, fetchAlerts]);
 
   // --- Location Save Handler ---
   const handleUnitsChange = (newUnits) => {
@@ -576,26 +478,14 @@ const App = () => {
     localStorage.setItem('weatherbird-units', JSON.stringify(newUnits));
   };
 
-  const handleLocationSave = useCallback(async (newLoc) => {
+  const handleLocationSave = useCallback((newLoc) => {
     localStorage.setItem('weatherbird-location-set', '1');
+    try {
+      localStorage.setItem(LOCATION_KEY, JSON.stringify(newLoc));
+    } catch { /* storage unavailable — location just won't survive a reload */ }
     setIsModalOpen(false);
-    if (db && userId) {
-      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-      const locationDocRef = doc(db, `artifacts/${appId}/users/${userId}/location_config`, 'current_location');
-      try {
-        await setDoc(locationDocRef, newLoc);
-        console.log("New location saved to Firestore.");
-      } catch (e) {
-        console.error("Failed to save new location:", e);
-        setAppError("Failed to save location to the database.");
-      }
-    } else {
-      // Firebase not ready yet — set state immediately and store for when Firestore attaches
-      pendingGpsLocationRef.current = newLoc;
-      setLocation(newLoc);
-      fetchWeather(newLoc);
-    }
-  }, [db, userId, fetchWeather]);
+    setLocation(newLoc); // the location effect below refetches weather and alerts
+  }, []);
 
   // --- Auto-Location Hook ---
   const { isTracking, trackingEnabled, setTrackingEnabled } = useAutoLocation(
@@ -640,7 +530,7 @@ const App = () => {
       case SCREENS.PRECIP:
         return <PrecipGraphTab hourly={hourly} isWeatherLoading={isWeatherLoading} />;
       case SCREENS.ALMANAC:
-        return <AlmanacTab location={location} userId={userId} />;
+        return <AlmanacTab location={location} />;
       case SCREENS.TRIP_WEATHER:
         return <TripWeatherTab location={location} />;
       case SCREENS.HURRICANE:
@@ -692,7 +582,7 @@ const App = () => {
       )}
 
       {/* App Status Modal */}
-      <AppStatus isLoading={isWeatherLoading} error={appError} isReady={isAuthReady} isAutoDetecting={false} />
+      <AppStatus isLoading={isWeatherLoading} error={appError} isAutoDetecting={false} />
 
       {/* Stale Data Badge — shown when displaying cached data that couldn't be refreshed */}
       {isStaleData && weatherData && (

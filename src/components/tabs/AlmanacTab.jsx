@@ -121,7 +121,7 @@ const OnThisDaySparkline = ({ data }) => {
   );
 };
 
-const AlmanacTab = ({ location, userId }) => {
+const AlmanacTab = ({ location }) => {
   const today = new Date();
   const [almanacData, setAlmanacData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);

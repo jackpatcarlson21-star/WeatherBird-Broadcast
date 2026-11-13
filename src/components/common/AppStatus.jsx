@@ -2,7 +2,7 @@ import React from 'react';
 import { AlertTriangle, MapPin } from 'lucide-react';
 import { NAVY_BLUE, BRIGHT_CYAN } from '../../utils/constants';
 
-const AppStatus = ({ isLoading, error, isReady, isAutoDetecting }) => {
+const AppStatus = ({ isLoading, error, isAutoDetecting }) => {
   if (error) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-red-900/80 p-4 font-vt323">
@@ -26,7 +26,7 @@ const AppStatus = ({ isLoading, error, isReady, isAutoDetecting }) => {
       </div>
     );
   }
-  if (!isReady || isLoading) {
+  if (isLoading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 font-vt323">
         <div className="text-center animate-pulse">
