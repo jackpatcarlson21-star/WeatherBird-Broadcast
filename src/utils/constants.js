@@ -16,6 +16,22 @@ export const SCREENS = {
   GARDEN: 'GARDEN',
 };
 
+// Sidebar tabs, top to bottom. The keyboard arrows follow this order too.
+export const NAV_TABS = [
+  { id: SCREENS.CONDITIONS,   name: 'CURRENT'   },
+  { id: SCREENS.HOURLY,       name: 'HOURLY'    },
+  { id: SCREENS.DAILY,        name: '7-DAY'     },
+  { id: SCREENS.RADAR,        name: 'RADAR'     },
+  { id: SCREENS.SPC,          name: 'SEVERE'    },
+  { id: SCREENS.ALERTS,       name: 'ALERTS'    },
+  { id: SCREENS.ALMANAC,      name: 'ALMANAC'   },
+  { id: SCREENS.MODELS,       name: 'MODELS'    },
+  { id: SCREENS.HURRICANE,    name: 'HURRICANE' },
+  { id: SCREENS.TRIP_WEATHER, name: 'TRIP'      },
+  { id: SCREENS.SATELLITE,    name: 'SATELLITE' },
+  { id: SCREENS.GARDEN,       name: 'GARDEN'    },
+];
+
 // --- Config ---
 export const INITIAL_LOCATION = { name: "Lawrenceburg, KY", lat: 38.0337, lon: -84.9966 };
 export const MUSIC_URL = "https://stream.zeno.fm/0r0xa792kwzuv";

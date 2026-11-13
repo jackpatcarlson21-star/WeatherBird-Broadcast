@@ -1,5 +1,5 @@
 import React from 'react';
-import { SCREENS, DARK_BLUE, BRIGHT_CYAN, MID_BLUE } from '../../utils/constants';
+import { SCREENS, NAV_TABS, DARK_BLUE, BRIGHT_CYAN, MID_BLUE } from '../../utils/constants';
 import { getSevereAlertLevel } from '../../utils/helpers';
 
 // Tabs where an active watch/warning should bleed into the nav itself, so
@@ -10,21 +10,6 @@ const SEVERITY_COLOR = { warning: '#EF4444', watch: '#F97316' };
 const TabNavigation = ({ currentTab, setTab, alerts = [] }) => {
   const severity = getSevereAlertLevel(alerts);
   const severityColor = severity ? SEVERITY_COLOR[severity] : null;
-
-  const tabs = [
-    { id: SCREENS.CONDITIONS,   name: 'CURRENT'   },
-    { id: SCREENS.HOURLY,       name: 'HOURLY'    },
-    { id: SCREENS.DAILY,        name: '7-DAY'     },
-    { id: SCREENS.RADAR,        name: 'RADAR'     },
-    { id: SCREENS.SPC,          name: 'SEVERE'    },
-    { id: SCREENS.ALERTS,       name: 'ALERTS'    },
-    { id: SCREENS.ALMANAC,      name: 'ALMANAC'   },
-    { id: SCREENS.MODELS,       name: 'MODELS'    },
-    { id: SCREENS.HURRICANE,    name: 'HURRICANE' },
-    { id: SCREENS.TRIP_WEATHER, name: 'TRIP'      },
-    { id: SCREENS.SATELLITE,    name: 'SATELLITE' },
-    { id: SCREENS.GARDEN,       name: 'GARDEN'    },
-  ];
 
   const renderTab = (tab) => {
     const hasAlertBadge = tab.id === SCREENS.ALERTS && alerts.length > 0;
@@ -66,7 +51,7 @@ const TabNavigation = ({ currentTab, setTab, alerts = [] }) => {
       style={{ backgroundColor: DARK_BLUE, borderColor: BRIGHT_CYAN }}
     >
       <div className="flex md:flex-col overflow-x-auto md:overflow-y-auto whitespace-nowrap md:whitespace-normal h-full gap-1.5 md:gap-2 snap-x snap-mandatory md:snap-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {tabs.map(renderTab)}
+        {NAV_TABS.map(renderTab)}
       </div>
     </div>
   );

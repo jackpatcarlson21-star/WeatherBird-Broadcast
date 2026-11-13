@@ -20,7 +20,7 @@ import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged }
 import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 // Constants and utilities
-import { SCREENS, INITIAL_LOCATION, MUSIC_URL, REFRESH_RATE_MS, NAVY_BLUE } from './utils/constants';
+import { SCREENS, NAV_TABS, INITIAL_LOCATION, MUSIC_URL, REFRESH_RATE_MS, NAVY_BLUE } from './utils/constants';
 import { getWeatherApiUrl, getAirQualityUrl, getNWSAlertsUrl, getNWSPointsUrl } from './utils/api';
 import { isNight, getSevereAlertLevel, getSevereAlerts, getTornadoWarnings, getExpirationCountdown } from './utils/helpers';
 import useAutoLocation from './utils/useAutoLocation';
@@ -69,6 +69,9 @@ const SCREEN_ORDER = [
   SCREENS.SPC, SCREENS.TRIP_WEATHER, SCREENS.ALMANAC,
   SCREENS.HURRICANE, SCREENS.MODELS, SCREENS.GARDEN,
 ];
+
+// Keyboard navigation steps through the sidebar tabs in the order shown.
+const NAV_ORDER = NAV_TABS.map(t => t.id);
 
 const App = () => {
   // --- State Hooks ---
@@ -133,23 +136,64 @@ const App = () => {
   }, [autoCycle, cycleSpeed]);
 
   // --- Keyboard Navigation ---
+  //   ← / →          previous / next screen
+  //   Home / End     first / last screen
+  //   ↑ / ↓          scroll the current screen a little
+  //   PgUp / PgDn    scroll the current screen by a page
+  //   Esc            close the settings / location modal
   useEffect(() => {
+    const isTypingTarget = (el) =>
+      el instanceof HTMLElement &&
+      (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName));
+
+    const goToScreen = (pick) => {
+      setAutoCycle(false); // manual navigation takes over, same as clicking a tab
+      setCurrentScreen(current => {
+        // -1 when auto-cycle left us on a screen with no sidebar tab (PRECIP/WWA)
+        const next = pick(NAV_ORDER.indexOf(current));
+        if (next === SCREENS.ALERTS) setShowAlertFlash(false);
+        return next;
+      });
+    };
+
+    const scrollContent = (amount) => {
+      contentRef.current?.scrollBy({ top: amount, behavior: 'smooth' });
+    };
+
     const handleKeyDown = (e) => {
-      if (e.key === 'ArrowRight') {
-        setCurrentScreen(current => {
-          const i = SCREEN_ORDER.indexOf(current);
-          return SCREEN_ORDER[(i + 1) % SCREEN_ORDER.length];
-        });
-      } else if (e.key === 'ArrowLeft') {
-        setCurrentScreen(current => {
-          const i = SCREEN_ORDER.indexOf(current);
-          return SCREEN_ORDER[(i - 1 + SCREEN_ORDER.length) % SCREEN_ORDER.length];
-        });
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+
+      if (e.key === 'Escape') {
+        if (isSettingsOpen) setIsSettingsOpen(false);
+        else if (isModalOpen) setIsModalOpen(false);
+        return;
       }
+
+      // Leave keys alone while a modal is open, the user is typing, or a
+      // Leaflet map has focus (it uses the arrow keys to pan).
+      if (isSettingsOpen || isModalOpen) return;
+      if (isTypingTarget(e.target)) return;
+      if (e.target instanceof Element && e.target.closest('.leaflet-container')) return;
+
+      const n = NAV_ORDER.length;
+      const page = (contentRef.current?.clientHeight ?? 400) * 0.85;
+
+      switch (e.key) {
+        case 'ArrowRight': goToScreen(i => NAV_ORDER[(i + 1) % n]); break;
+        case 'ArrowLeft':  goToScreen(i => NAV_ORDER[i < 0 ? n - 1 : (i - 1 + n) % n]); break;
+        case 'Home':       goToScreen(() => NAV_ORDER[0]); break;
+        case 'End':        goToScreen(() => NAV_ORDER[n - 1]); break;
+        case 'ArrowDown':  scrollContent(80); break;
+        case 'ArrowUp':    scrollContent(-80); break;
+        case 'PageDown':   scrollContent(page); break;
+        case 'PageUp':     scrollContent(-page); break;
+        default: return;
+      }
+      e.preventDefault();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isSettingsOpen, isModalOpen]);
 
   // --- Auto-Scroll Effect (scrolls content panel during auto-cycle) ---
   useEffect(() => {
