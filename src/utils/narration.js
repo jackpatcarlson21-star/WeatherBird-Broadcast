@@ -5,7 +5,7 @@ import { getWeatherDescription, degreeToCardinal } from './helpers';
  * Generate spoken narration text for each tab.
  */
 export const getNarrationText = (screen, data) => {
-  const { weatherData, alerts, location, aqiData } = data || {};
+  const { weatherData, location } = data || {};
   const current = weatherData?.current;
   const daily = weatherData?.daily;
   const hourly = weatherData?.hourly;
