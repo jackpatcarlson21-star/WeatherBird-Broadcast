@@ -261,6 +261,12 @@ const CurrentConditionsTab = ({ current, daily, hourly, night, isWeatherLoading,
           night={night}
           alerts={alerts}
           pop={Math.round(daily?.precipitation_probability_max?.[0] || 0)}
+          aqi={aqi != null ? Math.round(aqi) : null}
+          aqiLabel={aqiInfo.level.toUpperCase()}
+          aqiColorClass={aqiInfo.textColor}
+          uvIndex={uvIndex != null ? Math.round(uvIndex) : null}
+          uvLabel={uvInfo.label}
+          uvColorClass={uvInfo.color}
         />
       </div>
 

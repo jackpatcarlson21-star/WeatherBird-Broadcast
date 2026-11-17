@@ -60,7 +60,7 @@ const getTimeOfDay = () => {
   return 'late_night';
 };
 
-const WeatherBird = ({ temp, weatherCode, windSpeed, night, alerts, pop }) => {
+const WeatherBird = ({ temp, weatherCode, windSpeed, night, alerts, pop, aqi, aqiLabel, aqiColorClass, uvIndex, uvLabel, uvColorClass }) => {
   let message = "";
   let animation = "";
   let accessory = "";
@@ -283,7 +283,7 @@ const WeatherBird = ({ temp, weatherCode, windSpeed, night, alerts, pop }) => {
   }
 
   return (
-    <div className="flex flex-col items-center p-4 rounded-lg border-2 border-cyan-600 bg-black/30">
+    <div className="flex flex-col items-center justify-between p-4 rounded-lg border-2 border-cyan-600 bg-black/30">
       <style>{`
         @keyframes wiggle {
           0%, 100% { transform: rotate(-5deg); }
@@ -302,13 +302,26 @@ const WeatherBird = ({ temp, weatherCode, windSpeed, night, alerts, pop }) => {
         .animate-shiver { animation: shiver 0.1s ease-in-out infinite; }
         .animate-happy { animation: happy 0.5s ease-in-out infinite; }
       `}</style>
-      <div className={`${animation}`}>
-        <span className="relative inline-block">
-          <PixelBird bodyColor={bodyColor} />
-          {accessory && <span className="absolute -top-2 -right-4 text-3xl" aria-hidden="true">{accessory}</span>}
-        </span>
+      <div>
+        <div className={`${animation}`}>
+          <span className="relative inline-block">
+            <PixelBird bodyColor={bodyColor} />
+            {accessory && <span className="absolute -top-2 -right-4 text-3xl" aria-hidden="true">{accessory}</span>}
+          </span>
+        </div>
+        <p className="text-cyan-300 font-vt323 text-lg mt-2 text-center">{message}</p>
       </div>
-      <p className="text-cyan-300 font-vt323 text-lg mt-2 text-center">{message}</p>
+
+      {(aqi != null || uvIndex != null) && (
+        <div className="w-full pt-3 mt-3 border-t border-cyan-800/60 flex items-center justify-center gap-4 text-sm font-vt323">
+          {aqi != null && (
+            <span className={aqiColorClass || 'text-cyan-300'}>AQI {aqi} &middot; {aqiLabel}</span>
+          )}
+          {uvIndex != null && (
+            <span className={uvColorClass || 'text-cyan-300'}>UV {uvIndex} &middot; {uvLabel}</span>
+          )}
+        </div>
+      )}
     </div>
   );
 };
