@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { AlertTriangle, X, Clock } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -17,7 +17,7 @@ L.Icon.Default.mergeOptions({
 // Firebase
 
 // Constants and utilities
-import { SCREENS, NAV_TABS, INITIAL_LOCATION, MUSIC_URL, REFRESH_RATE_MS, NAVY_BLUE } from './utils/constants';
+import { SCREENS, NAV_TABS, INITIAL_LOCATION, MUSIC_URL, REFRESH_RATE_MS, NAVY_BLUE, getBroadcastSeconds, buildBroadcastPlaylist } from './utils/constants';
 import { getWeatherApiUrl, getAirQualityUrl, getNWSAlertsUrl, getNWSPointsUrl } from './utils/api';
 import { isNight, getSevereAlertLevel, getSevereAlerts, getTornadoWarnings, getExpirationCountdown } from './utils/helpers';
 import useAutoLocation from './utils/useAutoLocation';
@@ -75,13 +75,6 @@ const readSavedLocation = () => {
   return INITIAL_LOCATION;
 };
 
-const SCREEN_ORDER = [
-  SCREENS.CONDITIONS, SCREENS.HOURLY, SCREENS.DAILY, SCREENS.RADAR,
-  SCREENS.SATELLITE, SCREENS.PRECIP, SCREENS.ALERTS, SCREENS.WWA,
-  SCREENS.SPC, SCREENS.TRIP_WEATHER, SCREENS.ALMANAC,
-  SCREENS.HURRICANE, SCREENS.MODELS, SCREENS.GARDEN,
-];
-
 // Keyboard navigation steps through the sidebar tabs in the order shown.
 const NAV_ORDER = NAV_TABS.map(t => t.id);
 
@@ -107,13 +100,30 @@ const App = () => {
   const [volume, setVolume] = useState(0.5);
   const [currentScreen, setCurrentScreen] = useState(SCREENS.CONDITIONS);
   const [autoCycle, setAutoCycle] = useState(false);
-  const [cycleSpeed, setCycleSpeed] = useState(10);
+  const [cycleSpeed, setCycleSpeed] = useState(1); // multiplier on BROADCAST_SECONDS
   const [dismissedAlertIds, setDismissedAlertIds] = useState(new Set());
   const [dismissedTornadoModals, setDismissedTornadoModals] = useState(new Set());
   const [showAlertFlash, setShowAlertFlash] = useState(false);
 
   const [crtDone, setCrtDone] = useState(false);
   const lastAlertIdsRef = useRef('');
+  const autoCycleRef = useRef(autoCycle);
+  autoCycleRef.current = autoCycle;
+
+  // --- Broadcast Playlist ---
+  const hasAlerts = alerts.length > 0;
+  const hasWarning = getSevereAlertLevel(alerts) === 'warning';
+  const broadcastPlaylist = useMemo(
+    () => buildBroadcastPlaylist({ hasAlerts, hasWarning }),
+    [hasAlerts, hasWarning]
+  );
+  const screenDurationMs = getBroadcastSeconds(currentScreen) * cycleSpeed * 1000;
+
+  // Turning the broadcast on from a screen that isn't in the loop starts it at the top
+  const setBroadcast = (on) => {
+    setAutoCycle(on);
+    if (on) setCurrentScreen(cur => (broadcastPlaylist.includes(cur) ? cur : broadcastPlaylist[0]));
+  };
 
   // --- Alert Flash Timeout ---
   useEffect(() => {
@@ -124,24 +134,28 @@ const App = () => {
     if (severeLevel && currentAlertIds !== lastAlertIdsRef.current) {
       lastAlertIdsRef.current = currentAlertIds;
       setShowAlertFlash(true);
+      // A new warning interrupts the broadcast, like a real weather channel would
+      if (severeLevel === 'warning' && autoCycleRef.current) setCurrentScreen(SCREENS.ALERTS);
       const timeout = setTimeout(() => setShowAlertFlash(false), 3000);
       return () => clearTimeout(timeout);
     }
   }, [alerts, dismissedAlertIds]);
 
   // --- Auto-Cycle Effect ---
+  // Each screen gets its own time on air; a screen outside the loop (e.g. the
+  // alert screens after the alerts expire) hands off to the top of the loop.
   useEffect(() => {
     if (!autoCycle) return;
 
-    const interval = setInterval(() => {
+    const timeout = setTimeout(() => {
       setCurrentScreen(current => {
-        const i = SCREEN_ORDER.indexOf(current);
-        return SCREEN_ORDER[(i + 1) % SCREEN_ORDER.length];
+        const i = broadcastPlaylist.indexOf(current);
+        return broadcastPlaylist[(i + 1) % broadcastPlaylist.length];
       });
-    }, cycleSpeed * 1000);
+    }, screenDurationMs);
 
-    return () => clearInterval(interval);
-  }, [autoCycle, cycleSpeed]);
+    return () => clearTimeout(timeout);
+  }, [autoCycle, currentScreen, broadcastPlaylist, screenDurationMs]);
 
   // --- Keyboard Navigation ---
   //   ← / →          previous / next screen
@@ -204,49 +218,44 @@ const App = () => {
   }, [isSettingsOpen, isModalOpen]);
 
   // --- Auto-Scroll Effect (scrolls content panel during auto-cycle) ---
+  // Position is driven by elapsed time rather than per-frame steps, so it runs at
+  // the same speed on 60Hz and 120Hz screens, and the scroll height is re-read
+  // every frame so content that loads late (lazy tabs, images) still gets shown.
   useEffect(() => {
     if (!autoCycle) return;
 
-    // Reset scroll to top when screen changes
-    if (contentRef.current) {
-      contentRef.current.scrollTop = 0;
-    }
+    if (contentRef.current) contentRef.current.scrollTop = 0;
 
+    const pauseMs = 2000;     // hold at the top before scrolling
+    const endBufferMs = 1000; // hold at the bottom before the next screen
+    const scrollMs = Math.max(1000, screenDurationMs - pauseMs - endBufferMs);
+    const start = performance.now();
     let animationId;
-    let scrollPos = 0;
-    let pixelsPerFrame = 0.3;
-    const pauseMs = 2000;
 
-    const scroll = () => {
-      if (contentRef.current) {
-        const { scrollHeight, clientHeight } = contentRef.current;
-        const scrollable = scrollHeight - clientHeight;
-
-        // Calculate speed based on content length and remaining time
-        if (scrollable > 0 && pixelsPerFrame === 0.3) {
-          const scrollTimeMs = (cycleSpeed * 1000) - pauseMs - 1000; // leave 1s buffer at bottom
-          const framesAvailable = (scrollTimeMs / 1000) * 60; // ~60fps
-          pixelsPerFrame = Math.max(0.3, scrollable / framesAvailable);
-        }
-
-        if (scrollPos < scrollable) {
-          scrollPos += pixelsPerFrame;
-          contentRef.current.scrollTop = scrollPos;
+    const scroll = (now) => {
+      const progress = Math.min(1, Math.max(0, (now - start - pauseMs) / scrollMs));
+      const el = contentRef.current;
+      if (el) {
+        const scrollable = el.scrollHeight - el.clientHeight;
+        // Screens can mark one element (e.g. the radar map) with data-broadcast-focus;
+        // it's held centered instead of scrolling past it. Re-centered every frame
+        // so it stays put while images load in.
+        const focus = el.querySelector('[data-broadcast-focus]');
+        if (focus) {
+          const box = el.getBoundingClientRect();
+          const f = focus.getBoundingClientRect();
+          const target = el.scrollTop + (f.top - box.top) - (box.height - f.height) / 2;
+          el.scrollTop = Math.min(Math.max(0, target), Math.max(0, scrollable));
+        } else if (scrollable > 0) {
+          el.scrollTop = scrollable * progress;
         }
       }
-      animationId = requestAnimationFrame(scroll);
+      if (progress < 1) animationId = requestAnimationFrame(scroll);
     };
+    animationId = requestAnimationFrame(scroll);
 
-    // 2 second pause before scrolling starts
-    const timeout = setTimeout(() => {
-      animationId = requestAnimationFrame(scroll);
-    }, pauseMs);
-
-    return () => {
-      clearTimeout(timeout);
-      cancelAnimationFrame(animationId);
-    };
-  }, [autoCycle, currentScreen, cycleSpeed]);
+    return () => cancelAnimationFrame(animationId);
+  }, [autoCycle, currentScreen, screenDurationMs]);
 
 
   const [savedLocations, setSavedLocations] = useState(() => {
@@ -290,16 +299,15 @@ const App = () => {
   useEffect(() => {
     // Slow tick (60s) - only used for isNight; Header has its own 1s clock
     const clockTick = setInterval(() => setTime(new Date()), 60000);
+    return () => clearInterval(clockTick);
+  }, []);
 
+  useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio(MUSIC_URL);
       audioRef.current.loop = true;
     }
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
-
-    return () => clearInterval(clockTick);
+    audioRef.current.volume = volume;
   }, [volume]);
 
   const toggleMusic = () => {
@@ -655,7 +663,7 @@ const App = () => {
         volume={volume}
         setVolume={setVolume}
         autoCycle={autoCycle}
-        setAutoCycle={setAutoCycle}
+        setAutoCycle={setBroadcast}
         night={night}
         weatherCode={effectiveCurrentCode}
         sunrise={daily?.sunrise?.[0]}

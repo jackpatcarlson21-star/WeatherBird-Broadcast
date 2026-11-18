@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const PixelBird = ({ bodyColor = '#00FFFF' }) => (
   <svg
@@ -48,8 +48,6 @@ const PixelBird = ({ bodyColor = '#00FFFF' }) => (
   </svg>
 );
 
-const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-
 const getTimeOfDay = () => {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 9) return 'early_morning';
@@ -61,6 +59,12 @@ const getTimeOfDay = () => {
 };
 
 const WeatherBird = ({ temp, weatherCode, windSpeed, night, alerts, pop, aqi, aqiLabel, aqiColorClass, uvIndex, uvLabel, uvColorClass }) => {
+  // One random roll per mount, so the message only changes when the weather does.
+  // Picking with Math.random() at render time made it reshuffle on every re-render
+  // (e.g. while dragging the music volume slider), jumping the layout around.
+  const [seed] = useState(Math.random);
+  const pick = (arr) => arr[Math.floor(seed * arr.length)];
+
   let message = "";
   let animation = "";
   let accessory = "";

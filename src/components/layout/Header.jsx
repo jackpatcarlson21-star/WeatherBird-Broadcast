@@ -111,7 +111,7 @@ const Header = ({
         {/* Auto-Cycle Button */}
         <button
           onClick={() => setAutoCycle(!autoCycle)}
-          className={`hidden sm:block p-2 rounded-full transition shadow-md shrink-0 ${autoCycle ? 'bg-cyan-600' : 'bg-white/10 hover:bg-white/20'}`}
+          className={`p-2 rounded-full transition shadow-md shrink-0 ${autoCycle ? 'bg-cyan-600' : 'bg-white/10 hover:bg-white/20'}`}
           style={{ border: `1px solid ${BRIGHT_CYAN}` }}
           title={autoCycle ? 'Stop Auto-Cycle' : 'Start Auto-Cycle'}
         >

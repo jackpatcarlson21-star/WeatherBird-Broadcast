@@ -32,6 +32,32 @@ export const NAV_TABS = [
   { id: SCREENS.GARDEN,       name: 'GARDEN'    },
 ];
 
+// --- Broadcast (auto-cycle) ---
+// Seconds each screen stays up at NORMAL speed; the speed setting scales these.
+export const BROADCAST_SECONDS = {
+  [SCREENS.ALERTS]:     15,
+  [SCREENS.CONDITIONS]: 12,
+  [SCREENS.HOURLY]:     15,
+  [SCREENS.DAILY]:      15,
+  [SCREENS.RADAR]:      20, // give the radar loop time to play through
+  [SCREENS.PRECIP]:     12,
+  [SCREENS.WWA]:        12,
+};
+const DEFAULT_BROADCAST_SECONDS = 12;
+export const getBroadcastSeconds = (screen) => BROADCAST_SECONDS[screen] ?? DEFAULT_BROADCAST_SECONDS;
+
+// The loop shows the everyday forecast screens. Alert screens join only when
+// alerts are active, and a severe warning moves Alerts to the front.
+export const buildBroadcastPlaylist = ({ hasAlerts, hasWarning }) => {
+  const core = [SCREENS.CONDITIONS, SCREENS.HOURLY, SCREENS.DAILY, SCREENS.RADAR, SCREENS.PRECIP];
+  if (hasWarning) return [SCREENS.ALERTS, ...core, SCREENS.WWA];
+  if (hasAlerts) return [...core, SCREENS.ALERTS, SCREENS.WWA];
+  return core;
+};
+
+// Speed setting = multiplier on BROADCAST_SECONDS
+export const BROADCAST_SPEEDS = [[0.7, 'FAST'], [1, 'NORMAL'], [1.5, 'SLOW']];
+
 // --- Config ---
 export const INITIAL_LOCATION = { name: "Lawrenceburg, KY", lat: 38.0337, lon: -84.9966 };
 export const MUSIC_URL = "https://stream.zeno.fm/0r0xa792kwzuv";

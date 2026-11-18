@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Settings } from 'lucide-react';
-import { BRIGHT_CYAN } from '../../utils/constants';
+import { BRIGHT_CYAN, BROADCAST_SPEEDS } from '../../utils/constants';
 
 const SettingsModal = ({ units, onUnitsChange, cycleSpeed, onCycleSpeedChange, onClose }) => {
   return (
@@ -64,7 +64,7 @@ const SettingsModal = ({ units, onUnitsChange, cycleSpeed, onCycleSpeedChange, o
         <div className="mb-6">
           <p className="text-cyan-400 text-sm tracking-widest mb-2 font-vt323">AUTO-CYCLE SPEED</p>
           <div className="flex gap-2">
-            {[[10, '10S'], [15, '15S'], [30, '30S']].map(([val, label]) => (
+            {BROADCAST_SPEEDS.map(([val, label]) => (
               <button
                 key={val}
                 onClick={() => onCycleSpeedChange(val)}

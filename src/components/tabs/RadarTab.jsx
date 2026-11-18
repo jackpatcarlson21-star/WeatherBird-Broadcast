@@ -227,7 +227,7 @@ const RadarTab = ({ location }) => {
         <h3 className="text-xl sm:text-2xl text-cyan-300">{title}</h3>
         <p className="text-sm text-cyan-400">{subtitle}</p>
 
-        <div className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden bg-black flex items-center justify-center" style={{ minHeight: '500px' }}>
+        <div data-broadcast-focus className="relative w-full rounded-lg border-4 border-cyan-500 overflow-hidden bg-black flex items-center justify-center" style={{ minHeight: '500px' }}>
           {imgLoading && !imgError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
               <RefreshCw size={32} className="text-cyan-400 animate-spin mb-2" />
